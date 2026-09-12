@@ -1,0 +1,24 @@
+[Unit]
+Description=Sea Fight Telegram Bot
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=clawuser
+WorkingDirectory=/home/clawuser/projects/Games_bot/sea_fight_aiogram
+ExecStart=/usr/bin/python3 /home/clawuser/projects/Games_bot/sea_fight_aiogram/main.py
+Restart=always
+RestartSec=10
+Environment="PATH=/usr/bin"
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
