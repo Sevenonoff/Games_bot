@@ -153,6 +153,25 @@ class Database:
                 ON multiplayer_games(status)
             ''')
 
+            # Рейтинг мультиплеера — отдельный для каждого набора кораблей
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS player_ratings (
+                    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                    game_type VARCHAR(20) NOT NULL,
+                    rating INTEGER NOT NULL DEFAULT 1000,
+                    games_played INTEGER NOT NULL DEFAULT 0,
+                    games_won INTEGER NOT NULL DEFAULT 0,
+                    games_lost INTEGER NOT NULL DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (user_id, game_type)
+                )
+            ''')
+
+            await conn.execute('''
+                CREATE INDEX IF NOT EXISTS idx_player_ratings_top
+                ON player_ratings(game_type, rating DESC)
+            ''')
+
     async def get_user(self, user_id: int) -> Optional[User]:
         """Получить информацию о пользователе"""
         async with self.pool.acquire() as conn:
@@ -170,9 +189,9 @@ class Database:
             await conn.execute('''
                 INSERT INTO users (
                     user_id, first_name, last_name, username, phone_number,
-                    is_bot, language_code, is_premium, source, leaderboard_name
+                    is_bot, language_code, is_premium, source
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 ON CONFLICT (user_id) DO UPDATE SET
                     first_name = EXCLUDED.first_name,
                     last_name = EXCLUDED.last_name,
@@ -182,23 +201,10 @@ class Database:
                     language_code = EXCLUDED.language_code,
                     is_premium = EXCLUDED.is_premium,
                     source = EXCLUDED.source,
-                    leaderboard_name = COALESCE(EXCLUDED.leaderboard_name, users.leaderboard_name),
                     updated_at = CURRENT_TIMESTAMP
             ''', user.user_id, user.first_name, user.last_name, user.username,
                 user.phone_number, user.is_bot, user.language_code,
-                user.is_premium, user.source, user.leaderboard_name)
-
-    async def update_leaderboard_name(self, user_id: int, leaderboard_name: str) -> bool:
-        """Обновить имя для лидерборда"""
-        if not self.is_safe_leaderboard_name(leaderboard_name):
-            return False
-
-        async with self.pool.acquire() as conn:
-            await conn.execute(
-                'UPDATE users SET leaderboard_name = $1 WHERE user_id = $2',
-                leaderboard_name, user_id
-            )
-        return True
+                user.is_premium, user.source)
 
     async def add_leaderboard_entry(self, user_id: int, name: str, score: int,
                                      game_type: str = 'solo_full') -> int:
@@ -212,43 +218,137 @@ class Database:
                 user_id, name, score, game_type
             )
 
-            # Получаем позицию в рамках данного типа
+            # Позиция считается по лучшим результатам игроков — так же,
+            # как таблица потом отображается (одна строка на игрока).
+            # Место игрока определяет его лучший результат, а не счёт этой партии.
             result = await conn.fetchval('''
                 SELECT COUNT(*) + 1 AS position
-                FROM leaderboard
-                WHERE game_type = $1 AND score > $2
-            ''', game_type, score)
+                FROM (
+                    SELECT MAX(score) AS best
+                    FROM leaderboard
+                    WHERE game_type = $1 AND user_id <> $2
+                    GROUP BY user_id
+                ) others
+                WHERE others.best > (
+                    SELECT MAX(score) FROM leaderboard
+                    WHERE game_type = $1 AND user_id = $2
+                )
+            ''', game_type, user_id)
             return result
 
     async def get_top_leaderboard(self, limit: int = 100,
                                    game_type: str = None) -> List[dict]:
-        """Получить топ лидерборда, опционально по типу игры"""
+        """Получить топ лидерборда: лучший результат каждого игрока.
+
+        При равных очках выше тот, чей результат свежее.
+        """
         async with self.pool.acquire() as conn:
             if game_type:
                 rows = await conn.fetch('''
-                    SELECT user_id, name, score, game_type, created_at
-                    FROM leaderboard
-                    WHERE game_type = $1
-                    ORDER BY score DESC
+                    SELECT * FROM (
+                        SELECT DISTINCT ON (user_id)
+                               user_id, name, score, game_type, created_at
+                        FROM leaderboard
+                        WHERE game_type = $1
+                        ORDER BY user_id, score DESC, created_at DESC
+                    ) t
+                    ORDER BY score DESC, created_at DESC
                     LIMIT $2
                 ''', game_type, limit)
             else:
                 rows = await conn.fetch('''
-                    SELECT user_id, name, score, game_type, created_at
-                    FROM leaderboard
-                    ORDER BY score DESC
+                    SELECT * FROM (
+                        SELECT DISTINCT ON (user_id, game_type)
+                               user_id, name, score, game_type, created_at
+                        FROM leaderboard
+                        ORDER BY user_id, game_type, score DESC, created_at DESC
+                    ) t
+                    ORDER BY score DESC, created_at DESC
                     LIMIT $1
                 ''', limit)
             return [dict(row) for row in rows]
 
-    @staticmethod
-    def is_safe_leaderboard_name(name: str) -> bool:
-        """Проверить безопасность имени для лидерборда"""
-        import re
-        if not name:
-            return False
-        pattern = r'^[a-zA-Zа-яА-Я0-9_ .-]+$'
-        return re.match(pattern, name) is not None
+    # ========== Рейтинг мультиплеера (Elo) ==========
+
+    RATING_DEFAULT = 1000
+    RATING_K = 32
+
+    async def get_rating(self, user_id: int, game_type: str) -> dict:
+        """Получить рейтинг игрока, создав строку со стартовым значением"""
+        async with self.pool.acquire() as conn:
+            return dict(await self._ensure_rating(conn, user_id, game_type))
+
+    async def _ensure_rating(self, conn, user_id: int, game_type: str):
+        """Вернуть строку рейтинга, создав её при первом обращении"""
+        await conn.execute('''
+            INSERT INTO player_ratings (user_id, game_type, rating)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id, game_type) DO NOTHING
+        ''', user_id, game_type, self.RATING_DEFAULT)
+
+        return await conn.fetchrow('''
+            SELECT user_id, game_type, rating, games_played, games_won, games_lost
+            FROM player_ratings
+            WHERE user_id = $1 AND game_type = $2
+        ''', user_id, game_type)
+
+    async def apply_match_result(self, winner_id: int, loser_id: int,
+                                  game_type: str) -> dict:
+        """Пересчитать рейтинги по итогу партии.
+
+        Возвращает {user_id: {'rating': новый, 'delta': изменение, ...}}.
+        Обе строки пишутся в одной транзакции.
+        """
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                winner = await self._ensure_rating(conn, winner_id, game_type)
+                loser = await self._ensure_rating(conn, loser_id, game_type)
+
+                ra, rb = winner['rating'], loser['rating']
+                expected_winner = 1 / (1 + 10 ** ((rb - ra) / 400))
+                delta = round(self.RATING_K * (1 - expected_winner))
+
+                # Симметрично: сколько победитель получил, столько проигравший потерял
+                new_winner = ra + delta
+                new_loser = rb - delta
+
+                await conn.execute('''
+                    UPDATE player_ratings
+                    SET rating = $3,
+                        games_played = games_played + 1,
+                        games_won = games_won + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = $1 AND game_type = $2
+                ''', winner_id, game_type, new_winner)
+
+                await conn.execute('''
+                    UPDATE player_ratings
+                    SET rating = $3,
+                        games_played = games_played + 1,
+                        games_lost = games_lost + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = $1 AND game_type = $2
+                ''', loser_id, game_type, new_loser)
+
+        return {
+            winner_id: {'rating': new_winner, 'delta': delta},
+            loser_id: {'rating': new_loser, 'delta': -delta},
+        }
+
+    async def get_top_ratings(self, game_type: str, limit: int = 100) -> List[dict]:
+        """Топ игроков по рейтингу для указанного набора кораблей"""
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch('''
+                SELECT pr.user_id, pr.rating, pr.games_played,
+                       pr.games_won, pr.games_lost,
+                       u.username, u.first_name
+                FROM player_ratings pr
+                JOIN users u ON u.user_id = pr.user_id
+                WHERE pr.game_type = $1 AND pr.games_played > 0
+                ORDER BY pr.rating DESC, pr.games_won DESC
+                LIMIT $2
+            ''', game_type, limit)
+            return [dict(row) for row in rows]
 
     # ========== Мультиплеер ==========
 
@@ -453,8 +553,12 @@ class Database:
                        ($2, $1, 1, 0, 1, CURRENT_TIMESTAMP)
                 ON CONFLICT (user_id, opponent_id) DO UPDATE SET
                     games_played = multiplayer_stats.games_played + 1,
-                    games_won = CASE WHEN $1 = user_id THEN multiplayer_stats.games_won + 1 ELSE multiplayer_stats.games_won END,
-                    games_lost = CASE WHEN $1 = user_id THEN multiplayer_stats.games_lost ELSE multiplayer_stats.games_lost + 1 END,
+                    games_won = CASE WHEN $1 = multiplayer_stats.user_id
+                                     THEN multiplayer_stats.games_won + 1
+                                     ELSE multiplayer_stats.games_won END,
+                    games_lost = CASE WHEN $1 = multiplayer_stats.user_id
+                                      THEN multiplayer_stats.games_lost
+                                      ELSE multiplayer_stats.games_lost + 1 END,
                     last_played_at = CURRENT_TIMESTAMP
             ''', winner_id, loser_id)
 

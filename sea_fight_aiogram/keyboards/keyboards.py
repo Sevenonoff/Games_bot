@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Any
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from utils.i18n import get_translation
@@ -20,41 +20,6 @@ class ButtonFactory:
 class KeyboardBuilder:
     def __init__(self, button_factory: ButtonFactory):
         self.button_factory = button_factory
-
-    def create_name_keyboard(self, language_code: str,
-                              current_user_info: Dict[str, Any]) -> InlineKeyboardMarkup:
-        """Создать клавиатуру выбора имени для лидерборда"""
-        keyboard: List[List[InlineKeyboardButton]] = []
-        row: List[InlineKeyboardButton] = []
-
-        name = current_user_info.get('leaderboard_name') or current_user_info.get('first_name', '')
-        if name:
-            callback_data = ('name_tg' if not current_user_info.get('leaderboard_name')
-                            else 'name_lastused')
-            button = self.button_factory.create_button(
-                'text_use_name',
-                callback_data,
-                language_code=language_code,
-                name=name
-            )
-            row.append(button)
-
-        row.append(self.button_factory.create_button(
-            'text_use_other_name',
-            'name_new',
-            language_code
-        ))
-        keyboard.append(row)
-
-        keyboard.append([
-            self.button_factory.create_button(
-                'text_leaderboard_skip',
-                'leaderboard_skip',
-                language_code
-            )
-        ])
-
-        return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
     def create_main_keyboard(self, language_code: str) -> InlineKeyboardMarkup:
         """Создать главное меню"""
@@ -175,40 +140,4 @@ def create_sea_fight_keyboard(player_board: Any) -> InlineKeyboardMarkup:
             x += 1
         keyboard.append(row)
         y += 1
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
-
-
-def create_name_keyboard(language_code: str,
-                          current_user_info: Dict[str, Any]) -> InlineKeyboardMarkup:
-    """Создать клавиатуру выбора имени (устаревшее)"""
-    keyboard = []
-    row = []
-
-    if not current_user_info.get('leaderboard_name'):
-        name = current_user_info.get('first_name', '')
-        if name:
-            row.append(InlineKeyboardButton(
-                text=f"{get_translation(language_code, 'text_use_name')} '{name}'",
-                callback_data='name_tg'
-            ))
-    else:
-        name = current_user_info['leaderboard_name']
-        row.append(InlineKeyboardButton(
-            text=f"{get_translation(language_code, 'text_use_name')} '{name}'",
-            callback_data='name_lastused'
-        ))
-
-    row.append(InlineKeyboardButton(
-        text=get_translation(language_code, 'text_use_other_name'),
-        callback_data='name_new'
-    ))
-
-    keyboard.append(row)
-    keyboard.append([
-        InlineKeyboardButton(
-            text=get_translation(language_code, 'text_leaderboard_skip'),
-            callback_data='leaderboard_skip'
-        )
-    ])
-
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

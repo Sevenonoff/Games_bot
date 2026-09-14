@@ -1,4 +1,5 @@
 import asyncio
+import html
 import json
 import os
 from typing import Dict, Any, Optional
@@ -60,13 +61,16 @@ PLACEMENT_TIMEOUT = 180  # 3 минуты на расстановку
 MAX_TURN_TIMEOUTS = 3  # пропусков хода до технического поражения
 
 
-async def edit_message_safe(message: types.Message, text: str, reply_markup=None):
+async def edit_message_safe(message: types.Message, text: str, reply_markup=None,
+                            parse_mode: Optional[str] = None):
     """Безопасно редактировать сообщение (фото или текст)"""
     try:
         if message.photo:
-            await message.edit_caption(caption=text, reply_markup=reply_markup)
+            await message.edit_caption(caption=text, reply_markup=reply_markup,
+                                       parse_mode=parse_mode)
         else:
-            await message.edit_text(text=text, reply_markup=reply_markup)
+            await message.edit_text(text=text, reply_markup=reply_markup,
+                                    parse_mode=parse_mode)
     except Exception as e:
         logger.error(f"Error editing message: {e}")
 
@@ -323,14 +327,51 @@ def start_turn_timer(game: MultiplayerGame):
     cancel_turn_timer(game.game_id)
     if not game.time_limit_seconds or game.status != 'active' or not game.current_turn:
         return
+
+    # После рестарта бота ход уже идёт какое-то время — досчитываем остаток,
+    # иначе таймер и цифра в шапке доски расходятся
+    remaining = turn_seconds_left(game)
+    delay = game.time_limit_seconds if remaining is None else max(1, remaining)
+
     mp_timers[game.game_id] = asyncio.create_task(
-        _handle_turn_timeout(game.game_id, game.current_turn, game.time_limit_seconds)
+        _handle_turn_timeout(game.game_id, game.current_turn, delay)
     )
 
 
+def turn_timer_interval(delay: int) -> int:
+    """Как часто перерисовывать обратный отсчёт при лимите delay секунд.
+
+    Чем длиннее лимит, тем реже обновление: за час игры это ~60 перерисовок,
+    а не одна в секунду — Telegram не любит частых правок сообщений.
+    """
+    return max(5, min(60, delay // 6))
+
+
 async def _handle_turn_timeout(game_id: int, expected_turn: int, delay: int):
-    """Через delay секунд передать ход, если игрок так и не сходил"""
-    await asyncio.sleep(delay)
+    """Обновлять обратный отсчёт, а по истечении delay — передать ход"""
+    deadline = datetime.now() + timedelta(seconds=delay)
+    interval = turn_timer_interval(delay)
+
+    while True:
+        remaining = (deadline - datetime.now()).total_seconds()
+        if remaining <= 0:
+            break
+        await asyncio.sleep(min(interval, remaining))
+
+        if (deadline - datetime.now()).total_seconds() <= 0:
+            break
+
+        # Перерисовываем шапку с новым временем, пока ход всё ещё за тем же игроком
+        game = active_games.get(expected_turn)
+        if not game or game.game_id != game_id:
+            continue
+        if game.status != 'active' or game.current_turn != expected_turn:
+            continue
+        try:
+            await update_mp_boards(game)
+        except Exception as e:
+            logger.error(f"Error refreshing turn timer for game {game_id}: {e}")
+
     mp_timers.pop(game_id, None)
 
     game_data = await db.get_multiplayer_game(game_id)
@@ -378,6 +419,122 @@ async def _handle_turn_timeout(game_id: int, expected_turn: int, delay: int):
     start_turn_timer(game)
 
 
+def format_player_name(username: Optional[str], first_name: Optional[str],
+                       user_id: int) -> str:
+    """Имя игрока для таблиц: username → имя из Telegram → числовой id.
+
+    Без «@» — иначе Telegram превращает ник в кликабельную ссылку на профиль.
+    """
+    if username:
+        return username.lstrip('@')
+    return first_name or str(user_id)
+
+
+def display_name(user: Optional[User], fallback_id: int = 0) -> str:
+    """То же, но по объекту пользователя"""
+    if not user:
+        return str(fallback_id)
+    return format_player_name(user.username, user.first_name, user.user_id)
+
+
+MOVE_RESULT_KEYS = {'sunk': 'move_sunk', 'hit': 'move_hit', 'miss': 'move_miss'}
+
+
+def format_move(attack: Optional[dict], language_code: str, key: str) -> Optional[str]:
+    """Строка об одном выстреле ('Вы: 💥 корабль потоплен')"""
+    if not attack:
+        return None
+    result_key = MOVE_RESULT_KEYS.get(attack.get('result'))
+    if not result_key:
+        return None
+    return replace_placeholders(
+        get_translation(language_code, key),
+        get_translation(language_code, result_key)
+    )
+
+
+def recent_moves(game: MultiplayerGame, uid: int, lang: str) -> list:
+    """Два последних хода партии в хронологическом порядке.
+
+    Порядок задаёт номер хода ('seq'), который проставляется при выстреле.
+    У партий, начатых до появления номеров, его нет — тогда опираемся на то,
+    что ходы чередуются: последним ходил тот, чей сейчас НЕ ход.
+    """
+    player_num = game.get_player_number(uid)
+    enemy_num = 2 if player_num == 1 else 1
+    opponent_id = game.get_opponent_id(uid)
+
+    mine = json.loads(game.get_attacks(player_num))
+    theirs = json.loads(game.get_attacks(enemy_num))
+
+    entries = []
+    if mine:
+        moved_last = uid != game.current_turn
+        entries.append((mine[-1].get('seq', 1 if moved_last else 0),
+                        mine[-1], 'text_your_move'))
+    if theirs:
+        moved_last = opponent_id is not None and opponent_id != game.current_turn
+        entries.append((theirs[-1].get('seq', 1 if moved_last else 0),
+                        theirs[-1], 'text_opponent_move'))
+
+    entries.sort(key=lambda e: e[0])
+    lines = [format_move(attack, lang, key) for _, attack, key in entries]
+    return [line for line in lines if line]
+
+
+def turn_seconds_left(game: MultiplayerGame) -> Optional[int]:
+    """Сколько секунд осталось на текущий ход (None — лимита нет)"""
+    if not game.time_limit_seconds or not game.turn_start_time:
+        return None
+    elapsed = (datetime.now() - game.turn_start_time).total_seconds()
+    return max(0, int(game.time_limit_seconds - elapsed))
+
+
+def build_board_header(game: MultiplayerGame, uid: int, lang: str,
+                       profiles: Dict[int, tuple]) -> str:
+    """Шапка над досками.
+
+    Порядок хронологический: соперники, затем позапрошлый и прошлый ходы,
+    и в самом низу — чей ход сейчас (вместе с таймером).
+    """
+    lines = []
+
+    opponent_id = game.get_opponent_id(uid)
+    if opponent_id:
+        opponent_name = profiles.get(opponent_id, (str(opponent_id), 'en'))[0]
+        lines.append(replace_placeholders(
+            get_translation(lang, 'text_versus'),
+            get_translation(lang, 'text_you'),
+            opponent_name
+        ))
+
+    lines.extend(recent_moves(game, uid, lang))
+
+    is_my_turn = uid == game.current_turn
+    turn_text = get_translation(lang, 'text_your_turn' if is_my_turn else 'text_opponent_turn')
+    turn_line = f"{'🟢' if is_my_turn else '🔴'} {turn_text}"
+
+    remaining = turn_seconds_left(game)
+    if remaining is not None:
+        turn_line += " · " + replace_placeholders(
+            get_translation(lang, 'text_turn_timer'),
+            format_time_remaining(remaining)
+        )
+    lines.append(turn_line)
+
+    return "\n".join(lines)
+
+
+async def player_profiles(game: MultiplayerGame) -> Dict[int, tuple]:
+    """Имя и язык каждого игрока — один запрос на игрока за перерисовку"""
+    profiles = {}
+    for uid in (game.player1_id, game.player2_id):
+        if uid:
+            u = await db.get_user(uid)
+            profiles[uid] = (display_name(u, uid), (u.language_code if u else 'en') or 'en')
+    return profiles
+
+
 def render_own_board(own_board: list) -> Board:
     """Отображение своей доски: раненые клетки — 💢, потопленные — 💥.
     В сохранённой доске попадания уже записаны как BANG, промахи — как MISS."""
@@ -418,13 +575,25 @@ async def finish_mp_game(game: MultiplayerGame, winner_id: int,
     await db.update_multiplayer_game(game)
     cancel_turn_timer(game.game_id)
 
+    game_type = 'mp_full' if game.ship_set == 'full' else 'mp_reduced'
+
+    # Каждый шаг изолирован: сбой статистики или рейтинга не должен
+    # оставить игроков без уведомления о результате партии
     if loser_id:
-        await db.update_multiplayer_stats(winner_id, loser_id)
+        try:
+            await db.update_multiplayer_stats(winner_id, loser_id)
+        except Exception as e:
+            logger.error(f"Error updating multiplayer stats: {e}")
+
+    ratings = {}
+    if loser_id:
+        try:
+            ratings = await db.apply_match_result(winner_id, loser_id, game_type)
+        except Exception as e:
+            logger.error(f"Error applying rating for game {game.game_id}: {e}")
 
     bf = ButtonFactory()
     kb = KeyboardBuilder(bf)
-
-    game_type = 'mp_full' if game.ship_set == 'full' else 'mp_reduced'
 
     for uid, key in ((winner_id, winner_key), (loser_id, loser_key)):
         if not uid:
@@ -433,15 +602,17 @@ async def finish_mp_game(game: MultiplayerGame, winner_id: int,
         lang = u.language_code if u else 'en'
         num = game.get_player_number(uid)
 
-        # Записываем результат в лидерборд мультиплеера
-        if u:
-            name = u.leaderboard_name or u.first_name or str(uid)
-            try:
-                await db.add_leaderboard_entry(uid, name, game.get_score(num), game_type)
-            except Exception as e:
-                logger.error(f"Error adding mp leaderboard entry for {uid}: {e}")
-
         text = replace_placeholders(get_translation(lang, key), game.get_score(num))
+
+        rating = ratings.get(uid)
+        if rating:
+            delta = rating['delta']
+            text += "\n" + replace_placeholders(
+                get_translation(lang, 'text_rating_change'),
+                rating['rating'],
+                f"{delta:+d}"
+            )
+
         try:
             await bot.send_message(uid, text, reply_markup=kb.create_main_keyboard(lang))
         except Exception as e:
@@ -1031,9 +1202,14 @@ async def handle_multiplayer_join(message: types.Message, db_user: User, game_id
         ship_set = game_data.get('ship_set', 'full') if isinstance(game_data, dict) else 'full'
     ships = SHIPS if ship_set == 'full' else SHIPS_REDUCED
 
+    # Имена обеих сторон: кто приглашал (host) и кто подключился (joiner)
+    host_user = await db.get_user(game.player1_id)
+    host_name = display_name(host_user, game.player1_id)
+    joiner_name = display_name(db_user, user_id)
+
     # Уведомляем первого игрока и начинаем расстановку
     try:
-        p1_lang = (await db.get_user(game.player1_id)).language_code or 'en'
+        p1_lang = host_user.language_code if host_user else 'en'
 
         if game.placement_mode == 'manual':
             # Ручная расстановка для первого игрока
@@ -1042,7 +1218,9 @@ async def handle_multiplayer_join(message: types.Message, db_user: User, game_id
 
             await bot.send_message(
                 chat_id=game.player1_id,
-                text=get_translation(p1_lang, 'text_opponent_joined_placement'),
+                text=replace_placeholders(
+                    get_translation(p1_lang, 'text_opponent_joined_placement'),
+                    html.escape(joiner_name)),
                 parse_mode='HTML'
             )
             # Отправляем поле для расстановки
@@ -1050,7 +1228,9 @@ async def handle_multiplayer_join(message: types.Message, db_user: User, game_id
         else:
             await bot.send_message(
                 chat_id=game.player1_id,
-                text=get_translation(p1_lang, 'text_opponent_joined')
+                text=replace_placeholders(
+                    get_translation(p1_lang, 'text_opponent_joined'),
+                    joiner_name)
             )
     except Exception as e:
         logger.error(f"Error notifying player 1: {e}")
@@ -1061,13 +1241,16 @@ async def handle_multiplayer_join(message: types.Message, db_user: User, game_id
         placement_data[user_id] = p2_placement
 
         await message.answer(
-            get_translation(language_code, 'text_you_joined_placement'),
+            replace_placeholders(
+                get_translation(language_code, 'text_you_joined_placement'),
+                html.escape(host_name)),
             parse_mode='HTML'
         )
         await _send_new_placement_message(user_id, language_code, p2_placement)
     else:
         # Автоматическая расстановка - генерируем доски и начинаем игру
-        await message.answer(get_translation(language_code, 'text_you_joined'))
+        await message.answer(replace_placeholders(
+            get_translation(language_code, 'text_you_joined'), host_name))
         
         # Генерируем доски для обоих игроков
         # Доска для первого игрока
@@ -1238,7 +1421,7 @@ async def handle_mp_fix_ship(callback: types.CallbackQuery, state: FSMContext):
 
     placement = placement_data.get(user_id)
     if not placement:
-        await callback.answer("Error")
+        await callback.answer(get_translation(language_code, 'error_generic'))
         return
 
     current = placement.get_current_ship()
@@ -1263,7 +1446,7 @@ async def handle_mp_placement_click(callback: types.CallbackQuery, state: FSMCon
 
     placement = placement_data.get(user_id)
     if not placement:
-        await callback.answer("Error: placement not found")
+        await callback.answer(get_translation(language_code, 'error_placement_not_found'))
         return
 
     # Запрещённые и уже занятые клетки — игнорируем
@@ -1352,7 +1535,7 @@ async def handle_mp_ready(callback: types.CallbackQuery, state: FSMContext):
         # Теперь чистим placement
         if user_id in placement_data:
             del placement_data[user_id]
-        await callback.answer("Error: no game")
+        await callback.answer(get_translation(language_code, 'error_no_game'))
         return
 
     # Получаем игру из БД для определения номера игрока
@@ -1422,9 +1605,10 @@ async def start_mp_game(message: types.Message, game_id: int, user_id: int,
     active_games[game.player2_id] = game
 
     # Отправляем обоим игрокам
+    profiles = await player_profiles(game)
+
     for uid in [game.player1_id, game.player2_id]:
-        db_user = await db.get_user(uid)
-        lang = db_user.language_code if db_user else 'en'
+        lang = profiles.get(uid, ('', 'en'))[1]
         player_num = game.get_player_number(uid)
 
         # Своя доска (попадания и промахи уже записаны в неё)
@@ -1435,13 +1619,12 @@ async def start_mp_game(message: types.Message, game_id: int, user_id: int,
         kb = KeyboardBuilder(bf)
         own_kbd = kb.create_sea_fight_keyboard(display_board, callback_prefix='mpown')
 
-        is_my_turn = uid == game.current_turn
-        turn_text = get_translation(lang, 'text_your_turn') if is_my_turn else get_translation(lang, 'text_opponent_turn')
+        header = build_board_header(game, uid, lang, profiles)
         own_label = get_translation(lang, 'text_own_ships_field')
 
         own_msg = await bot.send_message(
             chat_id=uid,
-            text=f"{'🟢' if is_my_turn else '🔴'} {turn_text}\n\n{own_label}",
+            text=f"{header}\n\n{own_label}",
             reply_markup=own_kbd
         )
 
@@ -1455,7 +1638,7 @@ async def start_mp_game(message: types.Message, game_id: int, user_id: int,
 
         attack_msg = await bot.send_message(
             chat_id=uid,
-            text=f"{'🟢' if is_my_turn else '🔴'} {turn_text}\n\n{attack_label}",
+            text=f"{header}\n\n{attack_label}",
             reply_markup=attack_kbd
         )
 
@@ -1494,10 +1677,10 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
                 if user_id not in game_messages or (opponent_id and opponent_id not in game_messages):
                     await start_mp_game(callback.message, game.game_id, user_id, resume=True)
             else:
-                await callback.answer("Game is no longer active")
+                await callback.answer(get_translation(language_code, 'error_game_not_active'))
                 return
         else:
-            await callback.answer("No active game")
+            await callback.answer(get_translation(language_code, 'error_no_active_game'))
             return
 
     if game.current_turn != user_id:
@@ -1519,6 +1702,7 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
             return
 
     # Проверяем попадание
+    ship_cells = set()
     if enemy_board[y][x] == SHIP:
         # Помечаем попадание как BANG
         enemy_board[y][x] = BANG
@@ -1541,8 +1725,11 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
         result = 'miss'
         enemy_board[y][x] = MISS
 
-    # Сохраняем атаку
-    my_attacks.append({'x': x, 'y': y, 'result': result})
+    # Сохраняем атаку. seq — сквозной номер хода в партии: по нему шапка доски
+    # выстраивает ходы обоих игроков в хронологическом порядке
+    enemy_attacks = json.loads(game.get_attacks(enemy_num))
+    my_attacks.append({'x': x, 'y': y, 'result': result,
+                       'seq': len(my_attacks) + len(enemy_attacks)})
 
     # Обновляем игру
     if player_num == 1:
@@ -1552,9 +1739,11 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
         game.attacks2 = json.dumps(my_attacks)
         game.board1 = json.dumps(enemy_board)
 
-    # Переключаем ход
+    # Переключаем ход. turn_start_time нужен, чтобы таймер в шапке доски
+    # показывал время, оставшееся именно на текущий ход
     game.current_turn = game.get_opponent_id(user_id)
     game.last_move_time = datetime.now()
+    game.turn_start_time = datetime.now()
 
     await db.update_multiplayer_game(game)
     active_games[game.player1_id] = game
@@ -1571,35 +1760,58 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
             break
 
     if all_sunk:
-        # Показываем финальное состояние досок и завершаем игру
+        # Последний корабль: доигрываем анимацию и только затем объявляем итог.
+        # Фоновой задачей, чтобы не задерживать ответ на нажатие
+        cancel_turn_timer(game.game_id)
         await update_mp_boards(game)
-        await finish_mp_game(game, user_id)
-        await callback.answer('💥 Sunk!')
+        asyncio.create_task(_animate_then_finish(game, ship_cells, player_num, user_id))
+        await callback.answer(get_translation(language_code, 'text_killed'))
         return
 
     await update_mp_boards(game)
     start_turn_timer(game)
+
     if result == 'sunk':
-        await callback.answer('💥 Sunk!')
+        # Анимация фоном — ходы при этом не блокируются
+        asyncio.create_task(animate_mp_sunk(game, ship_cells, player_num))
+        await callback.answer(get_translation(language_code, 'text_killed'))
     elif result == 'hit':
-        await callback.answer('💢 Hit!')
+        await callback.answer(get_translation(language_code, 'text_damaged'))
     else:
-        await callback.answer('💨 Miss!')
+        await callback.answer(get_translation(language_code, 'text_miss'))
 
 
-async def update_mp_boards(game: MultiplayerGame):
-    """Обновить доски обоих игроков после хода"""
+async def _animate_then_finish(game: MultiplayerGame, ship_cells: set,
+                               attacker_num: int, winner_id: int):
+    """Проиграть анимацию последнего потопления и завершить игру"""
+    try:
+        await animate_mp_sunk(game, ship_cells, attacker_num)
+    except Exception as e:
+        logger.error(f"Error animating final ship in game {game.game_id}: {e}")
+    finally:
+        await finish_mp_game(game, winner_id)
+
+
+async def update_mp_boards(game: MultiplayerGame, highlight: Optional[tuple] = None,
+                           profiles: Optional[Dict[int, tuple]] = None):
+    """Обновить доски обоих игроков.
+
+    highlight — (клетки, символ) для кадра анимации потопления: эти клетки
+    временно рисуются указанным символом на обеих досках.
+    """
+    if profiles is None:
+        profiles = await player_profiles(game)
+
+    cells, symbol = highlight if highlight else (set(), None)
+
     for uid in [game.player1_id, game.player2_id]:
-        db_user = await db.get_user(uid)
-        lang = db_user.language_code if db_user else 'en'
+        lang = profiles.get(uid, ('', 'en'))[1]
         player_num = game.get_player_number(uid)
 
         msgs = game_messages.get(uid)
         if not msgs:
             continue
 
-        is_my_turn = uid == game.current_turn
-        turn_text = get_translation(lang, 'text_your_turn') if is_my_turn else get_translation(lang, 'text_opponent_turn')
         own_label = get_translation(lang, 'text_own_ships_field')
         attack_label = get_translation(lang, 'text_attack_field')
 
@@ -1611,6 +1823,16 @@ async def update_mp_boards(game: MultiplayerGame):
         my_attacks = json.loads(game.get_attacks(player_num))
         display_attack = render_attack_board(my_attacks)
 
+        # Кадр анимации: подсвечиваем клетки потопленного корабля на обеих досках
+        if symbol:
+            for (cx, cy) in cells:
+                if display_own.board[cy][cx] in (BANG, BIGBANG):
+                    display_own.board[cy][cx] = symbol
+                if display_attack.board[cy][cx] in (BANG, BIGBANG):
+                    display_attack.board[cy][cx] = symbol
+
+        header = build_board_header(game, uid, lang, profiles)
+
         bf = ButtonFactory()
         kb = KeyboardBuilder(bf)
 
@@ -1619,7 +1841,7 @@ async def update_mp_boards(game: MultiplayerGame):
             await bot.edit_message_text(
                 chat_id=uid,
                 message_id=msgs['own'],
-                text=f"{'🟢' if is_my_turn else '🔴'} {turn_text}\n\n{own_label}",
+                text=f"{header}\n\n{own_label}",
                 reply_markup=own_kbd
             )
         except Exception as e:
@@ -1630,11 +1852,54 @@ async def update_mp_boards(game: MultiplayerGame):
             await bot.edit_message_text(
                 chat_id=uid,
                 message_id=msgs['enemy'],
-                text=f"{'🟢' if is_my_turn else '🔴'} {turn_text}\n\n{attack_label}",
+                text=f"{header}\n\n{attack_label}",
                 reply_markup=attack_kbd
             )
         except Exception as e:
             logger.error(f"Error updating attack board for {uid}: {e}")
+
+
+async def animate_mp_sunk(game: MultiplayerGame, ship_cells: set,
+                          attacker_num: int, blinks: int = 3):
+    """Мигание потопленным кораблём у обоих игроков.
+
+    Запускается фоновой задачей и не задерживает ходы: если за время анимации
+    кто-то успел сходить или игра закончилась, оставшиеся кадры пропускаются —
+    доску дорисует обычный update_mp_boards.
+    """
+    if not ship_cells:
+        return
+
+    game_id = game.game_id
+    baseline = len(json.loads(game.get_attacks(attacker_num)))
+    profiles = await player_profiles(game)
+
+    def state_changed() -> bool:
+        current = active_games.get(game.player1_id)
+        if not current or current.game_id != game_id:
+            return True
+        if current.status not in ('active', 'finished'):
+            return True
+        return len(json.loads(current.get_attacks(attacker_num))) != baseline
+
+    try:
+        for _ in range(blinks):
+            for symbol in (BIGBANG, BANG):
+                if state_changed():
+                    return
+                await update_mp_boards(game, highlight=(ship_cells, symbol), profiles=profiles)
+                await asyncio.sleep(DELAY)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        logger.error(f"Error animating sunk ship in game {game_id}: {e}")
+    finally:
+        # Возвращаем достоверное состояние доски
+        if not state_changed():
+            try:
+                await update_mp_boards(game, profiles=profiles)
+            except Exception as e:
+                logger.error(f"Error restoring boards after animation: {e}")
 
 
 # ==================== SINGLE-PLAYER FIRE ====================
@@ -1747,27 +2012,28 @@ async def handle_fire(callback: types.CallbackQuery, state: FSMContext):
             parse_mode='HTML'
         )
 
-        # Определяем game_type для лидерборда
+        # Сразу записываем результат: имя берётся из профиля Telegram
         game_type = 'solo_full' if ship_set == 'full' else 'solo_reduced'
         game_data['game_type'] = game_type
 
-        # Запрашиваем имя для лидерборда
         db_user = await db.get_user(user_id)
-        name_kbd = keyboard_builder.create_name_keyboard(language_code, db_user.to_dict())
+        name = display_name(db_user, user_id)
+        try:
+            position = await db.add_leaderboard_entry(user_id, name, score, game_type)
+            added_text = replace_placeholders(
+                get_translation(language_code, 'text_leaderboard_added'),
+                html.escape(name), position, score
+            )
+        except Exception as e:
+            logger.error(f"Error adding solo leaderboard entry for {user_id}: {e}")
+            added_text = get_translation(language_code, 'error_generic')
 
-        if not db_user.leaderboard_name:
-            await bot.send_message(
-                chat_id=user_id,
-                text=get_translation(language_code, 'text_need_your_name'),
-                reply_markup=name_kbd
-            )
-            game_data['operation'] = 'waiting_for_name'
-        else:
-            await bot.send_message(
-                chat_id=user_id,
-                text=get_translation(language_code, 'text_leaderboard_adding'),
-                reply_markup=name_kbd
-            )
+        await bot.send_message(
+            chat_id=user_id,
+            text=added_text,
+            parse_mode='HTML',
+            reply_markup=keyboard_builder.create_main_keyboard(language_code)
+        )
     else:
         text += f"\n{get_translation(language_code, 'text_score')}: {score}"
         try:
@@ -1782,121 +2048,7 @@ async def handle_fire(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# ==================== NAME / LEADERBOARD ====================
-
-
-@dp.callback_query(F.data.startswith('name_'))
-async def handle_name(callback: types.CallbackQuery, state: FSMContext):
-    """Обработка выбора имени для лидерборда"""
-    user = callback.from_user
-    user_id = user.id
-
-    if user_id not in user_games:
-        await callback.answer()
-        return
-
-    game_data = user_games[user_id]
-    score = game_data.get('score', 0)
-    game_type = game_data.get('game_type', 'solo_full')
-    language_code = user.language_code or 'en'
-    chat_id = callback.message.chat.id
-    message_id = callback.message.message_id
-
-    button_factory = ButtonFactory()
-    keyboard_builder = KeyboardBuilder(button_factory)
-
-    data = callback.data.split('_')
-
-    if data[1] == 'tg':
-        db_user = await db.get_user(user_id)
-        name = db_user.first_name
-        if not name or not db.is_safe_leaderboard_name(name):
-            # Имя из Telegram содержит недопустимые символы — просим прислать другое
-            await bot.send_message(
-                chat_id=user_id,
-                text=get_translation(language_code, 'text_send_your_name')
-            )
-            game_data['operation'] = 'waiting_for_name'
-            await callback.answer()
-            return
-        game_data['operation'] = ''
-        position = await db.add_leaderboard_entry(user_id, name, score, game_type)
-
-        text = get_translation(language_code, 'text_leaderboard_added')
-        text = replace_placeholders(text, name, position, score)
-        new_kbd = keyboard_builder.create_main_keyboard(language_code)
-
-        try:
-            await bot.delete_message(chat_id=user_id, message_id=message_id)
-        except Exception:
-            pass
-
-        await bot.send_message(chat_id=user_id, text=text, reply_markup=new_kbd)
-
-    elif data[1] == 'lastused':
-        db_user = await db.get_user(user_id)
-        name = db_user.leaderboard_name
-        if not name:
-            await bot.send_message(
-                chat_id=user_id,
-                text=get_translation(language_code, 'text_send_your_name')
-            )
-            game_data['operation'] = 'waiting_for_name'
-            await callback.answer()
-            return
-        game_data['operation'] = ''
-        position = await db.add_leaderboard_entry(user_id, name, score, game_type)
-
-        text = get_translation(language_code, 'text_leaderboard_added')
-        text = replace_placeholders(text, name, position, score)
-        new_kbd = keyboard_builder.create_main_keyboard(language_code)
-
-        try:
-            await bot.delete_message(chat_id=user_id, message_id=message_id)
-        except Exception:
-            pass
-
-        await bot.send_message(chat_id=user_id, text=text, reply_markup=new_kbd)
-
-    elif data[1] == 'new':
-        await bot.send_message(
-            chat_id=user_id,
-            text=get_translation(language_code, 'text_send_your_name')
-        )
-        game_data['operation'] = 'waiting_for_name'
-
-    await callback.answer()
-
-
-@dp.callback_query(F.data == 'leaderboard_skip')
-async def handle_leaderboard_skip(callback: types.CallbackQuery, state: FSMContext):
-    """Пропустить добавление в лидерборд"""
-    user_id = callback.from_user.id
-    language_code = callback.from_user.language_code or 'en'
-    chat_id = callback.message.chat.id
-    message_id = callback.message.message_id
-
-    if user_id not in user_games:
-        await callback.answer()
-        return
-
-    game_data = user_games[user_id]
-    score = game_data.get('score', 0)
-
-    button_factory = ButtonFactory()
-    keyboard_builder = KeyboardBuilder(button_factory)
-    new_kbd = keyboard_builder.create_main_keyboard(language_code)
-
-    try:
-        await edit_message_safe(
-            callback.message,
-            f"{get_translation(language_code, 'text_you_won')}: {score}",
-            reply_markup=new_kbd
-        )
-    except Exception:
-        pass
-
-    await callback.answer()
+# ==================== LEADERBOARD ====================
 
 
 @dp.callback_query(F.data == 'leaderboard_show')
@@ -1921,33 +2073,43 @@ async def handle_leaderboard_type(callback: types.CallbackQuery, state: FSMConte
     """Показать конкретный лидерборд"""
     language_code = callback.from_user.language_code or 'en'
 
-    game_type = callback.data.replace('lb_type_', '')  # 'solo_full', 'solo_reduced', 'mp_full'
+    game_type = callback.data.replace('lb_type_', '')  # solo_full, solo_reduced, mp_full, mp_reduced
 
-    top = await db.get_top_leaderboard(game_type=game_type)
+    # Метка набора берётся из тех же ключей, что и кнопки выбора таблицы
+    type_label = get_translation(language_code, f'leaderboard_{game_type}')
+    is_rating = game_type.startswith('mp_')
 
-    # Заголовок с типом
-    type_labels = {
-        'solo_full': '🎖️ Solo (full set)',
-        'solo_reduced': '🎖️ Solo (reduced)',
-        'mp_full': '⚔️ Multiplayer (full set)',
-        'mp_reduced': '⚔️ Multiplayer (reduced set)',
-    }
-    type_label = type_labels.get(game_type, game_type)
     text = replace_placeholders(
-        get_translation(language_code, 'leaderboard_type_label'),
-        type_label
+        get_translation(language_code, 'rating_type_label' if is_rating else 'leaderboard_type_label'),
+        html.escape(type_label)
     )
 
-    for position, entry in enumerate(top, start=1):
-        text += f"\n{position}. {entry['name']} [{entry['score']}]"
+    if is_rating:
+        # Мультиплеер — рейтинг игроков, одна строка на игрока
+        rows = await db.get_top_ratings(game_type)
+        for position, entry in enumerate(rows, start=1):
+            name = format_player_name(entry['username'], entry['first_name'],
+                                      entry['user_id'])
+            text += (f"\n{position}. {html.escape(name)} — {entry['rating']} "
+                     f"({entry['games_won']}/{entry['games_lost']})")
+    else:
+        # Одиночная игра — лучший результат каждого игрока и его дата
+        rows = await db.get_top_leaderboard(game_type=game_type)
+        for position, entry in enumerate(rows, start=1):
+            played = entry['created_at'].strftime('%d.%m.%Y') if entry.get('created_at') else ''
+            # lstrip — на случай записей, сохранённых когда имена писались с «@»
+            name = (entry['name'] or '').lstrip('@')
+            text += f"\n{position}. {html.escape(name)} [{entry['score']}]"
+            if played:
+                text += f" · {played}"
 
-    if not top:
+    if not rows:
         text += "\n—"
 
     # Кнопка назад к выбору типа + возврат в главное меню
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="← Back" if language_code == 'en' else "← Назад",
+            text=get_translation(language_code, 'btn_back'),
             callback_data='leaderboard_show'
         )],
         [InlineKeyboardButton(
@@ -1957,47 +2119,12 @@ async def handle_leaderboard_type(callback: types.CallbackQuery, state: FSMConte
     ])
 
     try:
-        await edit_message_safe(callback.message, text, reply_markup=markup)
+        await edit_message_safe(callback.message, text, reply_markup=markup,
+                                parse_mode='HTML')
     except Exception:
         pass
 
     await callback.answer()
-
-
-@dp.message(F.text)
-async def handle_text_message(message: types.Message, state: FSMContext):
-    """Обработка текстовых сообщений (для ввода имени)"""
-    user = message.from_user
-    user_id = user.id
-
-    if user_id not in user_games:
-        return
-
-    game_data = user_games[user_id]
-    operation = game_data.get('operation', '')
-
-    if operation == 'waiting_for_name':
-        name = message.text[:50]
-
-        if not db.is_safe_leaderboard_name(name):
-            await message.answer(
-                get_translation(user.language_code or 'en', 'error_text_leaderboard_name')
-            )
-            return
-
-        # Обновляем имя в БД
-        await db.update_leaderboard_name(user_id, name)
-
-        # Добавляем в лидерборд с game_type
-        score = game_data.get('score', 0)
-        game_type = game_data.get('game_type', 'solo_full')
-        position = await db.add_leaderboard_entry(user_id, name, score, game_type)
-
-        text = get_translation(user.language_code or 'en', 'text_leaderboard_added')
-        text = replace_placeholders(text, name, position, score)
-        await message.answer(text)
-
-        game_data['operation'] = ''
 
 
 async def main():
