@@ -223,8 +223,20 @@ psql -U seafight_user -d seafight_bot
 # Просмотр пользователей
 SELECT * FROM users LIMIT 10;
 
-# Просмотр лидерборда (по типу игры: solo_full, solo_reduced, mp_full, mp_reduced)
+# Результаты одиночных партий (game_type: solo_full, solo_reduced)
 SELECT * FROM leaderboard WHERE game_type = 'solo_full' ORDER BY score DESC LIMIT 10;
+
+# Таблица рекордов одиночной игры так, как её видит игрок:
+# лучший результат каждого, при равных очках выше более свежий
+SELECT * FROM (
+    SELECT DISTINCT ON (user_id) user_id, name, score, created_at
+    FROM leaderboard WHERE game_type = 'solo_full'
+    ORDER BY user_id, score DESC, created_at DESC
+) t ORDER BY score DESC, created_at DESC LIMIT 10;
+
+# Рейтинг мультиплеера (game_type: mp_full, mp_reduced)
+SELECT user_id, rating, games_won, games_lost FROM player_ratings
+WHERE game_type = 'mp_full' ORDER BY rating DESC LIMIT 10;
 
 # Активные мультиплеерные игры
 SELECT game_id, player1_id, player2_id, status, time_limit_seconds
