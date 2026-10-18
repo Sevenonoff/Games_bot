@@ -53,3 +53,7 @@ games_bot_config.py
 # OS
 .DS_Store
 Thumbs.db
+
+# Max bot
+logs/
+max_bot/data/
