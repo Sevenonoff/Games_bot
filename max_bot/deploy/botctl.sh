@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Управление ботом Max на сервере: start | stop | restart | status.
 # start идемпотентен (flock), поэтому им же пользуется cron-сторож:
-#   * * * * * ~/games_bot/max_bot/deploy/botctl.sh start
+#   * * * * * ~/games_bot/max_bot/deploy/botctl.sh start cron
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -18,10 +18,16 @@ is_running() { pgrep -u "$(id -u)" -f "$PATTERN" >/dev/null; }
 start() {
     if is_running; then return 0; fi
     cd "$APP_DIR"
-    # flock -n: если бот уже держит lock, второй экземпляр сразу выходит
-    LOG_FILE="$LOG_DIR/max_bot.log" nohup flock -n "$LOCK" "$VENV/bin/python" -m max_bot.main >>"$OUT" 2>&1 &
-    sleep 2
-    if is_running; then echo "started"; else echo "failed, see $OUT"; tail -n 20 "$OUT"; return 1; fi
+    echo "$(date -Is) start (${1:-manual})" >>"$OUT"
+    # flock -n: если бот уже держит lock, второй экземпляр сразу выходит (и пишет об этом);
+    # setsid и stdin из /dev/null — чтобы процесс не зависел от ssh-сессии деплоя
+    LOG_FILE="$LOG_DIR/max_bot.log" setsid nohup flock -n -E 75 "$LOCK" "$VENV/bin/python" -m max_bot.main \
+        </dev/null >>"$OUT" 2>&1 &
+    for _ in $(seq 10); do
+        sleep 1
+        if is_running; then echo "started"; return 0; fi
+    done
+    echo "failed, see $OUT"; tail -n 20 "$OUT"; return 1
 }
 
 stop() {
@@ -42,9 +48,9 @@ status() {
 }
 
 case "${1:-status}" in
-    start) start ;;
+    start) start "${2:-}" ;;
     stop) stop ;;
-    restart) stop; start ;;
+    restart) stop; start "${2:-restart}" ;;
     status) status ;;
     *) echo "usage: $0 start|stop|restart|status"; exit 2 ;;
 esac

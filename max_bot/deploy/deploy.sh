@@ -39,10 +39,10 @@ chmod +x max_bot/deploy/botctl.sh
 mkdir -p max_bot/data logs
 CTL="\$HOME/$REMOTE_DIR/max_bot/deploy/botctl.sh"
 ( crontab -l 2>/dev/null | grep -v "$REMOTE_DIR/max_bot/deploy/botctl.sh" || true
-  echo "* * * * * \$CTL start >/dev/null 2>&1"
-  echo "@reboot \$CTL start >/dev/null 2>&1" ) | crontab -
+  echo "* * * * * \$CTL start cron >/dev/null 2>&1"
+  echo "@reboot \$CTL start reboot >/dev/null 2>&1" ) | crontab -
 log "crontab: watchdog + @reboot"
-max_bot/deploy/botctl.sh restart
+max_bot/deploy/botctl.sh restart deploy
 log "restart rev=$REV$DIRTY"
 max_bot/deploy/botctl.sh status
 EOF
