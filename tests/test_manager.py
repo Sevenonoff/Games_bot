@@ -7,6 +7,7 @@ from games_core.manager import Manager
 from games_core.progression import Progress
 from games_core.sessions import COUNTDOWN, GAMES, INPUT, REVIEW, Player
 from games_core.storage import Storage
+from sea_fight_aiogram.games_menu import tg_rows
 
 PLAYER = Player("max", 42, "Тестер", chat_id=7)
 
@@ -148,3 +149,4 @@ def test_game_screens_fit_limits(game, level):
     storage.save_result("max", 1, game, Progress(level=level, last_success_level=level), None, 0)
     s = GAMES[game]("abc", Player("max", 1, "x"), storage, random.Random(level), lambda: 1.0)
     s.screen().validate()
+    tg_rows(s.screen())     # и лимиты Telegram

@@ -49,10 +49,11 @@ async def step(rng, world, chats, log, skill) -> None:
     assert chat.note != t("note_stale"), "кнопка текущего экрана оказалась устаревшей"
 
 
-@pytest.mark.parametrize("seed", range(6))
-async def test_random_walk(seed):
+# в TG — настройки Manager из sea_fight_aiogram/games_menu.py; кнопки морского боя TG ядру незнакомы
+@pytest.mark.parametrize("seed, platform", [(s, "max") for s in range(6)] + [(s, "tg") for s in range(2)])
+async def test_random_walk(seed, platform):
     rng = random.Random(seed)
-    world = World(seed=seed, debug_users={ADMIN})
+    world = World(seed=seed, debug_users={ADMIN}, platform=platform)
     chats = [world.chat(ADMIN, "Админ"), world.chat(2, "Игрок")]
     log = deque(maxlen=25)
     finished_games, max_level, skill = set(), 1, {}

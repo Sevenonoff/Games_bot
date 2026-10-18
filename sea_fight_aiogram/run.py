@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import logging
 import sys
 from pathlib import Path
 
@@ -17,6 +18,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("\nБот остановлен")
-    except Exception as e:
-        print(f"Ошибка при запуске бота: {e}")
+    except Exception:
+        # в лог (LOG_FILE) с трассировкой; systemd перезапустит
+        logging.getLogger("run").exception("Ошибка при запуске бота")
         sys.exit(1)

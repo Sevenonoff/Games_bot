@@ -14,7 +14,7 @@ import random
 import secrets
 import time
 from collections import defaultdict
-from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
+from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Sequence, Set
 
 from . import debug
 from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
@@ -56,7 +56,9 @@ class Manager:
                  memo_close_seconds: float = MEMO_CLOSE_SECONDS,
                  review_seconds: float = REVIEW_SECONDS,
                  round_seconds: int = ROUND_SECONDS,
-                 debug_users: Iterable[int] = ()):
+                 debug_users: Iterable[int] = (),
+                 record_games: Sequence[str] = RECORD_GAMES,
+                 records_extra: Sequence[List[Button]] = ()):
         self.storage = storage
         self.platform = platform
         self.push = push
@@ -70,6 +72,9 @@ class Manager:
         self.review_seconds = review_seconds
         self.round_seconds = round_seconds
         self.debug_users = frozenset(debug_users)
+        # игры в меню рекордов; records_extra — ряды транспорта перед «Меню» (в TG — рекорды морского боя)
+        self.record_games = tuple(record_games)
+        self.records_extra = [list(row) for row in records_extra]
         self.round_overrides: Dict[int, int] = {}   # /dbg round: длина партии для одного игрока
         self.sessions: Dict[int, Session] = {}
         self.locks: Dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -130,7 +135,7 @@ class Manager:
             return Reply(self.sea_screen()), None
         if action == "rec":
             game = parts[1] if len(parts) > 1 else None
-            if game in RECORD_GAMES:
+            if game in self.record_games:
                 return Reply(self.records_screen(player, game)), None
             return Reply(self.records_menu()), None
         return Reply(self.menu_screen()), None
@@ -270,8 +275,8 @@ class Manager:
         ])
 
     def records_menu(self) -> Screen:
-        rows = [[Button(TITLES[g], data("rec", g))] for g in RECORD_GAMES]
-        return Screen(t("records_choose"), rows + [[Button(t("btn_menu"), "menu")]])
+        rows = [[Button(TITLES[g], data("rec", g))] for g in self.record_games]
+        return Screen(t("records_choose"), rows + self.records_extra + [[Button(t("btn_menu"), "menu")]])
 
     def records_screen(self, player: Player, game: str) -> Screen:
         top = self.storage.top(self.platform, game)

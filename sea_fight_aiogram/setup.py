@@ -12,7 +12,7 @@ with open("../requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="seafight-bot",
-    version="1.2.0",
+    version="1.3.0",
     author="Python_pars",
     description="Telegram бот 'Морской бой' на aiogram 3.x с PostgreSQL",
     long_description=long_description,

@@ -21,8 +21,8 @@ class KeyboardBuilder:
     def __init__(self, button_factory: ButtonFactory):
         self.button_factory = button_factory
 
-    def create_main_keyboard(self, language_code: str) -> InlineKeyboardMarkup:
-        """Создать главное меню"""
+    def create_sea_menu_keyboard(self, language_code: str) -> InlineKeyboardMarkup:
+        """Меню морского боя; главное меню со всеми играми — у games_core (callback 'menu')"""
         keyboard = [
             [self.button_factory.create_button(
                 'btn_single_game',
@@ -37,6 +37,11 @@ class KeyboardBuilder:
             [self.button_factory.create_button(
                 'btn_leaderboard',
                 'leaderboard_show',
+                language_code
+            )],
+            [self.button_factory.create_button(
+                'btn_main_menu',
+                'menu',
                 language_code
             )]
         ]

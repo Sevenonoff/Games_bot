@@ -1,16 +1,18 @@
 import asyncio
 import html
 import json
-import os
+import sys
+from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
+import logging.handlers
 
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
-from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from config import (BOT_TOKEN, ROWS, COLS, EMPTY, SHIP, BANG, BIGBANG, MISS,
                     AVAILABLE, BUILDING_SHIP, SHIPS, SHIPS_REDUCED, DELAY)
@@ -23,6 +25,16 @@ from utils.i18n import get_translation, replace_placeholders
 from keyboards import ButtonFactory, KeyboardBuilder
 from states import MultiplayerStates, SinglePlayerStates
 
+# Игры ядра (мемо, матрица, башня) — из корня репозитория. append, а не insert:
+# корень не должен перекрывать модули бота (config, database, utils)
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from games_core.manager import Manager  # noqa: E402
+from games_core.storage import Storage  # noqa: E402
+
+import config  # noqa: E402
+import games_tg  # noqa: E402
+from games_menu import format_player_name  # noqa: E402
+
 if not BOT_TOKEN:
     raise SystemExit("BOT_TOKEN не задан. Создайте файл .env по образцу .env.example")
 
@@ -31,12 +43,22 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
+# Настройка логирования: LOG_FILE — файл с ротацией, иначе stdout
+if config.LOG_FILE:
+    Path(config.LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
+    _log_handlers = [logging.handlers.RotatingFileHandler(
+        config.LOG_FILE, maxBytes=5_000_000, backupCount=3, encoding="utf-8")]
+else:
+    _log_handlers = [logging.StreamHandler(sys.stdout)]
+logging.basicConfig(level=logging.INFO, handlers=_log_handlers,
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # Инициализация базы данных
 db = Database()
+
+# Игры ядра: Manager создаётся в main()
+games_manager: Optional[Manager] = None
 
 # Хранилище игровых состояний пользователей
 user_games: Dict[int, Dict] = {}
@@ -76,45 +98,9 @@ async def edit_message_safe(message: types.Message, text: str, reply_markup=None
 
 
 async def send_main_menu(message: types.Message, user: User):
-    """Отправить главное меню"""
-    try:
-        image_path = os.path.join(os.path.dirname(__file__), 'img', 'seafight.jpg')
-
-        button_factory = ButtonFactory()
-        keyboard_builder = KeyboardBuilder(button_factory)
-        main_keyboard = keyboard_builder.create_main_keyboard(user.language_code)
-
-        # Проверяем, существует ли файл изображения
-        if os.path.exists(image_path):
-            try:
-                photo = FSInputFile(image_path)
-                await bot.send_photo(
-                    chat_id=user.user_id,
-                    photo=photo,
-                    parse_mode='HTML',
-                    caption=get_translation(user.language_code, 'text_start_msg'),
-                    reply_markup=main_keyboard
-                )
-            except Exception as e:
-                logger.error(f"Ошибка отправки фото: {e}")
-                # Если не удалось отправить фото, отправляем текст
-                await bot.send_message(
-                    chat_id=user.user_id,
-                    text=get_translation(user.language_code, 'text_start_msg'),
-                    parse_mode='HTML',
-                    reply_markup=main_keyboard
-                )
-        else:
-            # Если изображения нет, просто отправляем текст
-            await bot.send_message(
-                chat_id=user.user_id,
-                text=get_translation(user.language_code, 'text_start_msg'),
-                parse_mode='HTML',
-                reply_markup=main_keyboard
-            )
-    except Exception as e:
-        logger.error(f"Ошибка в send_main_menu: {e}")
-        raise
+    """Главное меню всех игр (games_core) новым сообщением"""
+    player = games_tg.make_player(user.user_id, user.username, user.first_name, user.user_id)
+    await games_tg.send_menu(games_manager, bot, player)
 
 
 async def send_game_field(chat_id: int, language_code: str, player_board: Any):
@@ -134,7 +120,7 @@ async def send_error_message(message: types.Message, user: User):
     """Отправить сообщение об ошибке"""
     button_factory = ButtonFactory()
     keyboard_builder = KeyboardBuilder(button_factory)
-    kbd = keyboard_builder.create_main_keyboard(user.language_code)
+    kbd = keyboard_builder.create_sea_menu_keyboard(user.language_code)
 
     await bot.send_message(
         chat_id=user.user_id,
@@ -235,7 +221,7 @@ async def start_placement_timer(chat_id: int, message_id: int, user_id: int, lan
             bf = ButtonFactory()
             kb = KeyboardBuilder(bf)
             try:
-                menu_kbd = kb.create_main_keyboard(language_code)
+                menu_kbd = kb.create_sea_menu_keyboard(language_code)
                 await bot.edit_message_text(
                     chat_id=chat_id,
                     message_id=message_id,
@@ -269,7 +255,7 @@ async def start_placement_timer(chat_id: int, message_id: int, user_id: int, lan
                             await bot.send_message(
                                 opponent_id,
                                 get_translation(opp_lang, 'text_cancelled'),
-                                reply_markup=kb.create_main_keyboard(opp_lang)
+                                reply_markup=kb.create_sea_menu_keyboard(opp_lang)
                             )
                         except Exception as e:
                             logger.error(f"Error notifying opponent about placement timeout: {e}")
@@ -417,17 +403,6 @@ async def _handle_turn_timeout(game_id: int, expected_turn: int, delay: int):
 
     await update_mp_boards(game)
     start_turn_timer(game)
-
-
-def format_player_name(username: Optional[str], first_name: Optional[str],
-                       user_id: int) -> str:
-    """Имя игрока для таблиц: username → имя из Telegram → числовой id.
-
-    Без «@» — иначе Telegram превращает ник в кликабельную ссылку на профиль.
-    """
-    if username:
-        return username.lstrip('@')
-    return first_name or str(user_id)
 
 
 def display_name(user: Optional[User], fallback_id: int = 0) -> str:
@@ -614,7 +589,7 @@ async def finish_mp_game(game: MultiplayerGame, winner_id: int,
             )
 
         try:
-            await bot.send_message(uid, text, reply_markup=kb.create_main_keyboard(lang))
+            await bot.send_message(uid, text, reply_markup=kb.create_sea_menu_keyboard(lang))
         except Exception as e:
             logger.error(f"Error notifying player {uid} about game end: {e}")
 
@@ -823,25 +798,23 @@ async def cmd_start(message: types.Message, state: FSMContext):
             pass
 
 
-@dp.callback_query(F.data.in_(['newgame', 'menu']))
+@dp.callback_query(F.data == 'sea_menu')
+async def handle_sea_menu(callback: types.CallbackQuery, state: FSMContext):
+    """Меню морского боя (из главного меню игр)"""
+    language_code = callback.from_user.language_code or 'en'
+    kb = KeyboardBuilder(ButtonFactory())
+    await edit_message_safe(
+        callback.message,
+        get_translation(language_code, 'text_start_msg'),
+        reply_markup=kb.create_sea_menu_keyboard(language_code)
+    )
+    await callback.answer()
+
+
+@dp.callback_query(F.data == 'newgame')
 async def handle_new_game(callback: types.CallbackQuery, state: FSMContext):
     """Начать новую игру — предлагаем выбрать набор кораблей"""
     logger.info(f"Received callback: {callback.data} from user {callback.from_user.id}")
-    if callback.data == 'menu':
-        user = callback.from_user
-        db_user = await db.get_user(user.id)
-        if not db_user:
-            db_user = User(
-                user_id=user.id,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                username=user.username,
-                language_code=user.language_code or 'en'
-            )
-        await send_main_menu(callback.message, db_user)
-        await callback.answer()
-        return
-
     user = callback.from_user
     user_id = user.id
     language_code = user.language_code or 'en'
@@ -1351,7 +1324,7 @@ async def handle_mp_surrender(callback: types.CallbackQuery, state: FSMContext):
             try:
                 bf = ButtonFactory()
                 kb = KeyboardBuilder(bf)
-                menu_kbd = kb.create_main_keyboard(opp_lang)
+                menu_kbd = kb.create_sea_menu_keyboard(opp_lang)
                 await bot.send_message(
                     opponent_id,
                     get_translation(opp_lang, 'text_cancelled'),
@@ -1921,7 +1894,7 @@ async def handle_fire(callback: types.CallbackQuery, state: FSMContext):
         await edit_message_safe(
             callback.message,
             get_translation(language_code, 'text_game_lost_restart'),
-            reply_markup=kb.create_main_keyboard(language_code)
+            reply_markup=kb.create_sea_menu_keyboard(language_code)
         )
         await callback.answer()
         return
@@ -2032,7 +2005,7 @@ async def handle_fire(callback: types.CallbackQuery, state: FSMContext):
             chat_id=user_id,
             text=added_text,
             parse_mode='HTML',
-            reply_markup=keyboard_builder.create_main_keyboard(language_code)
+            reply_markup=keyboard_builder.create_sea_menu_keyboard(language_code)
         )
     else:
         text += f"\n{get_translation(language_code, 'text_score')}: {score}"
@@ -2129,9 +2102,17 @@ async def handle_leaderboard_type(callback: types.CallbackQuery, state: FSMConte
 
 async def main():
     """Запуск бота"""
+    global games_manager
+
     # Подключаемся к базе данных
     await db.connect()
     await db.init_tables()
+
+    # Игры ядра: SQLite рядом с ботом; обработчики — после обработчиков морского боя
+    Path(config.GAMES_DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    games_storage = Storage(config.GAMES_DB_PATH)
+    games_manager = games_tg.build_manager(bot, games_storage)
+    games_tg.register(dp, bot, games_manager)
 
     # Восстанавливаем активные игры и их таймеры после рестарта
     try:
@@ -2144,11 +2125,14 @@ async def main():
     except Exception as e:
         logger.error(f"Error restoring active games: {e}")
 
-    print("Бот запущен...")
+    me = await bot.get_me()
+    logger.info("started as @%s (id %s), games db=%s", me.username, me.id, config.GAMES_DB_PATH)
 
     try:
         await dp.start_polling(bot)
     finally:
+        await games_manager.shutdown()
+        games_storage.close()
         await db.close()
 
 

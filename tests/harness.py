@@ -20,6 +20,7 @@ from games_core.sessions import GAMES, INPUT, Player, Session, TimedSession
 from games_core.storage import Storage
 from games_core.texts import t
 from games_core.ui import Button, Screen
+from sea_fight_aiogram import games_menu as tg
 
 Cell = Tuple[int, int]
 
@@ -218,15 +219,19 @@ class World:
     """Manager на виртуальном времени, общая БД и чаты игроков."""
 
     def __init__(self, seed: int = 1, round_seconds: int = 60, preview_seconds: float = 1.0,
-                 countdown_seconds: float = 2.0, tick_seconds: float = 5.0, debug_users=()):
+                 countdown_seconds: float = 2.0, tick_seconds: float = 5.0, debug_users=(),
+                 platform: str = "max"):
         self.time = VirtualTime()
         self.storage = Storage(":memory:")
         self.messenger = Messenger()
-        self.mgr = Manager(self.storage, "max", self.messenger.push, clock=self.time,
+        self.platform = platform
+        # в TG у Manager свои настройки меню рекордов (sea_fight_aiogram/games_menu.py)
+        options = tg.MANAGER_OPTIONS if platform == tg.PLATFORM else {}
+        self.mgr = Manager(self.storage, platform, self.messenger.push, clock=self.time,
                            rng=random.Random(seed), sleep=self.time.sleep,
                            preview_seconds=preview_seconds, countdown_seconds=countdown_seconds,
                            tick_seconds=tick_seconds, round_seconds=round_seconds,
-                           debug_users=debug_users)
+                           debug_users=debug_users, **options)
         self.errors: List[BaseException] = []   # исключения в таймерах, иначе они пропадут молча
         spawn = self.mgr._spawn
 
@@ -241,7 +246,7 @@ class World:
             self.errors.append(task.exception())
 
     def chat(self, user_id: int = 42, name: str = "Тестер") -> Chat:
-        return Chat(self.mgr, self.messenger, Player("max", user_id, name, chat_id=user_id))
+        return Chat(self.mgr, self.messenger, Player(self.platform, user_id, name, chat_id=user_id))
 
     def scores_count(self) -> int:
         return self.storage.conn.execute("SELECT COUNT(*) FROM scores").fetchone()[0]
@@ -274,7 +279,7 @@ async def win_round(world: "World", chat: Chat) -> Optional[str]:
 # --- инварианты: что должно быть верно на любом экране ---
 
 KNOWN_PAYLOAD = re.compile(
-    r"^(menu|sea|rec|noop|dbg(:\w+)*"
+    r"^(menu|sea|sea_rec|rec|noop|dbg(:\w+)*"
     rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"
     r"|q:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")
 
@@ -289,6 +294,7 @@ def check_screen(chat) -> None:
     assert buttons, "экран без кнопок — тупик"
     for b in buttons:
         assert KNOWN_PAYLOAD.match(b.data), f"кнопка {b.text!r} с неизвестным payload {b.data!r}"
+    tg.tg_rows(chat.screen)   # тот же экран уходит и в Telegram: его лимиты тоже соблюдены
     assert chat.text == t("menu") or any(b.data == "menu" or b.data.startswith("q:") for b in buttons), \
         "с экрана не уйти в меню"
     s = live(chat)

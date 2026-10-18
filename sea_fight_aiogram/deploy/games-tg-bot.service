@@ -1,0 +1,19 @@
+# Telegram-бот игр (@games_telegram_robot): мемо, матрица, башня (games_core) + морской бой.
+# User-юнит systemd (linger включён), sudo не нужен:
+#   cp deploy/games-tg-bot.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now games-tg-bot
+# Лог: ~/projects/Games_bot/logs/tg_bot.log; ошибки запуска — journalctl --user -u games-tg-bot
+[Unit]
+Description=Games Telegram bot (games_core + sea fight)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/Games_bot/sea_fight_aiogram
+ExecStart=%h/projects/Games_bot/sea_fight_aiogram/.venv/bin/python run.py
+Environment=LOG_FILE=%h/projects/Games_bot/logs/tg_bot.log
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,6 +1,13 @@
-# Sea Fight Bot - Aiogram + PostgreSQL
+# Games Bot (Telegram) - Aiogram + PostgreSQL + games_core
 
-Telegram бот "Морской бой" на aiogram 3.x с PostgreSQL базой данных.
+Telegram-бот игр @games_telegram_robot на aiogram 3.x. Главное меню — как у бота
+в Max: 🃏 Мемо · 🟦 Матрица памяти · 🔢 Башня чисел · 🚢 Морской бой · 🏆 Рекорды.
+
+- **Мемо, матрица, башня** — общее ядро `games_core` (корень репозитория), то же,
+  что у бота Max (`max_bot/`). Транспорт TG — `games_tg.py`, payload'ы и лимиты
+  клавиатуры — `games_menu.py`. Прогресс и рекорды — SQLite `data/games.db`
+  (`platform="tg"`). Тексты пока только на русском. Правила игр — `max_bot/README.md`.
+- **Морской бой** — свой, описан ниже: одиночная игра, игра с другом, Elo, PostgreSQL.
 
 ## 📋 Особенности
 
@@ -77,16 +84,41 @@ GRANT ALL PRIVILEGES ON DATABASE seafight_bot TO seafight_user;
 
 ### 4. Запуск бота
 
+Зависимости — в отдельном venv бота: aiogram 3.13 несовместим с maxapi из
+корневого `.venv`.
+
 ```bash
-python main.py
+python3 -m venv .venv
+.venv/bin/pip install -r ../requirements.txt
+.venv/bin/python run.py          # вручную
 ```
+
+Постоянно бот работает на 89.125.106.7 как user-сервис systemd (linger включён):
+
+```bash
+cp deploy/games-tg-bot.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now games-tg-bot
+systemctl --user status games-tg-bot     # restart / stop — так же
+tail -f ../logs/tg_bot.log               # лог, каждое нажатие в играх ядра — строка tap
+```
+
+Не запускайте вторую копию с тем же токеном: Telegram отдаст `Conflict`.
+`seafight-bot.service` и `*_bot.sh` (screen) устарели — используйте `deploy/games-tg-bot.service`.
+
+Тесты связки с aiogram: `.venv/bin/python -m pytest ../tests/test_tg_glue.py`
+(из корня репозитория: `sea_fight_aiogram/.venv/bin/python -m pytest tests/test_tg_glue.py`).
+Меню TG в сценариях — `tests/scenarios/tg_menu.scenario` (`Платформа: tg`).
 
 ## 📁 Структура проекта
 
 ```
 sea_fight_aiogram/
-├── main.py                    # Основной файл бота (одиночная игра + мультиплеер)
+├── main.py                    # Основной файл бота (морской бой: одиночная игра + мультиплеер)
+├── games_tg.py                # Игры ядра games_core: aiogram-транспорт для Manager
+├── games_menu.py              # Игры ядра: callback_data, лимиты Telegram, имя игрока (без aiogram)
 ├── run.py                     # Скрипт запуска
+├── deploy/games-tg-bot.service # user-юнит systemd
+├── data/games.db              # SQLite игр ядра (не в git)
 ├── config.py                  # Конфигурация (поле, символы, наборы кораблей)
 ├── states.py                  # FSM-состояния
 ├── .env.example               # Пример конфига
@@ -108,7 +140,11 @@ sea_fight_aiogram/
 
 ## 🎮 Управление ботом
 
-- `/start` — главное меню (или присоединение к игре по ссылке `?start=mp_КОД`)
+- `/start` или любое сообщение — главное меню игр (`/start mp_КОД` — присоединение к игре)
+- `/dbg …` — отладочные команды игр ядра для `DEBUG_USER_IDS` (см. `max_bot/README.md`)
+- **Мемо / Матрица памяти / Башня чисел** — игры ядра; **Рекорды** — их таблицы
+  и кнопка «Морской бой» к таблицам боя
+- **Морской бой** — меню боя:
 - **Одиночная игра** — кнопка в меню: выбор набора кораблей и бой
 - **Играть с другом** — кнопка в меню: выбор времени на ход, набора кораблей
   и режима расстановки, затем ссылка-приглашение для друга

@@ -45,6 +45,7 @@ class Scenario:
     name: str
     draft: bool = False
     admins: Set[str] = field(default_factory=set)
+    platform: str = "max"
     steps: List[Step] = field(default_factory=list)
     error: Optional[str] = None       # ошибка разбора: покажем при запуске, а не при сборе тестов
 
@@ -124,6 +125,10 @@ def parse(text: str, path: Path) -> List[Scenario]:
             current = Scenario(path, no, "(до первого «Сценарий:»)")
             current.error = f"строка {no}: шаг вне сценария — начните с «Сценарий: название»"
             scenarios.append(current)
+            continue
+        m = re.fullmatch(r"Платформа:\s*(max|tg)", line, re.IGNORECASE)
+        if m:
+            current.platform = m[1].lower()
             continue
         m = re.fullmatch(r"Админы?:\s*(.+)", line)
         if m:
@@ -289,7 +294,7 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
         raise ScenarioFailed(f"{sc.path.name}: {sc.error}")
     log = transcript if transcript is not None else []
     ids = {name: i for i, name in enumerate(sc.players, 1)}
-    world = World(debug_users={ids[a] for a in sc.admins})
+    world = World(debug_users={ids[a] for a in sc.admins}, platform=sc.platform)
     chats = {name: world.chat(uid, name) for name, uid in ids.items()}
     step = None
     try:
