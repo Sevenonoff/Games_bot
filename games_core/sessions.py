@@ -254,6 +254,8 @@ class MemoSession(Session):
         super().__init__(*args, **kwargs)
         self.board = memo.MemoBoard.generate(self.progress.level, self.rng)
         self.moves = 0
+        self.mismatch_id = 0              # номер несовпадения: таймер закрывает только «своё»
+        self.close_pending = False        # Manager ещё не запустил таймер закрытия
 
     def tap(self, r: int, c: int) -> Optional[str]:
         level = self.progress.level
@@ -263,6 +265,8 @@ class MemoSession(Session):
         self.moves += 1
         if result == memo.MISMATCH:
             self.combo = 0
+            self.mismatch_id += 1
+            self.close_pending = True
             if self.board.penalized:
                 points = memo_penalty(level)
                 self.score = max(0, self.score - points)

@@ -60,6 +60,13 @@ class MemoBoard:
     def is_visible(self, idx: int) -> bool:
         return idx in self.matched or idx in self.face_up
 
+    def close_mismatch(self) -> bool:
+        """Закрыть открытую несовпавшую пару. True — было что закрывать."""
+        if len(self.face_up) != 2:
+            return False
+        self.face_up = []
+        return True
+
     def tap(self, r: int, c: int) -> str:
         if not (0 <= r < self.rows and 0 <= c < self.cols):
             return IGNORED

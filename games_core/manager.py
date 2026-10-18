@@ -17,7 +17,7 @@ from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
 from . import debug
-from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, Player, Session, TimedSession
+from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, MemoSession, Player, Session, TimedSession
 from .storage import Storage
 from .texts import TITLES, t
 from .ui import Button, Reply, Screen, data
@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 PREVIEW_SECONDS = 1.0
 COUNTDOWN_SECONDS = 2.0   # «3, 2, 1» перед каждым показом
 TIMER_TICK_SECONDS = 5.0  # как часто обновлять таймер партии, если игрок не нажимает
+MEMO_CLOSE_SECONDS = 3.0  # несовпавшая пара в мемо закрывается сама (или раньше — нажатием)
 ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
 RECORD_GAMES = ("memo", "matrix", "tower", "sea_full", "sea_reduced")
@@ -51,6 +52,7 @@ class Manager:
                  preview_seconds: float = PREVIEW_SECONDS,
                  countdown_seconds: float = COUNTDOWN_SECONDS,
                  tick_seconds: float = TIMER_TICK_SECONDS,
+                 memo_close_seconds: float = MEMO_CLOSE_SECONDS,
                  round_seconds: int = ROUND_SECONDS,
                  debug_users: Iterable[int] = ()):
         self.storage = storage
@@ -62,6 +64,7 @@ class Manager:
         self.preview_seconds = preview_seconds
         self.countdown_seconds = countdown_seconds
         self.tick_seconds = tick_seconds
+        self.memo_close_seconds = memo_close_seconds
         self.round_seconds = round_seconds
         self.debug_users = frozenset(debug_users)
         self.round_overrides: Dict[int, int] = {}   # /dbg round: длина партии для одного игрока
@@ -151,10 +154,12 @@ class Manager:
     # --- таймеры ---
 
     def _schedule(self, uid: int, s: Session) -> None:
-        if not isinstance(s, TimedSession) or not s.round_pending:
-            return
-        s.round_pending = False
-        self._spawn(self._run_round(uid, s, s.round_id))
+        if isinstance(s, MemoSession) and s.close_pending:
+            s.close_pending = False
+            self._spawn(self._close_mismatch_later(uid, s, s.mismatch_id))
+        if isinstance(s, TimedSession) and s.round_pending:
+            s.round_pending = False
+            self._spawn(self._run_round(uid, s, s.round_id))
 
     def _spawn(self, coro) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -173,6 +178,15 @@ class Manager:
             change()
             await self._push(s, s.screen())
             return True
+
+    async def _close_mismatch_later(self, uid: int, s: MemoSession, mismatch_id: int) -> None:
+        """Закрыть несовпавшую пару, если игрок не закрыл её нажатием раньше."""
+        await self.sleep(self.memo_close_seconds)
+        async with self.locks[uid]:
+            if (self.sessions.get(uid) is not s or s.finished
+                    or s.mismatch_id != mismatch_id or not s.board.close_mismatch()):
+                return
+            await self._push(s, s.screen())
 
     async def _run_round(self, uid: int, s: TimedSession, round_id: int) -> None:
         """Отсчёт «3, 2, 1» → показ → ввод с ходом таймера до конца раунда или партии."""

@@ -76,6 +76,7 @@ STEP_PATTERNS = [
     (r"нет кнопки (.+)", "no_button"),
     (r"есть кнопка (.+)", "has_button"),
     (r"кнопки: (.+)", "buttons"),
+    (r"открыто клеток:? (\d+)", "open_cells"),
 ]
 
 
@@ -227,6 +228,15 @@ async def do_no_note(world: World, chat: Chat) -> None:
     assert chat.note is None, f"ждали нажатие без уведомления, было {chat.note!r}"
 
 
+CLOSED_CELLS = ("⬜", "🟨")   # закрытая карта / клетка без числа
+
+
+async def do_open_cells(world: World, chat: Chat, count: str) -> None:
+    cells = [b.text for b in chat.buttons if b.data.startswith("t:")]
+    opened = sum(1 for text in cells if text not in CLOSED_CELLS)
+    assert opened == int(count), f"открыто клеток: {opened}, ожидалось {count}; поле {cells}"
+
+
 async def do_has_button(world: World, chat: Chat, label: str) -> None:
     assert any(unquote(label) in x for x in labels(chat)), f"нет кнопки «{unquote(label)}»"
 
@@ -247,6 +257,7 @@ ACTIONS: Dict[str, Callable] = {
     "right": do_right, "right_until": do_right_until, "wrong": do_wrong, "win_round": do_win_round,
     "wait": do_wait, "see": do_see, "not_see": do_not_see, "note": do_note, "no_note": do_no_note,
     "has_button": do_has_button, "no_button": do_no_button, "buttons": do_buttons,
+    "open_cells": do_open_cells,
 }
 
 

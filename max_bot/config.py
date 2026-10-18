@@ -13,6 +13,7 @@ PREVIEW_SECONDS = float(os.getenv("PREVIEW_SECONDS", "1.0"))
 ROUND_SECONDS = int(os.getenv("ROUND_SECONDS", "60"))
 COUNTDOWN_SECONDS = float(os.getenv("COUNTDOWN_SECONDS", "2.0"))
 TIMER_TICK_SECONDS = float(os.getenv("TIMER_TICK_SECONDS", "5.0"))
+MEMO_CLOSE_SECONDS = float(os.getenv("MEMO_CLOSE_SECONDS", "3.0"))
 # кому доступны /dbg-команды: user_id через запятую; свой id бот покажет в ответ на /dbg
 DEBUG_USER_IDS = frozenset(int(x) for x in os.getenv("DEBUG_USER_IDS", "").replace(",", " ").split())
 

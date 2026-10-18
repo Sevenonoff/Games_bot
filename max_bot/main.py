@@ -100,6 +100,7 @@ def build(bot: Bot, storage: Storage) -> tuple[Dispatcher, Manager]:
     manager = Manager(storage, config.PLATFORM, push,
                       preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
                       countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
+                      memo_close_seconds=config.MEMO_CLOSE_SECONDS,
                       debug_users=config.DEBUG_USER_IDS)
 
     async def safe_handle(player: Player, payload: str, respond) -> None:
