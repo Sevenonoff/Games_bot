@@ -70,6 +70,7 @@ def callback_responder(event: MessageCallback, timing: dict):
     """respond для нажатий: ответ на callback и правка сообщения одним запросом."""
     async def respond(reply: Reply):
         timing["dispatched"] = time.monotonic()
+        timing["note"] = reply.note
         try:
             return await _respond(reply)
         finally:
@@ -134,9 +135,10 @@ def build(bot: Bot, storage: Storage) -> tuple[Dispatcher, Manager]:
         done = time.monotonic()
         dispatched = timing.get("dispatched", done)
         # wait — очередь за замком игрока (таймеры, предыдущие нажатия), api — ответ Max
-        logger.info("tap user=%s payload=%s age=%dms wait=%dms api=%dms",
+        logger.info("tap user=%s payload=%s age=%dms wait=%dms api=%dms note=%r",
                     event.callback.user.user_id, payload, age_ms,
-                    (dispatched - received) * 1000, (timing.get("answered", done) - dispatched) * 1000)
+                    (dispatched - received) * 1000, (timing.get("answered", done) - dispatched) * 1000,
+                    timing.get("note"))
 
     return dp, manager
 
