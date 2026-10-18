@@ -25,6 +25,17 @@ from . import config, webhook
 logger = logging.getLogger("max_bot")
 
 
+class SecretFilter(logging.Filter):
+    """Маскирует секрет вебхука в любой строке лога (maxapi пишет URL вебхука целиком)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if config.WEBHOOK_SECRET:
+            message = record.getMessage()
+            if config.WEBHOOK_SECRET in message:
+                record.msg, record.args = message.replace(config.WEBHOOK_SECRET, "***"), None
+        return True
+
+
 def setup_logging() -> None:
     if config.LOG_FILE:
         Path(config.LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
@@ -32,6 +43,8 @@ def setup_logging() -> None:
             config.LOG_FILE, maxBytes=5_000_000, backupCount=3, encoding="utf-8")]
     else:
         handlers = [logging.StreamHandler(sys.stdout)]
+    for handler in handlers:
+        handler.addFilter(SecretFilter())
     logging.basicConfig(level=logging.INFO, handlers=handlers,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 

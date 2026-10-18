@@ -21,6 +21,7 @@ services:
     volumes:
       - ../data:/app/max_bot/data
       - ../../logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro   # время в логе — как на сервере (МСК)
     networks:
       caddy:
         aliases: [games-bot]
