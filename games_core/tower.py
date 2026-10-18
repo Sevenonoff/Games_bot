@@ -1,11 +1,18 @@
-"""Башня чисел: числа на секунду появляются на поле, игрок открывает их по возрастанию."""
+"""Башня чисел: числа на секунду появляются на поле, игрок открывает их по возрастанию.
+
+Клетки без чисел неактивны: нажатие по ним ничего не делает.
+"""
+import math
 import random
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
 IGNORED, HIT, CLEARED, MISS = "ignored", "hit", "cleared", "miss"
 
-MAX_NUMBERS = 60
+FIELD_COLS = 7            # больше кнопок в ряду Max не принимает
+FIELD_ROWS_LIMIT = 14     # 15-й ряд — служебные кнопки
+DENSITY = 0.6             # доля клеток с числами на поле 7 × N
+MAX_NUMBERS = int(FIELD_COLS * FIELD_ROWS_LIMIT * DENSITY)   # 58
 
 # уровень: (сколько чисел, мин. старт, макс. старт, макс. шаг)
 TOWER_LEVELS = {
@@ -20,8 +27,8 @@ TOWER_LEVELS = {
 LATE_START_MAX = 50
 LATE_STEP_MAX = 3
 
-# (макс. чисел, сторона поля)
-FIELD_SIDES = ((6, 3), (10, 4), (15, 5), (21, 6), (29, 7), (38, 8), (48, 9), (MAX_NUMBERS, 10))
+# (макс. чисел, сторона квадратного поля); дальше поле 7 × N
+FIELD_SIDES = ((6, 3), (10, 4), (15, 5), (21, 6), (29, 7))
 
 Cell = Tuple[int, int]
 
@@ -32,11 +39,13 @@ def tower_params(level: int) -> Tuple[int, int, int, int]:
     return min(level - 1, MAX_NUMBERS), 1, LATE_START_MAX, LATE_STEP_MAX
 
 
-def field_side(count: int) -> int:
+def field_size(count: int) -> Tuple[int, int]:
+    """(rows, cols) поля под count чисел."""
     for max_count, side in FIELD_SIDES:
         if count <= max_count:
-            return side
-    return FIELD_SIDES[-1][1]
+            return side, side
+    rows = max(8, math.ceil(count / DENSITY / FIELD_COLS))
+    return min(rows, FIELD_ROWS_LIMIT), FIELD_COLS
 
 
 def make_numbers(level: int, rng: random.Random) -> List[int]:
@@ -51,44 +60,36 @@ def make_numbers(level: int, rng: random.Random) -> List[int]:
 
 @dataclass
 class TowerRound:
-    side: int
+    rows: int
+    cols: int
     numbers: List[int]                     # по возрастанию
     cells: Dict[Cell, int]                 # клетка -> число
     opened: int = 0                        # сколько чисел уже открыто
-    _by_number: Dict[int, Cell] = field(default_factory=dict, repr=False)
+    _order: Dict[Cell, int] = field(default_factory=dict, repr=False)
 
     def __post_init__(self):
-        self._by_number = {n: cell for cell, n in self.cells.items()}
+        self._order = {cell: self.numbers.index(n) for cell, n in self.cells.items()}
 
     @classmethod
     def generate(cls, level: int, rng: random.Random) -> "TowerRound":
         numbers = make_numbers(level, rng)
-        side = field_side(len(numbers))
-        all_cells = [(r, c) for r in range(side) for c in range(side)]
+        rows, cols = field_size(len(numbers))
+        all_cells = [(r, c) for r in range(rows) for c in range(cols)]
         places = rng.sample(all_cells, len(numbers))
-        return cls(side, numbers, dict(zip(places, numbers)))
-
-    @property
-    def rows(self) -> int:
-        return self.side
-
-    @property
-    def cols(self) -> int:
-        return self.side
+        return cls(rows, cols, numbers, dict(zip(places, numbers)))
 
     @property
     def size(self) -> int:
         return len(self.numbers)
 
     def is_opened(self, cell: Cell) -> bool:
-        n = self.cells.get(cell)
-        return n is not None and self.numbers.index(n) < self.opened
+        return self._order.get(cell, len(self.numbers)) < self.opened
 
     def tap(self, r: int, c: int) -> str:
         cell = (r, c)
-        if not (0 <= r < self.side and 0 <= c < self.side) or self.is_opened(cell):
+        if cell not in self.cells or self.is_opened(cell):
             return IGNORED
-        if self._by_number[self.numbers[self.opened]] != cell:
+        if self._order[cell] != self.opened:
             return MISS
         self.opened += 1
         return CLEARED if self.opened == len(self.numbers) else HIT

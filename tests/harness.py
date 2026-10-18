@@ -1,7 +1,7 @@
 """Мессенджер без мессенджера: цепочки нажатий через Manager, как их делает человек.
 
-VirtualTime — часы и sleep для Manager: таймеры (скрыть фигуры, конец минуты)
-срабатывают по advance(), минута партии проходит мгновенно.
+VirtualTime — часы и sleep для Manager: таймеры (отсчёт «3, 2, 1», показ фигур,
+ход таймера, конец минуты) срабатывают по advance(), минута партии проходит мгновенно.
 Messenger хранит сообщения бота и принимает правки по таймеру (push).
 Chat — переписка одного игрока: send() — текстовое сообщение (ответ приходит
 новым сообщением), click("подпись") и tap(r, c) — нажатия кнопок текущего экрана.
@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Tuple
 
 from games_core import seafight_solo as sea
 from games_core.manager import RECORD_GAMES, Manager
-from games_core.sessions import GAMES, PREVIEW, Player, Session, TimedSession
+from games_core.sessions import GAMES, INPUT, Player, Session, TimedSession
 from games_core.storage import Storage
 from games_core.texts import t
 from games_core.ui import Button, Screen
@@ -162,7 +162,7 @@ def right_move(s: Optional[Session]) -> Optional[Cell]:
     if s is None or s.finished or s.over:
         return None
     if isinstance(s, TimedSession):
-        if s.phase == PREVIEW:
+        if s.phase != INPUT:
             return None
         if s.game == "matrix":
             return min(s.round.targets - s.round.found)
@@ -186,10 +186,14 @@ def right_move(s: Optional[Session]) -> Optional[Cell]:
 
 
 def wrong_move(s: TimedSession) -> Cell:
-    """Ошибочное нажатие в матрице или башне."""
-    right = s.round.targets if s.game == "matrix" else {right_move(s)}
-    return next((r, c) for r in range(s.round.rows) for c in range(s.round.cols)
-                if (r, c) not in right)
+    """Ошибочное нажатие: в матрице — пустая клетка, в башне — не то число (пустые неактивны)."""
+    if s.game == "matrix":
+        return next((r, c) for r in range(s.round.rows) for c in range(s.round.cols)
+                    if (r, c) not in s.round.targets)
+    right = right_move(s)
+    cell = next((cell for cell in s.round.cells if cell != right and not s.round.is_opened(cell)), None)
+    assert cell is not None, "осталось одно число — ошибиться нельзя"
+    return cell
 
 
 def wrong_moves(s: Session) -> List[Cell]:
@@ -214,13 +218,14 @@ class World:
     """Manager на виртуальном времени, общая БД и чаты игроков."""
 
     def __init__(self, seed: int = 1, round_seconds: int = 60, preview_seconds: float = 1.0,
-                 debug_users=()):
+                 countdown_seconds: float = 2.0, tick_seconds: float = 5.0, debug_users=()):
         self.time = VirtualTime()
         self.storage = Storage(":memory:")
         self.messenger = Messenger()
         self.mgr = Manager(self.storage, "max", self.messenger.push, clock=self.time,
                            rng=random.Random(seed), sleep=self.time.sleep,
-                           preview_seconds=preview_seconds, round_seconds=round_seconds,
+                           preview_seconds=preview_seconds, countdown_seconds=countdown_seconds,
+                           tick_seconds=tick_seconds, round_seconds=round_seconds,
                            debug_users=debug_users)
         self.errors: List[BaseException] = []   # исключения в таймерах, иначе они пропадут молча
         spawn = self.mgr._spawn
@@ -247,10 +252,13 @@ class World:
 
 
 async def wait_preview(world: "World", chat: Chat) -> None:
-    """Если идёт показ фигур — дождаться его конца."""
+    """Если идёт отсчёт или показ фигур — дождаться начала ввода."""
     s = chat.session
-    if isinstance(s, TimedSession) and not s.finished and s.phase == PREVIEW:
-        await world.time.advance(world.mgr.preview_seconds)
+    for _ in range(100):
+        if not isinstance(s, TimedSession) or s.finished or s.phase == INPUT:
+            return
+        await world.time.advance(0.1)
+    raise AssertionError(f"ввод не начался: фаза {s.phase}")
 
 
 async def win_round(world: "World", chat: Chat) -> Optional[str]:

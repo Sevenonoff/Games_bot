@@ -1,4 +1,5 @@
 """Мемо: найти все пары одинаковых карт."""
+import math
 import random
 from dataclasses import dataclass, field
 from typing import List, Set, Tuple
@@ -7,17 +8,23 @@ from .icons import ICONS
 
 IGNORED, OPENED, MATCH, MISMATCH, CLEARED = "ignored", "opened", "match", "mismatch", "cleared"
 
-# уровень: (пар, рядов, колонок); дальше последнего — последнее значение
+# уровень: (пар, рядов, колонок); не больше 7 колонок (лимит Max) и 14 рядов;
+# дальше последнего — последнее значение
 MEMO_LEVELS = (
     (3, 2, 3), (4, 2, 4), (6, 3, 4), (8, 4, 4), (10, 4, 5),
-    (12, 4, 6), (15, 5, 6), (18, 6, 6), (21, 6, 7), (24, 6, 8),
-    (28, 7, 8), (32, 8, 8), (35, 7, 10), (40, 8, 10), (45, 9, 10),
-    (50, 10, 10), (55, 11, 10), (60, 12, 10), (65, 13, 10), (70, 14, 10),
+    (12, 4, 6), (15, 5, 6), (18, 6, 6), (21, 6, 7), (24, 8, 6),
+    (28, 8, 7), (30, 10, 6), (35, 10, 7), (42, 12, 7), (49, 14, 7),
 )
+# поле засчитано, если собрано не больше чем за MOVES_PER_PAIR ходов на пару
+MOVES_PER_PAIR = 2.0
 
 
 def memo_params(level: int) -> Tuple[int, int, int]:
     return MEMO_LEVELS[min(level, len(MEMO_LEVELS)) - 1]
+
+
+def moves_limit(pairs: int) -> int:
+    return math.ceil(pairs * MOVES_PER_PAIR)
 
 
 @dataclass
@@ -41,6 +48,10 @@ class MemoBoard:
     @property
     def pairs(self) -> int:
         return len(self.cards) // 2
+
+    @property
+    def moves_limit(self) -> int:
+        return moves_limit(self.pairs)
 
     @property
     def found_pairs(self) -> int:

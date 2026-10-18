@@ -3,6 +3,7 @@
 Сессия не знает про таймеры и сеть — этим занимается Manager.
 """
 import html
+import math
 import random
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
@@ -14,11 +15,15 @@ from .storage import Storage
 from .texts import TITLES, t
 from .ui import Button, Screen, data
 
-PREVIEW, INPUT = "preview", "input"
+COUNTDOWN, PREVIEW, INPUT = "countdown", "preview", "input"
+COUNTDOWN_FROM = 3        # «3, 2, 1» перед каждым показом
+ROUND_SECONDS = 60
+TIMER_BAR = 10            # делений в полоске таймера
 
 MATRIX_SHOWN = "🟦"
 MATRIX_HIDDEN = "⬜"
-TOWER_EMPTY = "⬜"
+TOWER_INACTIVE = "🟨"     # клетка без числа — всегда жёлтая
+TOWER_HIDDEN = "⬜"       # клетка с числом, пока оно скрыто
 MEMO_HIDDEN = "⬜"
 SEA_SYMBOLS = {sea.UNKNOWN: "🟦", sea.SHOT_MISS: "💠", sea.SHOT_HIT: "💥", sea.SHOT_SUNK: "💢"}
 
@@ -49,6 +54,7 @@ class Session:
         self.over = False                 # партия закончилась сама (поле собрано, победа)
         self.finished = False             # результат сохранён
         self.msg_ref: Any = None          # id сообщения в мессенджере, ставит транспорт
+        self.rendered_at = 0.0            # когда сообщение партии последний раз обновлялось
         self.last_activity = clock()
 
     # --- общее ---
@@ -98,34 +104,61 @@ class Session:
 
 
 class TimedSession(Session):
-    """Раунды на время: показ на секунду, затем ввод. Партия — ROUND_SECONDS."""
+    """Раунды на время: отсчёт «3, 2, 1», показ, затем ввод.
+
+    Время партии (round_seconds) идёт только в фазе ввода: отсчёт и показ
+    его не съедают. Фазы переключает Manager по таймерам.
+    """
     timed = True
     round_cls: Any = None
     phase_key = ""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.deadline: Optional[float] = None   # ставит Manager после показа первого раунда
+        self.round_seconds = ROUND_SECONDS      # Manager может заменить до первого раунда
+        self.time_spent = 0.0                   # секунды ввода прошлых раундов
+        self.input_started: Optional[float] = None
         self.round_id = 0
         self.rounds_won = 0
         self.rounds_total = 0
-        self.preview_pending = False
-        self.phase = PREVIEW
+        self.round_pending = False              # раунд создан, Manager ещё не запустил его таймеры
+        self.phase = COUNTDOWN
+        self.countdown = COUNTDOWN_FROM
         self.round = None
         self._new_round()
 
     def _new_round(self) -> None:
+        self._pause()
         self.round = self.round_cls.generate(self.progress.level, self.rng)
         self.round_id += 1
-        self.phase = PREVIEW
-        self.preview_pending = True
+        self.phase = COUNTDOWN
+        self.countdown = COUNTDOWN_FROM
+        self.round_pending = True
+
+    def _pause(self) -> None:
+        if self.input_started is not None:
+            self.time_spent += self.clock() - self.input_started
+            self.input_started = None
+
+    def begin_input(self) -> None:
+        self.phase = INPUT
+        self.input_started = self.clock()
+
+    def seconds_left(self) -> float:
+        spent = self.time_spent
+        if self.input_started is not None:
+            spent += self.clock() - self.input_started
+        return max(0.0, self.round_seconds - spent)
 
     def time_left(self) -> int:
-        if self.deadline is None:
-            return 60
-        return max(0, int(self.deadline - self.clock() + 0.999))
+        return math.ceil(self.seconds_left() - 1e-9)
+
+    def time_is_up(self) -> bool:
+        return self.phase == INPUT and self.seconds_left() <= 0
 
     def tap(self, r: int, c: int) -> Optional[str]:
+        if self.phase == COUNTDOWN:
+            return t("note_countdown")
         if self.phase == PREVIEW:
             return t("note_preview")
         level = self.progress.level
@@ -149,11 +182,23 @@ class TimedSession(Session):
             return self._level_note(delta) or t("note_round_ok")
         return None
 
+    def timer(self) -> str:
+        left = self.time_left()
+        filled = math.ceil(TIMER_BAR * left / self.round_seconds) if self.round_seconds else 0
+        bar = "▓" * filled + "░" * (TIMER_BAR - filled)
+        return t("timer", left=left, bar=bar)
+
     def header(self) -> str:
-        phase = t("phase_preview") if self.phase == PREVIEW else t(self.phase_key)
+        if self.phase == COUNTDOWN:
+            phase = t("phase_countdown", n=self.countdown)
+        elif self.phase == PREVIEW:
+            phase = t("phase_preview")
+        else:
+            phase = t(self.phase_key)
         return "\n".join([
             f"<b>{TITLES[self.game]}</b> · {t('level', level=self.progress.level)}",
-            t("timed_status", score=self.score, mult=format_multiplier(self.combo), left=self.time_left()),
+            self.timer(),
+            t("timed_status", score=self.score, mult=format_multiplier(self.combo)),
             "",
             phase,
         ])
@@ -183,6 +228,8 @@ class MatrixSession(TimedSession):
         cell = (r, c)
         if self.phase == PREVIEW:
             return MATRIX_SHOWN if cell in self.round.targets else MATRIX_HIDDEN
+        if self.phase == COUNTDOWN:
+            return MATRIX_HIDDEN
         return MATRIX_SHOWN if cell in self.round.found else MATRIX_HIDDEN
 
 
@@ -193,11 +240,11 @@ class TowerSession(TimedSession):
 
     def cell_symbol(self, r: int, c: int) -> str:
         n = self.round.cells.get((r, c))
-        if n is None:
-            return TOWER_EMPTY
+        if n is None or self.phase == COUNTDOWN:
+            return TOWER_INACTIVE
         if self.phase == PREVIEW or self.round.is_opened((r, c)):
             return str(n)
-        return TOWER_EMPTY
+        return TOWER_HIDDEN
 
 
 class MemoSession(Session):
@@ -236,6 +283,7 @@ class MemoSession(Session):
             f"<b>{TITLES[self.game]}</b> · {t('level', level=self.progress.level)}",
             t("memo_status", found=self.board.found_pairs, pairs=self.board.pairs,
               score=self.score, mult=format_multiplier(self.combo)),
+            t("memo_moves", moves=self.moves, limit=self.board.moves_limit),
             "",
             t("memo_hint"),
         ])
@@ -245,9 +293,14 @@ class MemoSession(Session):
     def finish(self) -> Screen:
         self.finished = True
         done = self.board.found_pairs == self.board.pairs
-        if done:
-            register_win(self.progress)
-            line = t("result_memo_done", moves=self.moves)
+        limit = self.board.moves_limit
+        if done and self.moves <= limit:
+            # поле в лимит ходов — сразу следующий уровень
+            register_win(self.progress, wins_needed=1)
+            line = t("result_memo_done", moves=self.moves, limit=limit)
+        elif done:
+            # собрано, но слишком много ходов: уровень остаётся
+            line = t("result_memo_slow", moves=self.moves, limit=limit)
         else:
             register_fail(self.progress)
             line = t("result_memo_quit", found=self.board.found_pairs, pairs=self.board.pairs)

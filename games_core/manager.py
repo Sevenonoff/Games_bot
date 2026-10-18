@@ -2,7 +2,8 @@
 
 Транспорт вызывает handle(player, payload, respond):
   respond(reply) отправляет/редактирует сообщение и возвращает его id;
-  push(msg_ref, screen) — правка сообщения по таймеру (скрыть фигуры, конец минуты).
+  push(msg_ref, screen) — правка сообщения по таймеру: отсчёт «3, 2, 1», показ,
+  ввод, ход таймера партии, конец минуты.
 Все действия одного пользователя идут под его asyncio.Lock — включая ответ
 транспорта, — поэтому сообщение не может «откатиться» к устаревшему экрану.
 """
@@ -16,7 +17,7 @@ from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
 from . import debug
-from .sessions import GAMES, PREVIEW, INPUT, Player, Session
+from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, Player, Session, TimedSession
 from .storage import Storage
 from .texts import TITLES, t
 from .ui import Button, Reply, Screen, data
@@ -24,6 +25,8 @@ from .ui import Button, Reply, Screen, data
 logger = logging.getLogger(__name__)
 
 PREVIEW_SECONDS = 1.0
+COUNTDOWN_SECONDS = 2.0   # «3, 2, 1» перед каждым показом
+TIMER_TICK_SECONDS = 5.0  # как часто обновлять таймер партии, если игрок не нажимает
 ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
 RECORD_GAMES = ("memo", "matrix", "tower", "sea_full", "sea_reduced")
@@ -46,6 +49,8 @@ class Manager:
                  rng: Optional[random.Random] = None,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  preview_seconds: float = PREVIEW_SECONDS,
+                 countdown_seconds: float = COUNTDOWN_SECONDS,
+                 tick_seconds: float = TIMER_TICK_SECONDS,
                  round_seconds: int = ROUND_SECONDS,
                  debug_users: Iterable[int] = ()):
         self.storage = storage
@@ -55,6 +60,8 @@ class Manager:
         self.rng = rng or random.Random()
         self.sleep = sleep
         self.preview_seconds = preview_seconds
+        self.countdown_seconds = countdown_seconds
+        self.tick_seconds = tick_seconds
         self.round_seconds = round_seconds
         self.debug_users = frozenset(debug_users)
         self.round_overrides: Dict[int, int] = {}   # /dbg round: длина партии для одного игрока
@@ -72,6 +79,7 @@ class Manager:
             ref = await respond(reply)
             if shown is not None and ref is not None:
                 shown.msg_ref = ref
+                shown.rendered_at = self.clock()
             if shown is not None and not shown.finished:
                 self._schedule(uid, shown)
 
@@ -87,14 +95,15 @@ class Manager:
             if s is None or len(parts) < 2 or s.sid != parts[1] or s.finished:
                 return Reply(note=t("note_stale")), None
             s.last_activity = self.clock()
-            if action == "q" or self._time_is_up(s):
+            if action == "q" or (s.timed and s.time_is_up()):
                 return Reply(s.finish()), s
             try:
                 r, c = int(parts[2]), int(parts[3])
             except (IndexError, ValueError):
                 return Reply(), None
-            if s.timed and s.phase == PREVIEW:
-                return Reply(note=t("note_preview")), None
+            if s.timed and s.phase != INPUT:
+                # отсчёт или показ: нажатие не засчитывается
+                return Reply(note=s.tap(r, c)), None
             note = s.tap(r, c)
             if s.over:
                 return Reply(s.finish(), note), s
@@ -123,11 +132,10 @@ class Manager:
     def start_session(self, player: Player, game: str) -> Session:
         self._abandon(player.user_id)
         s = GAMES[game](secrets.token_hex(3), player, self.storage, self.rng, self.clock)
+        if isinstance(s, TimedSession):
+            s.round_seconds = self.round_overrides.get(player.user_id, self.round_seconds)
         self.sessions[player.user_id] = s
         return s
-
-    def _time_is_up(self, s: Session) -> bool:
-        return s.timed and s.deadline is not None and self.clock() >= s.deadline
 
     def _abandon(self, uid: int) -> None:
         s = self.sessions.pop(uid, None)
@@ -143,13 +151,10 @@ class Manager:
     # --- таймеры ---
 
     def _schedule(self, uid: int, s: Session) -> None:
-        if not s.timed or not s.preview_pending:
+        if not isinstance(s, TimedSession) or not s.round_pending:
             return
-        s.preview_pending = False
-        self._spawn(self._hide_later(uid, s, s.round_id))
-        if s.deadline is None:
-            s.deadline = self.clock() + self.round_overrides.get(uid, self.round_seconds)
-            self._spawn(self._finish_later(uid, s))
+        s.round_pending = False
+        self._spawn(self._run_round(uid, s, s.round_id))
 
     def _spawn(self, coro) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -157,25 +162,48 @@ class Manager:
         task.add_done_callback(self._tasks.discard)
         return task
 
-    async def _hide_later(self, uid: int, s: Session, round_id: int) -> None:
-        await self.sleep(self.preview_seconds)
-        async with self.locks[uid]:
-            if (self.sessions.get(uid) is not s or s.finished
-                    or s.round_id != round_id or s.phase != PREVIEW):
-                return
-            s.phase = INPUT
-            await self._push(s, s.screen())
+    def _alive(self, uid: int, s: TimedSession, round_id: int) -> bool:
+        return self.sessions.get(uid) is s and not s.finished and s.round_id == round_id
 
-    async def _finish_later(self, uid: int, s: Session) -> None:
-        await self.sleep(max(0.0, s.deadline - self.clock()))
+    async def _step(self, uid: int, s: TimedSession, round_id: int, change: Callable[[], None]) -> bool:
+        """Под замком: если раунд ещё тот же — применить change и показать экран."""
         async with self.locks[uid]:
-            if self.sessions.get(uid) is not s or s.finished:
+            if not self._alive(uid, s, round_id):
+                return False
+            change()
+            await self._push(s, s.screen())
+            return True
+
+    async def _run_round(self, uid: int, s: TimedSession, round_id: int) -> None:
+        """Отсчёт «3, 2, 1» → показ → ввод с ходом таймера до конца раунда или партии."""
+        step = self.countdown_seconds / COUNTDOWN_FROM
+        for n in range(COUNTDOWN_FROM - 1, 0, -1):
+            await self.sleep(step)
+            if not await self._step(uid, s, round_id, lambda n=n: setattr(s, "countdown", n)):
                 return
-            await self._push(s, s.finish())
+        await self.sleep(step)
+        if not await self._step(uid, s, round_id, lambda: setattr(s, "phase", PREVIEW)):
+            return
+        await self.sleep(self.preview_seconds)
+        if not await self._step(uid, s, round_id, s.begin_input):
+            return
+
+        while True:
+            await self.sleep(min(self.tick_seconds, s.seconds_left()))
+            async with self.locks[uid]:
+                if not self._alive(uid, s, round_id) or s.phase != INPUT:
+                    return
+                if s.time_is_up():
+                    await self._push(s, s.finish())
+                    return
+                # нажатие только что обновило экран — таймер на нём свежий
+                if self.clock() - s.rendered_at >= 1.0:
+                    await self._push(s, s.screen())
 
     async def _push(self, s: Session, screen: Screen) -> None:
         if s.msg_ref is None:
             return
+        s.rendered_at = self.clock()
         try:
             await self.push(s.msg_ref, screen)
         except Exception:

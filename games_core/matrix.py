@@ -6,12 +6,13 @@ from typing import Set, Tuple
 
 IGNORED, HIT, CLEARED, MISS = "ignored", "hit", "cleared", "miss"
 
-MAX_CELLS = 60
+FIELD_COLS = 7            # больше кнопок в ряду Max не принимает
 FIELD_ROWS_LIMIT = 14     # 15-й ряд — служебные кнопки
 TARGET_DENSITY = 0.42
+MAX_CELLS = int(FIELD_COLS * FIELD_ROWS_LIMIT * TARGET_DENSITY)   # 41
 
-# (последний уровень, сторона квадратного поля)
-SQUARE_FIELDS = ((2, 3), (5, 4), (9, 5), (14, 6), (20, 7), (27, 8), (35, 9))
+# (последний уровень, сторона квадратного поля); дальше поле 7 × N
+SQUARE_FIELDS = ((2, 3), (5, 4), (9, 5), (14, 6), (20, 7))
 
 Cell = Tuple[int, int]
 
@@ -22,9 +23,8 @@ def matrix_params(level: int) -> Tuple[int, int, int]:
     for last_level, side in SQUARE_FIELDS:
         if level <= last_level:
             return side, side, n
-    cols = 10
-    rows = max(10, math.ceil(n / TARGET_DENSITY / cols))
-    return min(rows, FIELD_ROWS_LIMIT), cols, n
+    rows = max(8, math.ceil(n / TARGET_DENSITY / FIELD_COLS))
+    return min(rows, FIELD_ROWS_LIMIT), FIELD_COLS, n
 
 
 @dataclass

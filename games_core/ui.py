@@ -5,7 +5,9 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-MAX_COLS = 10
+# Max принимает до 7 кнопок в ряду (8 → 400 errors.maxRowSize) и до 30 рядов;
+# рядов держим не больше 15, чтобы поле влезало в экран телефона
+MAX_COLS = 7
 MAX_ROWS = 15
 MAX_DATA_LEN = 256
 MAX_TEXT_LEN = 64

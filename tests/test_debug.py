@@ -3,7 +3,7 @@ import pytest
 
 from games_core.texts import t
 from games_core.manager import text_payload
-from tests.harness import World
+from tests.harness import World, wait_preview
 
 ADMIN = 42
 
@@ -62,7 +62,7 @@ async def test_level_with_streak_then_level_up(world):
     await chat.click("Играть")
     s = chat.session
     assert s.progress.level == 5
-    await world.time.advance(1.0)
+    await wait_preview(world, chat)
     while chat.note is None:
         await chat.play_right()
     assert chat.note == t("note_level_up", level=6)
@@ -91,7 +91,7 @@ async def test_short_round_only_for_admin(world):
     for chat in (admin, other):
         await chat.send()
         await chat.click("Матрица")
-    await world.time.advance(5.0)
+    await world.time.advance(2.0 + 1.0 + 5.0)    # отсчёт и показ время партии не тратят
     assert "Партия окончена" in admin.text
     assert "Партия окончена" not in other.text
     await admin.send("dbg:round:0")

@@ -2,7 +2,7 @@
 import pytest
 
 from games_core.texts import t
-from tests.harness import World, win_round, wrong_move
+from tests.harness import World, wait_preview, win_round, wrong_move
 
 
 @pytest.fixture
@@ -46,18 +46,28 @@ async def test_matrix_minute_passes_on_virtual_time(world):
     chat = world.chat()
     await chat.send()
     await chat.click("Матрица")
-    assert t("phase_preview") in chat.text
+    assert t("phase_countdown", n=3) in chat.text and "⏱ 60 с" in chat.text
+    await chat.tap(0, 0)
+    assert chat.note == t("note_countdown")
+
+    await world.time.advance(2.0)        # «2», «1», показ — правками сообщения
+    assert t("phase_preview") in chat.text and world.messenger.pushes == 3
     await chat.tap(0, 0)
     assert chat.note == t("note_preview")
 
-    await world.time.advance(1.0)        # таймер скрыл фигуры правкой сообщения
-    assert t("phase_matrix") in chat.text and world.messenger.pushes == 1
+    await world.time.advance(1.0)        # таймер скрыл фигуры
+    assert t("phase_matrix") in chat.text and "⏱ 60 с" in chat.text
     assert await win_round(world, chat) == t("note_round_ok")
 
-    await world.time.advance(29.0)       # с начала партии прошло 30 с
+    await wait_preview(world, chat)      # отсчёт и показ время партии не тратят
+    assert "⏱ 60 с" in chat.text
+    await world.time.advance(12.0)       # таймер обновляется сам, без нажатий
+    assert "⏱ 50 с" in chat.text
+    await world.time.advance(17.0)
     await chat.tap(*wrong_move(chat.session))
-    assert chat.note == t("note_round_fail") and "⏱ 30 с" in chat.text
+    assert chat.note == t("note_round_fail") and "⏱ 31 с" in chat.text
 
+    await wait_preview(world, chat)
     await world.time.advance(31.0)       # конец минуты тоже приходит правкой
     assert "Партия окончена" in chat.text and "Раундов пройдено: 1 из 2" in chat.text
     assert world.storage.top("max", "matrix")[0][:2] == (42, "Тестер")
@@ -79,7 +89,7 @@ async def test_matrix_level_down_after_two_errors(world):
     await chat.send("dbg:level:matrix:3")
     await chat.click("Играть")
     for note in (t("note_round_fail"), t("note_level_down", level=2)):
-        await world.time.advance(1.0)
+        await wait_preview(world, chat)
         await chat.tap(*wrong_move(chat.session))
         assert chat.note == note
 
@@ -108,3 +118,26 @@ async def test_two_players_do_not_mix(world):
             if "Партия окончена" not in chat.text:
                 await chat.play_right()
     assert {name for _, name, _ in world.storage.top("max", "sea_reduced")} == {"Алиса", "Боб"}
+
+
+async def test_tower_colors_and_inactive_cells(world):
+    """Пустые клетки жёлтые всегда, клетки с числами белые; нажатие по пустой — не ошибка."""
+    chat = world.chat()
+    await chat.send()
+    await chat.click("Башня")
+    s = chat.session
+    empty = next((r, c) for r in range(s.round.rows) for c in range(s.round.cols)
+                 if (r, c) not in s.round.cells)
+    numbered = next(iter(s.round.cells))
+
+    await world.time.advance(2.0)                     # показ
+    assert chat.cell(*empty).text == "🟨"
+    assert chat.cell(*numbered).text == str(s.round.cells[numbered])
+    await world.time.advance(1.0)                     # ввод
+    assert chat.cell(*empty).text == "🟨" and chat.cell(*numbered).text == "⬜"
+
+    await chat.tap(*empty)
+    assert chat.note is None and s.progress.fail_count == 0 and s.round.opened == 0
+    await chat.play_right()
+    first = min(s.round.cells, key=s.round.cells.get)
+    assert chat.cell(*first).text == str(s.round.numbers[0])

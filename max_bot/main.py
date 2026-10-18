@@ -6,6 +6,7 @@ import asyncio
 import logging
 import logging.handlers
 import sys
+import time
 from pathlib import Path
 
 from maxapi import Bot, Dispatcher
@@ -60,14 +61,21 @@ def main_screen_sender(bot: Bot, chat_id: int):
         if reply.screen is None:
             return None
         sent = await bot.send_message(chat_id=chat_id, text=reply.screen.text,
-                                      attachments=render(reply.screen), parse_mode=ParseMode.HTML)
+                                      attachments=render(reply.screen), format=ParseMode.HTML)
         return message_id(sent.message) if sent else None
     return respond
 
 
-def callback_responder(event: MessageCallback):
+def callback_responder(event: MessageCallback, timing: dict):
     """respond для нажатий: ответ на callback и правка сообщения одним запросом."""
     async def respond(reply: Reply):
+        timing["dispatched"] = time.monotonic()
+        try:
+            return await _respond(reply)
+        finally:
+            timing["answered"] = time.monotonic()
+
+    async def _respond(reply: Reply):
         if reply.screen is None:
             try:
                 await event.ack(notification=reply.note)
@@ -86,10 +94,11 @@ def build(bot: Bot, storage: Storage) -> tuple[Dispatcher, Manager]:
 
     async def push(ref, screen: Screen) -> None:
         await bot.edit_message(message_id=ref, text=screen.text,
-                               attachments=render(screen), parse_mode=ParseMode.HTML)
+                               attachments=render(screen), format=ParseMode.HTML)
 
     manager = Manager(storage, config.PLATFORM, push,
                       preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
+                      countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
                       debug_users=config.DEBUG_USER_IDS)
 
     async def safe_handle(player: Player, payload: str, respond) -> None:
@@ -115,8 +124,19 @@ def build(bot: Bot, storage: Storage) -> tuple[Dispatcher, Manager]:
     @dp.message_callback()
     async def on_callback(event: MessageCallback):
         chat_id = event.message.recipient.chat_id if event.message else None
-        await safe_handle(player_from(event.callback.user, chat_id),
-                          event.callback.payload or "menu", callback_responder(event))
+        received = time.monotonic()
+        # возраст нажатия к приходу к нам: callback.timestamp ставит сервер Max (мс)
+        age_ms = int(time.time() * 1000) - event.callback.timestamp
+        timing: dict = {}
+        payload = event.callback.payload or "menu"
+        await safe_handle(player_from(event.callback.user, chat_id), payload,
+                          callback_responder(event, timing))
+        done = time.monotonic()
+        dispatched = timing.get("dispatched", done)
+        # wait — очередь за замком игрока (таймеры, предыдущие нажатия), api — ответ Max
+        logger.info("tap user=%s payload=%s age=%dms wait=%dms api=%dms",
+                    event.callback.user.user_id, payload, age_ms,
+                    (dispatched - received) * 1000, (timing.get("answered", done) - dispatched) * 1000)
 
     return dp, manager
 

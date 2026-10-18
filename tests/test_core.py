@@ -88,7 +88,7 @@ def test_matrix_round():
 
 def test_tower_first_level_is_one_two_three():
     rnd = tower.TowerRound.generate(1, random.Random(0))
-    assert rnd.numbers == [1, 2, 3] and rnd.side == 3
+    assert rnd.numbers == [1, 2, 3] and (rnd.rows, rnd.cols) == (3, 3)
 
 
 @pytest.mark.parametrize("level", range(1, 70))
@@ -96,8 +96,8 @@ def test_tower_numbers_ascending_and_fit(level):
     rng = random.Random(level)
     rnd = tower.TowerRound.generate(level, rng)
     assert rnd.numbers == sorted(set(rnd.numbers))
-    assert len(rnd.cells) == len(rnd.numbers) <= rnd.side ** 2
-    assert rnd.side <= MAX_COLS
+    assert len(rnd.cells) == len(rnd.numbers) <= rnd.rows * rnd.cols
+    assert rnd.cols <= MAX_COLS and rnd.rows <= MAX_ROWS - 1
 
 
 def test_tower_harder_levels():
@@ -114,8 +114,9 @@ def test_tower_order():
     assert rnd.tap(*by_num[rnd.numbers[1]]) == tower.MISS
     assert rnd.tap(*by_num[rnd.numbers[0]]) == tower.HIT
     assert rnd.tap(*by_num[rnd.numbers[0]]) == tower.IGNORED
-    empty = next((r, c) for r in range(rnd.side) for c in range(rnd.side) if (r, c) not in rnd.cells)
-    assert rnd.tap(*empty) == tower.MISS
+    # клетка без числа неактивна: нажатие не ошибка
+    empty = next((r, c) for r in range(rnd.rows) for c in range(rnd.cols) if (r, c) not in rnd.cells)
+    assert rnd.tap(*empty) == tower.IGNORED
 
 
 # --- мемо ---
@@ -173,3 +174,27 @@ def test_sea_fire():
     assert b.fire(0, 0) == sea.HIT
     assert b.fire(0, 1) == sea.SUNK and b.shots[0][0] == sea.SHOT_SUNK
     assert b.fire(3, 3) == sea.WON and b.score == 29
+
+
+def test_memo_moves_limit():
+    assert memo.moves_limit(3) == 6
+    assert memo.MemoBoard.generate(1, random.Random(0)).moves_limit == 6
+
+
+def test_level_up_carries_to_next_partia():
+    p = pr.Progress(level=1, last_success_level=1, last_played_at=0.0)
+    for _ in range(pr.WINS_TO_LEVEL_UP):
+        pr.register_win(p)
+    assert p.level == 2 and pr.start_partia(p, now=60.0) == 2
+
+
+def test_level_down_carries_to_next_partia():
+    p = pr.Progress(level=5, last_success_level=5, last_played_at=0.0)
+    pr.register_fail(p)
+    pr.register_fail(p)
+    assert pr.start_partia(p, now=60.0) == 4
+
+
+def test_single_win_level_up():
+    p = pr.Progress(level=3, last_success_level=3)
+    assert pr.register_win(p, wins_needed=1) == 1 and p.level == 4

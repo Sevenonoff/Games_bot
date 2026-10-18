@@ -5,7 +5,7 @@ import pytest
 
 from games_core.manager import Manager
 from games_core.progression import Progress
-from games_core.sessions import GAMES, INPUT, PREVIEW, Player
+from games_core.sessions import COUNTDOWN, GAMES, INPUT, Player
 from games_core.storage import Storage
 
 PLAYER = Player("max", 42, "Тестер", chat_id=7)
@@ -33,7 +33,7 @@ async def env():
     storage = Storage(":memory:")
     tr = FakeTransport()
     mgr = Manager(storage, "max", tr.push, rng=random.Random(1),
-                  preview_seconds=0.01, round_seconds=0.2)
+                  preview_seconds=0.01, countdown_seconds=0.03, round_seconds=0.2)
     yield mgr, tr, storage
     await mgr.shutdown()
 
@@ -57,13 +57,13 @@ async def test_matrix_preview_then_hide_and_timeout(env):
     mgr, tr, storage = env
     reply = await press(mgr, tr, "new:matrix")
     s = mgr.sessions[PLAYER.user_id]
-    assert s.phase == PREVIEW and s.msg_ref == "mid-1"
+    assert s.phase == COUNTDOWN and s.msg_ref == "mid-1"
     reply.screen.validate()
 
-    # нажатие во время показа не засчитывается
-    assert (await press(mgr, tr, tap_payload(s, 0, 0))).note == "Запоминайте…"
+    # нажатие во время отсчёта не засчитывается
+    assert (await press(mgr, tr, tap_payload(s, 0, 0))).note == "Приготовьтесь…"
 
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.1)
     assert s.phase == INPUT and tr.pushes[-1][0] == "mid-1"
 
     target = sorted(s.round.targets)[0]
@@ -88,13 +88,13 @@ async def test_tower_round_fail_moves_on(env):
     mgr, tr, _ = env
     await press(mgr, tr, "new:tower")
     s = mgr.sessions[PLAYER.user_id]
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0.1)
     by_num = {n: cell for cell, n in s.round.cells.items()}
     wrong = by_num[s.round.numbers[-1]]
     first_round = s.round_id
     reply = await press(mgr, tr, tap_payload(s, *wrong))
     assert "Ошибка" in reply.note
-    assert s.round_id == first_round + 1 and s.phase == PREVIEW
+    assert s.round_id == first_round + 1 and s.phase == COUNTDOWN
     assert s.progress.fail_count == 1
 
 
@@ -112,8 +112,9 @@ async def test_memo_full_board_is_win(env):
     assert s.finished and "Поле собрано" in reply.screen.text
     # 3 пары без промахов на 1 уровне: 10 + 10 + 10
     assert s.score == 30
+    # 3 хода при лимите 6 — сразу следующий уровень
     p = storage.load_progress("max", 42, "memo")
-    assert p.win_streak == 1 and p.best_score == 30
+    assert p.level == 2 and p.last_success_level == 2 and p.best_score == 30
 
 
 async def test_memo_quit_is_fail_and_next_partia_keeps_level(env):

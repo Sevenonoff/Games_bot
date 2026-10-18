@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Set, Tuple
 
 ROWS = 8
-COLS = 8
+COLS = 7             # больше кнопок в ряду Max не принимает
 SHIP_SETS = {
     "full": [4, 3, 3, 2, 2, 2, 1, 1, 1, 1],
     "reduced": [3, 2, 2, 1, 1, 1],
@@ -25,7 +25,7 @@ Cell = Tuple[int, int]
 
 
 def generate_ships(sizes: List[int], rng: random.Random, rows: int = ROWS, cols: int = COLS,
-                   attempts: int = 20, tries: int = 100) -> List[List[Cell]]:
+                   attempts: int = 300, tries: int = 100) -> List[List[Cell]]:
     """Случайная расстановка: корабли не касаются друг друга даже углами."""
     for _ in range(attempts):
         occupied: Set[Cell] = set()

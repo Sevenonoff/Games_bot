@@ -1,7 +1,8 @@
 """Общий движок уровней для мемо, матрицы и башни.
 
-3 выигрыша подряд — уровень +1, 2 ошибки — уровень -1.
-Новая партия начинается с последнего уровня, на котором был выигрыш;
+3 выигрыша подряд — уровень +1 (мемо: одно поле в лимит ходов), 2 ошибки — уровень -1.
+Новая партия начинается с уровня, на котором закончилась прошлая
+(last_success_level: последний выигрыш или заработанный/потерянный уровень);
 после перерыва больше 2 суток — на 3 уровня проще.
 """
 from dataclasses import dataclass
@@ -37,12 +38,16 @@ def start_partia(p: Progress, now: float) -> int:
     return level
 
 
-def register_win(p: Progress) -> int:
-    """Учесть выигрыш раунда. Возвращает изменение уровня (0 или +1)."""
+def register_win(p: Progress, wins_needed: int = WINS_TO_LEVEL_UP) -> int:
+    """Учесть выигрыш раунда. Возвращает изменение уровня (0 или +1).
+
+    Заработанный уровень сразу становится уровнем старта следующей партии.
+    """
     p.last_success_level = p.level
     p.win_streak += 1
-    if p.win_streak >= WINS_TO_LEVEL_UP:
+    if p.win_streak >= wins_needed:
         p.level += 1
+        p.last_success_level = p.level
         p.win_streak = 0
         p.fail_count = 0
         return 1
@@ -57,5 +62,6 @@ def register_fail(p: Progress) -> int:
         p.fail_count = 0
         if p.level > MIN_LEVEL:
             p.level -= 1
+            p.last_success_level = min(p.last_success_level, p.level)
             return -1
     return 0
