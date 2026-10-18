@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Выкладка бота Max на продовый сервер (запускать локально из любой папки).
-#   ./max_bot/deploy/deploy.sh          — код + зависимости + перезапуск
+#   ./max_bot/deploy/deploy.sh          — код + пересборка образа + перезапуск контейнера
 #   ./max_bot/deploy/deploy.sh --env    — то же и скопировать локальный max_bot/.env
+# Бот работает в контейнере games-bot (max_bot/deploy/compose.yaml) в сети china-cars: Caddy china-cars
+# проксирует на него /hooks/games/<секрет>. Перезапуск после падения и перезагрузки — restart: unless-stopped.
 # Каждое действие на сервере пишется в ~/claude-ops.log.
 set -euo pipefail
 
@@ -32,17 +34,21 @@ set -euo pipefail
 log() { echo "\$(date -Is) [games_bot] \$1" >> ~/claude-ops.log; echo "\$1"; }
 cd ~/$REMOTE_DIR
 echo "$REV$DIRTY" > REVISION
-if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; log "created venv"; fi
-.venv/bin/pip install -q --disable-pip-version-check -r max_bot/requirements.txt
-log "pip install -r max_bot/requirements.txt"
-chmod +x max_bot/deploy/botctl.sh
 mkdir -p max_bot/data logs
-CTL="\$HOME/$REMOTE_DIR/max_bot/deploy/botctl.sh"
-( crontab -l 2>/dev/null | grep -v "$REMOTE_DIR/max_bot/deploy/botctl.sh" || true
-  echo "* * * * * \$CTL start cron >/dev/null 2>&1"
-  echo "@reboot \$CTL start reboot >/dev/null 2>&1" ) | crontab -
-log "crontab: watchdog + @reboot"
-max_bot/deploy/botctl.sh restart deploy
-log "restart rev=$REV$DIRTY"
-max_bot/deploy/botctl.sh status
+
+# переход со старой схемы (venv + cron-сторож): снять cron и остановить процесс, если они ещё есть
+if crontab -l 2>/dev/null | grep -q "$REMOTE_DIR/max_bot/deploy/botctl.sh"; then
+    crontab -l | grep -v "$REMOTE_DIR/max_bot/deploy/botctl.sh" | crontab - || crontab -r
+    log "crontab: removed legacy botctl watchdog"
+fi
+if pkill -u "\$(id -u)" -f "^\$HOME/$REMOTE_DIR/.venv/bin/python -m max_bot.main"; then
+    sleep 2; log "stopped legacy venv bot"
+fi
+
+BOT_UID=\$(id -u) BOT_GID=\$(id -g) docker compose -f max_bot/deploy/compose.yaml up -d --build --quiet-pull 2>&1 | tail -n 3
+log "compose up --build rev=$REV$DIRTY"
+docker image prune -f --filter label=app=games-bot >/dev/null
+sleep 5
+docker compose -f max_bot/deploy/compose.yaml ps --format '{{.Name}} {{.Status}}'
+tail -n 3 logs/max_bot.log
 EOF

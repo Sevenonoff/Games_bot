@@ -11,7 +11,7 @@
   - меню, рекорды и таймеры: `manager`;
   - SQLite: `storage`.
   Транспорту нужно только превратить `Screen` в свои кнопки. Этот же пакет потом подключится к Telegram.
-- `max_bot/` — транспорт Max на `maxapi`, long polling, без вебхука:
+- `max_bot/` — транспорт Max на `maxapi`, webhook через Caddy china-drom.ru (или long polling, если `WEBHOOK_URL` пуст):
   - нажатие обрабатывается одним запросом `POST /answers`: ответ на callback и новая клавиатура вместе;
   - скрыть фигуры после показа и закончить минуту — через `PUT /messages` по таймеру.
 - Состояние:
@@ -58,7 +58,7 @@ cp max_bot/.env.example max_bot/.env   # вписать MAX_BOT_TOKEN
 .venv/bin/python -m pytest
 .venv/bin/python -m max_bot.main
 ```
-Две копии бота на одном токене делят между собой апдейты. Прежде чем запускать бот локально, остановите прод.
+Локально бот работает через long polling (`WEBHOOK_URL` пуст). Пока на проде включён webhook, polling ничего не получает. Две копии бота на одном токене тоже нельзя запускать вместе: прежде чем запускать бот локально, остановите прод (`docker compose -f max_bot/deploy/compose.yaml stop` на сервере).
 
 ## Тесты
 - `tests/harness.py` — мессенджер без мессенджера. `Chat.click("Морской бой")` жмёт кнопку по подписи, `tap(r, c)` — клетку поля. Время виртуальное: `world.time.advance(60)` проматывает минуту партии мгновенно, вместе со всеми правками по таймеру.
@@ -84,9 +84,20 @@ cp max_bot/.env.example max_bot/.env   # вписать MAX_BOT_TOKEN
 
 Партии из `/dbg` настоящие: их результат попадает в рекорды. После проверки на проде стоит сделать `/dbg reset`.
 
-## Прод (91.227.18.215, пользователь drom_root_user, без sudo)
+## Прод (91.227.18.215, china-drom.ru, пользователь drom_root_user, без sudo)
+- Бот работает в Docker-контейнере `games-bot` (`max_bot/deploy/compose.yaml`, отдельный compose-проект `games-bot`).
+  - Контейнер подключён к сети `china-cars_default`: Caddy china-cars проксирует `https://china-drom.ru/hooks/games/<секрет>` на `games-bot:8445`. Порт хоста не публикуется, ufw пропускает только 22/80/443.
+  - Перезапуск после падения и перезагрузки сервера делает Docker (`restart: unless-stopped`), лимит памяти 160 МБ.
 - Выкладка: `./max_bot/deploy/deploy.sh`. С ключом `--env` скрипт копирует и локальный `max_bot/.env`.
-- Код лежит в `~/games_bot`, venv — в `~/games_bot/.venv`, логи — в `~/games_bot/logs/max_bot.log` (ротация 5 МБ × 3).
-- Процессом управляет `~/games_bot/max_bot/deploy/botctl.sh start|stop|restart|status`.
-- Cron-сторож каждую минуту вызывает `botctl.sh start` (с flock, поэтому второй копии не будет); есть и `@reboot`.
+- Код лежит в `~/games_bot`, база — `~/games_bot/max_bot/data/games.db`, логи — `~/games_bot/logs/max_bot.log` (ротация 5 МБ × 3).
 - Каждое действие на сервере записывается в `~/claude-ops.log`.
+
+### Webhook или long polling
+- Режим задаёт `max_bot/.env` на сервере:
+  - `WEBHOOK_URL=https://china-drom.ru/hooks/games/<секрет>` и `WEBHOOK_SECRET=<секрет>` — webhook. При старте бот сам подписывает этот URL.
+  - Без `WEBHOOK_URL` — long polling.
+- Тот же секрет записан в `GAMES_WEBHOOK_SECRET` в `~/china_cars/infra/prod/.env`. Маршрут в Caddyfile china-cars описан в их `infra/prod/README.md`.
+- Подписки: `docker compose -f max_bot/deploy/compose.yaml exec games-bot python -m max_bot.webhook list|subscribe|unsubscribe`.
+- Вернуться к polling: `unsubscribe`, затем убрать `WEBHOOK_URL` из `.env` и выполнить `docker compose … up -d`. Пока подписка есть, polling ничего не получает.
+- Max шлёт только на HTTPS:443. Если 8 ч подряд нет ответа 200, он снимает подписку сам. Тогда после долгого простоя сделайте `subscribe` (или просто перезапустите бота).
+- Смена секрета: `unsubscribe` → новый секрет в обоих `.env` → `docker compose up -d caddy` у china-cars → перезапуск бота.

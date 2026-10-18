@@ -1,0 +1,36 @@
+# Бот игр для Max на проде china-drom.ru (91.227.18.215), отдельный compose-проект.
+# Контейнер подключён к сети china-cars, чтобы Caddy china-cars проксировал
+# /hooks/games/<секрет> на games-bot:8445 (порт хоста закрыт ufw, наружу ничего не публикуется).
+# Запуск из ~/games_bot:  docker compose -f max_bot/deploy/compose.yaml up -d --build
+name: games-bot
+
+services:
+  games-bot:
+    build:
+      context: ../..
+      dockerfile: max_bot/Dockerfile
+    image: games-bot:local
+    restart: unless-stopped
+    user: "${BOT_UID:-1001}:${BOT_GID:-1001}"   # владелец data/ и logs/ на хосте (drom_root_user)
+    env_file: ../.env
+    environment:
+      DB_PATH: /app/max_bot/data/games.db
+      LOG_FILE: /app/logs/max_bot.log
+      WEBHOOK_HOST: 0.0.0.0
+      WEBHOOK_PORT: "8445"
+    volumes:
+      - ../data:/app/max_bot/data
+      - ../../logs:/app/logs
+    networks:
+      caddy:
+        aliases: [games-bot]
+    mem_limit: 160m
+    memswap_limit: 160m
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+
+networks:
+  caddy:
+    external: true
+    name: ${CADDY_NETWORK:-china-cars_default}

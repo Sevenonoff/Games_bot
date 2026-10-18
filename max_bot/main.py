@@ -8,6 +8,7 @@ import logging.handlers
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 from maxapi import Bot, Dispatcher
 from maxapi.enums.parse_mode import ParseMode
@@ -19,7 +20,7 @@ from games_core.sessions import Player
 from games_core.storage import Storage
 from games_core.ui import Reply, Screen
 
-from . import config
+from . import config, webhook
 
 logger = logging.getLogger("max_bot")
 
@@ -155,7 +156,23 @@ async def main() -> None:
     me = await bot.get_me()
     logger.info("started as @%s (id %s), db=%s", me.username, me.user_id, config.DB_PATH)
     try:
-        await dp.start_polling(bot)
+        if config.WEBHOOK_URL:
+            if not config.WEBHOOK_SECRET:
+                raise SystemExit("WEBHOOK_URL задан без WEBHOOK_SECRET")
+            if await webhook.ensure_subscribed(bot):
+                logger.info("subscribed webhook %s", webhook.mask(config.WEBHOOK_URL))
+            logger.info("webhook mode on %s:%s", config.WEBHOOK_HOST, config.WEBHOOK_PORT)
+            # access_log=None: путь вебхука содержит секрет
+            await dp.handle_webhook(bot, host=config.WEBHOOK_HOST, port=config.WEBHOOK_PORT,
+                                    path=urlparse(config.WEBHOOK_URL).path, secret=config.WEBHOOK_SECRET,
+                                    access_log=None)
+        else:
+            subs = await webhook.subscribed_urls(bot)
+            if subs:
+                logger.warning("polling, но у бота есть webhook-подписки %s — апдейты уйдут туда; "
+                               "снять: python -m max_bot.webhook unsubscribe", [webhook.mask(u) for u in subs])
+            logger.info("long polling mode")
+            await dp.start_polling(bot)
     finally:
         await manager.shutdown()
         storage.close()

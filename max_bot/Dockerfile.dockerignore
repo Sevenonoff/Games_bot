@@ -1,0 +1,7 @@
+# контекст — корень репозитория; в образ идут только games_core и max_bot, без секретов и данных
+*
+!games_core/
+!max_bot/
+max_bot/.env
+max_bot/data/
+**/__pycache__/

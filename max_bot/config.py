@@ -14,6 +14,12 @@ ROUND_SECONDS = int(os.getenv("ROUND_SECONDS", "60"))
 COUNTDOWN_SECONDS = float(os.getenv("COUNTDOWN_SECONDS", "2.0"))
 TIMER_TICK_SECONDS = float(os.getenv("TIMER_TICK_SECONDS", "5.0"))
 MEMO_CLOSE_SECONDS = float(os.getenv("MEMO_CLOSE_SECONDS", "3.0"))
+# webhook: пусто — long polling. URL публичный (Caddy china-drom.ru → контейнер games-bot), путь содержит секрет;
+# тот же секрет Max присылает в заголовке X-Max-Bot-Api-Secret
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
+WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8445"))
 # кому доступны /dbg-команды: user_id через запятую; свой id бот покажет в ответ на /dbg
 DEBUG_USER_IDS = frozenset(int(x) for x in os.getenv("DEBUG_USER_IDS", "").replace(",", " ").split())
 
