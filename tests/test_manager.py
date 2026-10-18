@@ -5,7 +5,7 @@ import pytest
 
 from games_core.manager import Manager
 from games_core.progression import Progress
-from games_core.sessions import COUNTDOWN, GAMES, INPUT, Player
+from games_core.sessions import COUNTDOWN, GAMES, INPUT, REVIEW, Player
 from games_core.storage import Storage
 
 PLAYER = Player("max", 42, "Тестер", chat_id=7)
@@ -33,7 +33,7 @@ async def env():
     storage = Storage(":memory:")
     tr = FakeTransport()
     mgr = Manager(storage, "max", tr.push, rng=random.Random(1),
-                  preview_seconds=0.01, countdown_seconds=0.03, round_seconds=0.2)
+                  preview_seconds=0.01, countdown_seconds=0.03, review_seconds=0.02, round_seconds=0.2)
     yield mgr, tr, storage
     await mgr.shutdown()
 
@@ -94,7 +94,9 @@ async def test_tower_round_fail_moves_on(env):
     first_round = s.round_id
     reply = await press(mgr, tr, tap_payload(s, *wrong))
     assert "Ошибка" in reply.note
-    assert s.round_id == first_round + 1 and s.phase == COUNTDOWN
+    assert s.round_id == first_round and s.phase == REVIEW and s.wrong_cell == wrong
+    await asyncio.sleep(0.03)            # разбор кончился — новый раунд с отсчётом
+    assert s.round_id == first_round + 1 and s.phase == COUNTDOWN and s.wrong_cell is None
     assert s.progress.fail_count == 1
 
 

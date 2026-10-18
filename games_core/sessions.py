@@ -15,7 +15,7 @@ from .storage import Storage
 from .texts import TITLES, t
 from .ui import Button, Screen, data
 
-COUNTDOWN, PREVIEW, INPUT = "countdown", "preview", "input"
+COUNTDOWN, PREVIEW, INPUT, REVIEW = "countdown", "preview", "input", "review"
 COUNTDOWN_FROM = 3        # «3, 2, 1» перед каждым показом
 ROUND_SECONDS = 60
 TIMER_BAR = 10            # делений в полоске таймера
@@ -24,6 +24,7 @@ MATRIX_SHOWN = "🟦"
 MATRIX_HIDDEN = "⬜"
 TOWER_INACTIVE = "🟨"     # клетка без числа — всегда жёлтая
 TOWER_HIDDEN = "⬜"       # клетка с числом, пока оно скрыто
+WRONG_CELL = "❌"         # ошибочное нажатие на разборе после ошибки
 MEMO_HIDDEN = "⬜"
 SEA_SYMBOLS = {sea.UNKNOWN: "🟦", sea.SHOT_MISS: "💠", sea.SHOT_HIT: "💥", sea.SHOT_SUNK: "💢"}
 
@@ -104,10 +105,10 @@ class Session:
 
 
 class TimedSession(Session):
-    """Раунды на время: отсчёт «3, 2, 1», показ, затем ввод.
+    """Раунды на время: отсчёт «3, 2, 1», показ, затем ввод; после ошибки — разбор.
 
-    Время партии (round_seconds) идёт только в фазе ввода: отсчёт и показ
-    его не съедают. Фазы переключает Manager по таймерам.
+    Время партии (round_seconds) идёт только в фазе ввода: отсчёт, показ и
+    разбор ошибки его не съедают. Фазы переключает Manager по таймерам.
     """
     timed = True
     round_cls: Any = None
@@ -122,6 +123,8 @@ class TimedSession(Session):
         self.rounds_won = 0
         self.rounds_total = 0
         self.round_pending = False              # раунд создан, Manager ещё не запустил его таймеры
+        self.review_pending = False             # ошибка: Manager покажет разбор и начнёт новый раунд
+        self.wrong_cell: Optional[tuple] = None
         self.phase = COUNTDOWN
         self.countdown = COUNTDOWN_FROM
         self.round = None
@@ -129,6 +132,7 @@ class TimedSession(Session):
 
     def _new_round(self) -> None:
         self._pause()
+        self.wrong_cell = None
         self.round = self.round_cls.generate(self.progress.level, self.rng)
         self.round_id += 1
         self.phase = COUNTDOWN
@@ -161,6 +165,8 @@ class TimedSession(Session):
             return t("note_countdown")
         if self.phase == PREVIEW:
             return t("note_preview")
+        if self.phase == REVIEW:
+            return t("note_review")
         level = self.progress.level
         result = self.round.tap(r, c)
         if result == matrix.IGNORED:
@@ -169,7 +175,11 @@ class TimedSession(Session):
             self.combo = 0
             self.rounds_total += 1
             delta = register_fail(self.progress)
-            self._new_round()
+            # разбор: поле с найденными клетками и ошибочной, новый раунд начнёт Manager
+            self._pause()
+            self.phase = REVIEW
+            self.wrong_cell = (r, c)
+            self.review_pending = True
             return self._level_note(delta) or t("note_round_fail")
         self.score += tap_points(level, self.combo)
         self.combo += 1
@@ -193,6 +203,8 @@ class TimedSession(Session):
             phase = t("phase_countdown", n=self.countdown)
         elif self.phase == PREVIEW:
             phase = t("phase_preview")
+        elif self.phase == REVIEW:
+            phase = t("phase_review")
         else:
             phase = t(self.phase_key)
         return "\n".join([
@@ -226,6 +238,8 @@ class MatrixSession(TimedSession):
 
     def cell_symbol(self, r: int, c: int) -> str:
         cell = (r, c)
+        if cell == self.wrong_cell:
+            return WRONG_CELL
         if self.phase == PREVIEW:
             return MATRIX_SHOWN if cell in self.round.targets else MATRIX_HIDDEN
         if self.phase == COUNTDOWN:
@@ -239,6 +253,8 @@ class TowerSession(TimedSession):
     phase_key = "phase_tower"
 
     def cell_symbol(self, r: int, c: int) -> str:
+        if (r, c) == self.wrong_cell:
+            return WRONG_CELL
         n = self.round.cells.get((r, c))
         if n is None or self.phase == COUNTDOWN:
             return TOWER_INACTIVE

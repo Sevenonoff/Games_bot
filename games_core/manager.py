@@ -17,7 +17,7 @@ from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
 from . import debug
-from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, MemoSession, Player, Session, TimedSession
+from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
 from .storage import Storage
 from .texts import TITLES, t
 from .ui import Button, Reply, Screen, data
@@ -28,6 +28,7 @@ PREVIEW_SECONDS = 1.0
 COUNTDOWN_SECONDS = 2.0   # «3, 2, 1» перед каждым показом
 TIMER_TICK_SECONDS = 5.0  # как часто обновлять таймер партии, если игрок не нажимает
 MEMO_CLOSE_SECONDS = 3.0  # несовпавшая пара в мемо закрывается сама (или раньше — нажатием)
+REVIEW_SECONDS = 2.0      # после ошибки в матрице/башне: найденные клетки и ошибочная
 ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
 RECORD_GAMES = ("memo", "matrix", "tower", "sea_full", "sea_reduced")
@@ -53,6 +54,7 @@ class Manager:
                  countdown_seconds: float = COUNTDOWN_SECONDS,
                  tick_seconds: float = TIMER_TICK_SECONDS,
                  memo_close_seconds: float = MEMO_CLOSE_SECONDS,
+                 review_seconds: float = REVIEW_SECONDS,
                  round_seconds: int = ROUND_SECONDS,
                  debug_users: Iterable[int] = ()):
         self.storage = storage
@@ -65,6 +67,7 @@ class Manager:
         self.countdown_seconds = countdown_seconds
         self.tick_seconds = tick_seconds
         self.memo_close_seconds = memo_close_seconds
+        self.review_seconds = review_seconds
         self.round_seconds = round_seconds
         self.debug_users = frozenset(debug_users)
         self.round_overrides: Dict[int, int] = {}   # /dbg round: длина партии для одного игрока
@@ -157,6 +160,9 @@ class Manager:
         if isinstance(s, MemoSession) and s.close_pending:
             s.close_pending = False
             self._spawn(self._close_mismatch_later(uid, s, s.mismatch_id))
+        if isinstance(s, TimedSession) and s.review_pending:
+            s.review_pending = False
+            self._spawn(self._review_then_next(uid, s, s.round_id))
         if isinstance(s, TimedSession) and s.round_pending:
             s.round_pending = False
             self._spawn(self._run_round(uid, s, s.round_id))
@@ -187,6 +193,16 @@ class Manager:
                     or s.mismatch_id != mismatch_id or not s.board.close_mismatch()):
                 return
             await self._push(s, s.screen())
+
+    async def _review_then_next(self, uid: int, s: TimedSession, round_id: int) -> None:
+        """Разбор ошибки review_seconds, затем новый раунд с отсчётом."""
+        await self.sleep(self.review_seconds)
+        async with self.locks[uid]:
+            if not self._alive(uid, s, round_id) or s.phase != REVIEW:
+                return
+            s._new_round()
+            await self._push(s, s.screen())
+            self._schedule(uid, s)
 
     async def _run_round(self, uid: int, s: TimedSession, round_id: int) -> None:
         """Отсчёт «3, 2, 1» → показ → ввод с ходом таймера до конца раунда или партии."""
