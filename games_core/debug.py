@@ -20,7 +20,7 @@ SEA_SETS = {"full": "sea_full", "reduced": "sea_reduced"}
 
 HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — уровень и серия побед ({games})
 /dbg idle &lt;игра&gt; &lt;дней&gt; — будто последняя игра была N дней назад
-/dbg round &lt;сек&gt; — длина партии матрицы и башни для вас (0 — как у всех)
+/dbg round &lt;сек&gt; — длина партии матрицы для вас (0 — как у всех)
 /dbg sea_end [full|reduced] — морской бой за выстрел до победы
 /dbg memo_end — мемо, осталась одна пара
 /dbg reset — стереть ваши уровни и рекорды"""
@@ -48,7 +48,7 @@ def menu(mgr: "Manager", player: Player, status: str = "") -> Screen:
                      f"ошибок {p.fail_count}, рекорд {p.best_score}")
     round_seconds = mgr.round_overrides.get(player.user_id)
     if round_seconds:
-        lines.append(f"⏱ Партия матрицы и башни: {round_seconds} с")
+        lines.append(f"⏱ Партия матрицы: {round_seconds} с")
     lines += ["", HELP.format(games=", ".join(LEVEL_GAMES))]
     return Screen("\n".join(lines), [
         [Button("⛵ Выстрел до победы", data("dbg", "sea_end", "reduced")),
@@ -100,10 +100,10 @@ def set_round(mgr: "Manager", player: Player, args: List[str]) -> Result:
         raise ValueError(args)
     if seconds:
         mgr.round_overrides[player.user_id] = seconds
-        status = f"✅ Партия матрицы и башни: {seconds} с"
+        status = f"✅ Партия матрицы: {seconds} с"
     else:
         mgr.round_overrides.pop(player.user_id, None)
-        status = f"✅ Партия матрицы и башни: {mgr.round_seconds} с, как у всех"
+        status = f"✅ Партия матрицы: {mgr.round_seconds} с, как у всех"
     return Reply(menu(mgr, player, status)), None
 
 

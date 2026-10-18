@@ -25,6 +25,10 @@ MATRIX_HIDDEN = "⬜"
 TOWER_INACTIVE = "🟨"     # клетка без числа — всегда жёлтая
 TOWER_HIDDEN = "⬜"       # клетка с числом, пока оно скрыто
 WRONG_CELL = "❌"         # ошибочное нажатие на разборе после ошибки
+MATRIX_ANSWER = "🟩"      # на разборе: клетка из ответа, которую игрок не нашёл
+TOWER_ROUNDS = 6          # башня без таймера: партия — 6 раундов
+FLOOR_POINTS = 50         # этаж растущей башни за каждые 50 очков
+TOWER_ART_FLOORS = 5      # столько этажей рисуем во время игры (дальше — только число)
 MEMO_HIDDEN = "⬜"
 SEA_SYMBOLS = {sea.UNKNOWN: "🟦", sea.SHOT_MISS: "💠", sea.SHOT_HIT: "💥", sea.SHOT_SUNK: "💢"}
 
@@ -105,18 +109,22 @@ class Session:
 
 
 class TimedSession(Session):
-    """Раунды на время: отсчёт «3, 2, 1», показ, затем ввод; после ошибки — разбор.
+    """Раунды: отсчёт «3, 2, 1», показ, затем ввод; после ошибки — разбор с ответом.
 
-    Время партии (round_seconds) идёт только в фазе ввода: отсчёт, показ и
-    разбор ошибки его не съедают. Фазы переключает Manager по таймерам.
+    Партия ограничена временем (clock_limited: round_seconds идут только в фазе
+    ввода, отсчёт, показ и разбор их не съедают) или числом раундов (rounds_limit).
+    Фазы переключает Manager по таймерам.
     """
     timed = True
+    clock_limited = True
+    rounds_limit: Optional[int] = None
     round_cls: Any = None
     phase_key = ""
+    review_key = ""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.round_seconds = ROUND_SECONDS      # Manager может заменить до первого раунда
+        self.round_seconds = ROUND_SECONDS if self.clock_limited else None   # Manager может заменить
         self.time_spent = 0.0                   # секунды ввода прошлых раундов
         self.input_started: Optional[float] = None
         self.round_id = 0
@@ -149,6 +157,8 @@ class TimedSession(Session):
         self.input_started = self.clock()
 
     def seconds_left(self) -> float:
+        if self.round_seconds is None:
+            return math.inf
         spent = self.time_spent
         if self.input_started is not None:
             spent += self.clock() - self.input_started
@@ -188,11 +198,20 @@ class TimedSession(Session):
             self.rounds_won += 1
             self.rounds_total += 1
             delta = register_win(self.progress)
-            self._new_round()
+            if self.rounds_done():
+                self.over = True
+            else:
+                self._new_round()
             return self._level_note(delta) or t("note_round_ok")
         return None
 
+    def rounds_done(self) -> bool:
+        return self.rounds_limit is not None and self.rounds_total >= self.rounds_limit
+
     def timer(self) -> str:
+        if not self.clock_limited:
+            current = self.rounds_total if self.phase == REVIEW else self.rounds_total + 1
+            return t("round_of", n=min(current, self.rounds_limit), total=self.rounds_limit)
         left = self.time_left()
         filled = math.ceil(TIMER_BAR * left / self.round_seconds) if self.round_seconds else 0
         bar = "▓" * filled + "░" * (TIMER_BAR - filled)
@@ -204,16 +223,20 @@ class TimedSession(Session):
         elif self.phase == PREVIEW:
             phase = t("phase_preview")
         elif self.phase == REVIEW:
-            phase = t("phase_review")
+            phase = t(self.review_key)
         else:
             phase = t(self.phase_key)
         return "\n".join([
             f"<b>{TITLES[self.game]}</b> · {t('level', level=self.progress.level)}",
             self.timer(),
             t("timed_status", score=self.score, mult=format_multiplier(self.combo)),
+            *self.extra_lines(),
             "",
             phase,
         ])
+
+    def extra_lines(self) -> List[str]:
+        return []
 
     def screen(self) -> Screen:
         rows = self._field(self.round.rows, self.round.cols, self.cell_symbol)
@@ -226,20 +249,28 @@ class TimedSession(Session):
         self.finished = True
         is_record = self._save(self.score)
         return self._result_screen([
+            *self.result_extra(),
             t("result_level", level=self.progress.level),
-            t("result_rounds", won=self.rounds_won, total=self.rounds_total),
+            t("result_rounds", won=self.rounds_won,
+              total=self.rounds_limit if self.rounds_limit else self.rounds_total),
         ], is_record)
+
+    def result_extra(self) -> List[str]:
+        return []
 
 
 class MatrixSession(TimedSession):
     game = "matrix"
     round_cls = matrix.MatrixRound
     phase_key = "phase_matrix"
+    review_key = "phase_review_matrix"
 
     def cell_symbol(self, r: int, c: int) -> str:
         cell = (r, c)
         if cell == self.wrong_cell:
             return WRONG_CELL
+        if self.phase == REVIEW and cell in self.round.targets - self.round.found:
+            return MATRIX_ANSWER
         if self.phase == PREVIEW:
             return MATRIX_SHOWN if cell in self.round.targets else MATRIX_HIDDEN
         if self.phase == COUNTDOWN:
@@ -251,16 +282,44 @@ class TowerSession(TimedSession):
     game = "tower"
     round_cls = tower.TowerRound
     phase_key = "phase_tower"
+    review_key = "phase_review_tower"
+    clock_limited = False
+    rounds_limit = TOWER_ROUNDS
 
     def cell_symbol(self, r: int, c: int) -> str:
-        if (r, c) == self.wrong_cell:
-            return WRONG_CELL
         n = self.round.cells.get((r, c))
+        if (r, c) == self.wrong_cell:
+            return WRONG_CELL if n is None else f"{WRONG_CELL}{n}"   # ошибка и правильное число клетки
         if n is None or self.phase == COUNTDOWN:
             return TOWER_INACTIVE
-        if self.phase == PREVIEW or self.round.is_opened((r, c)):
+        # на разборе видны все числа — правильный ответ
+        if self.phase in (PREVIEW, REVIEW) or self.round.is_opened((r, c)):
             return str(n)
         return TOWER_HIDDEN
+
+    def extra_lines(self) -> List[str]:
+        return tower_art(self.score, TOWER_ART_FLOORS)
+
+    def result_extra(self) -> List[str]:
+        return tower_art(self.score, TOWER_ART_FLOORS * 2)
+
+
+def floors_word(n: int) -> str:
+    if n % 10 == 1 and n % 100 != 11:
+        return "этаж"
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return "этажа"
+    return "этажей"
+
+
+def tower_art(score: int, max_floors: int) -> List[str]:
+    """Растущая башня: этаж за каждые FLOOR_POINTS очков, рисуем не больше max_floors."""
+    floors = max(0, score) // FLOOR_POINTS
+    lines = [t("tower_height", floors=floors, word=floors_word(floors))]
+    if floors:
+        lines.append("🚩" if floors <= max_floors else "🚩 ⋮")
+        lines += ["🧱🧱🧱"] * min(floors, max_floors)
+    return lines
 
 
 class MemoSession(Session):

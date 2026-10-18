@@ -138,7 +138,7 @@ class Manager:
     def start_session(self, player: Player, game: str) -> Session:
         self._abandon(player.user_id)
         s = GAMES[game](secrets.token_hex(3), player, self.storage, self.rng, self.clock)
-        if isinstance(s, TimedSession):
+        if isinstance(s, TimedSession) and s.clock_limited:
             s.round_seconds = self.round_overrides.get(player.user_id, self.round_seconds)
         self.sessions[player.user_id] = s
         return s
@@ -151,7 +151,9 @@ class Manager:
     def _drop_idle(self) -> None:
         now = self.clock()
         for uid, s in list(self.sessions.items()):
-            if s.finished or (not s.timed and now - s.last_activity > IDLE_SECONDS):
+            # партии на время кончаются сами; остальные убираем после простоя
+            ends_itself = isinstance(s, TimedSession) and s.clock_limited
+            if s.finished or (not ends_itself and now - s.last_activity > IDLE_SECONDS):
                 del self.sessions[uid]
 
     # --- таймеры ---
@@ -195,10 +197,13 @@ class Manager:
             await self._push(s, s.screen())
 
     async def _review_then_next(self, uid: int, s: TimedSession, round_id: int) -> None:
-        """Разбор ошибки review_seconds, затем новый раунд с отсчётом."""
+        """Разбор ошибки review_seconds, затем новый раунд с отсчётом (или конец партии по числу раундов)."""
         await self.sleep(self.review_seconds)
         async with self.locks[uid]:
             if not self._alive(uid, s, round_id) or s.phase != REVIEW:
+                return
+            if s.rounds_done():
+                await self._push(s, s.finish())
                 return
             s._new_round()
             await self._push(s, s.screen())
@@ -216,6 +221,8 @@ class Manager:
             return
         await self.sleep(self.preview_seconds)
         if not await self._step(uid, s, round_id, s.begin_input):
+            return
+        if not s.clock_limited:
             return
 
         while True:
