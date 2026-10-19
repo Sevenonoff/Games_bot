@@ -485,6 +485,11 @@ def build_board_header(game: MultiplayerGame, uid: int, lang: str,
 
     lines.extend(recent_moves(game, uid, lang))
 
+    if game.status == 'finished':
+        # последний корабль потоплен: ходов нет, итог придёт отдельным сообщением
+        lines.append(get_translation(lang, 'text_mp_game_over'))
+        return "\n".join(lines)
+
     is_my_turn = uid == game.current_turn
     turn_text = get_translation(lang, 'text_your_turn' if is_my_turn else 'text_opponent_turn')
     turn_line = f"{'🟢' if is_my_turn else '🔴'} {turn_text}"
@@ -1635,6 +1640,10 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
     language_code = callback.from_user.language_code or 'en'
 
     game = active_games.get(user_id)
+    if game and game.status == 'finished':
+        # Последний корабль потоплен, идёт анимация и подведение итога — ходов больше нет
+        await callback.answer(get_translation(language_code, 'error_game_not_active'))
+        return
     if not game or game.status != 'active':
         # Фоллбэк: пробуем восстановить игру из БД
         active_game_db = await db.get_active_game_for_user(user_id)
@@ -1712,25 +1721,25 @@ async def handle_mp_fire(callback: types.CallbackQuery, state: FSMContext):
         game.attacks2 = json.dumps(my_attacks)
         game.board1 = json.dumps(enemy_board)
 
-    # Переключаем ход. turn_start_time нужен, чтобы таймер в шапке доски
-    # показывал время, оставшееся именно на текущий ход
-    game.current_turn = game.get_opponent_id(user_id)
+    all_sunk = not any(cell == SHIP for row in enemy_board for cell in row)
+
     game.last_move_time = datetime.now()
-    game.turn_start_time = datetime.now()
+    if all_sunk:
+        # Победа: партия закрыта сразу, до первого await, и ход сопернику не переходит.
+        # Иначе пока мигает последний корабль, проигравший успевает выстрелить
+        # (и даже «победить» вторым). Итог объявит finish_mp_game после анимации
+        game.status = 'finished'
+        game.winner_id = user_id
+        game.finished_at = datetime.now()
+    else:
+        # Переключаем ход. turn_start_time нужен, чтобы таймер в шапке доски
+        # показывал время, оставшееся именно на текущий ход
+        game.current_turn = game.get_opponent_id(user_id)
+        game.turn_start_time = datetime.now()
 
     await db.update_multiplayer_game(game)
     active_games[game.player1_id] = game
     active_games[game.player2_id] = game
-
-    # Проверяем победу
-    all_sunk = True
-    for row in enemy_board:
-        for cell in row:
-            if cell == SHIP:
-                all_sunk = False
-                break
-        if not all_sunk:
-            break
 
     if all_sunk:
         # Последний корабль: доигрываем анимацию и только затем объявляем итог.

@@ -123,6 +123,7 @@ translations: Dict[str, Dict[str, str]] = {
         # Turn and field labels
         "text_your_turn": "Your turn",
         "text_opponent_turn": "Opponent's turn",
+        "text_mp_game_over": "🏁 All ships sunk — game over",
         "text_own_ships_field": "🚢 Your ships",
         "text_attack_field": "🎯 Attack opponent",
         "text_own_field_warning": "⚠️ This is your ships field. Use the attack field below to fire!",
@@ -252,6 +253,7 @@ translations: Dict[str, Dict[str, str]] = {
         # Ход и метки полей
         "text_your_turn": "Ваш ход",
         "text_opponent_turn": "Ход противника",
+        "text_mp_game_over": "🏁 Все корабли потоплены — партия окончена",
         "text_own_ships_field": "🚢 Ваши корабли",
         "text_attack_field": "🎯 Поле для атаки",
         "text_own_field_warning": "⚠️ Это поле ваших кораблей. Для атаки используйте поле ниже!",
