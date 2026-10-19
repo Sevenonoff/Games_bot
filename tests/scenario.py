@@ -17,7 +17,9 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from games_core.manager import text_payload
 from games_core.sessions import TimedSession
-from tests.harness import Chat, World, check_screen, live, right_move, wait_preview, win_round, wrong_moves
+from games_core import seafight_mp as mp
+from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, mp_targets, right_move,
+                           wait_preview, win_round, wrong_moves)
 
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
 DEFAULT_PLAYER = "Тестер"
@@ -62,7 +64,14 @@ class Scenario:
 # --- разбор ---
 
 STEP_PATTERNS = [
+    (r"пишу код приглашения", "send_code"),
     (r"пишу (.+)", "send"),
+    (r"перехожу по ссылке", "follow_invite"),
+    (r"стреляю мимо", "mp_miss"),
+    (r"стреляю по кораблю", "mp_hit"),
+    (r"доводим партию до последнего выстрела", "mp_endgame"),
+    (r"расставляю корабли", "mp_place"),
+    (r"перезапускаю бота", "restart"),
     (r"жму клетку (\d+)[ ,]+(\d+)", "tap"),
     (r"жму (.+)", "click"),
     (r"хожу верно до (.+)", "right_until"),
@@ -163,7 +172,8 @@ def plain(text: str) -> str:
 
 def labels(chat: Chat) -> List[str]:
     """Подписи кнопок, кроме клеток поля."""
-    return [b.text for b in chat.buttons if not b.data.startswith("t:")]
+    return [b.text for b in chat.buttons
+            if b.data != "noop" and b.data.split(":")[0] not in ("t", "mpf", "mpp")]
 
 
 async def do_send(world: World, chat: Chat, text: str) -> None:
@@ -179,6 +189,11 @@ async def do_tap(world: World, chat: Chat, r: str, c: str) -> None:
 
 
 async def right_once(world: World, chat: Chat) -> None:
+    if mp_game(chat) is not None:
+        cell = mp_right_move(chat)
+        assert cell is not None, "в бою с другом сейчас не ваш ход"
+        await chat.tap(*cell)
+        return
     await wait_preview(world, chat)
     cell = right_move(live(chat))
     assert cell is not None, "сейчас нет верного хода: партии нет или она окончена"
@@ -257,7 +272,75 @@ async def do_buttons(world: World, chat: Chat, spec: str) -> None:
     assert ok, f"кнопки не те:\n  ждали {expected}\n  на экране {actual}"
 
 
+# --- бой с другом ---
+
+async def do_follow_invite(world: World, chat: Chat) -> None:
+    param = world.invite_link()
+    assert param is not None, "ни на одном экране нет ссылки-приглашения"
+    await chat.start(param)
+
+
+async def do_send_code(world: World, chat: Chat) -> None:
+    param = world.invite_link()
+    assert param is not None, "ни на одном экране нет приглашения"
+    await chat.send(text_payload(param[len("mp_"):]))
+
+
+def _mp_game(chat: Chat) -> mp.MpGame:
+    game = mp_game(chat)
+    assert game is not None, "у игрока нет боя с другом"
+    return game
+
+
+async def do_mp_miss(world: World, chat: Chat) -> None:
+    await chat.tap(*mp_targets(_mp_game(chat), chat.player.user_id, ships=False)[0])
+
+
+async def do_mp_hit(world: World, chat: Chat) -> None:
+    """Попасть, по возможности не потопив: в корабль, у которого останутся целые клетки."""
+    game, uid = _mp_game(chat), chat.player.user_id
+    targets = mp_targets(game, uid, ships=True)
+    ships = game.opponent(uid).ships
+    alive = {cell: sum(1 for x in next(s for s in ships if cell in s) if x in targets) for cell in targets}
+    await chat.tap(*max(targets, key=lambda cell: alive[cell]))
+
+
+async def do_mp_endgame(world: World, chat: Chat) -> None:
+    """Оба по очереди топят корабли соперника, пока у каждого не останется одна клетка
+    до победы; следующий ход — за этим игроком."""
+    game = _mp_game(chat)
+    for _ in range(MAX_MOVES):
+        left = {s.user_id: len(mp_targets(game, s.user_id, ships=True)) for s in game.sides}
+        if all(n == 1 for n in left.values()) and game.turn == chat.player.user_id:
+            return
+        shooter = world.chats[game.turn]
+        await shooter.tap(*mp_targets(game, game.turn, ships=left[game.turn] > 1)[0])
+    raise AssertionError("не удалось довести партию до последнего выстрела")
+
+
+async def do_mp_place(world: World, chat: Chat) -> None:
+    """Расставить оставшиеся корабли нажатиями: каждый — горизонтально, в первое подходящее место."""
+    p = _mp_game(chat).side(chat.player.user_id).placement
+    assert p is not None, "расстановки нет"
+    if p.current_cells():
+        await chat.click("Зафиксировать")
+    while not p.is_complete():
+        size = p.current_size
+        spot = next(((r, c) for r in range(p.rows) for c in range(p.cols - size + 1)
+                     if p._check([(r, c + i) for i in range(size)]) is None), None)
+        assert spot is not None, f"корабль на {size} клеток уже не встаёт"
+        r, c = spot
+        await chat.tap(r, c + (size - 1) // 2)
+        await chat.click("Зафиксировать")
+
+
+async def do_restart(world: World, chat: Chat) -> None:
+    await world.restart()
+
+
 ACTIONS: Dict[str, Callable] = {
+    "send_code": do_send_code, "follow_invite": do_follow_invite, "mp_miss": do_mp_miss,
+    "mp_hit": do_mp_hit, "mp_endgame": do_mp_endgame, "mp_place": do_mp_place, "restart": do_restart,
     "send": do_send, "click": do_click, "tap": do_tap,
     "right": do_right, "right_until": do_right_until, "wrong": do_wrong, "win_round": do_win_round,
     "wait": do_wait, "see": do_see, "not_see": do_not_see, "note": do_note, "no_note": do_no_note,
@@ -305,7 +388,8 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
             for c in chats.values():
                 if c.ref is not None:
                     check_screen(c)
-            if step.action in ("send", "click", "tap", "right", "right_until", "wrong", "win_round", "wait"):
+            if step.action in ("send", "click", "tap", "right", "right_until", "wrong", "win_round", "wait",
+                               "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place"):
                 log.append(f"{step.line:>3}  [{step.player}] {step.source}\n"
                            f"{indent(describe(chat, with_field=verbose))}")
     except AssertionError as e:

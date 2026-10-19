@@ -14,8 +14,10 @@ import random
 import re
 from typing import Dict, List, Optional, Tuple
 
+from games_core import seafight_mp as mp
 from games_core import seafight_solo as sea
 from games_core.manager import RECORD_GAMES, Manager
+from games_core.multiplayer import start_payload
 from games_core.sessions import GAMES, INPUT, Player, Session, TimedSession
 from games_core.storage import Storage
 from games_core.texts import t
@@ -61,6 +63,7 @@ class VirtualTime:
 class Messenger:
     def __init__(self):
         self.screens: Dict[str, Screen] = {}
+        self.history: List[Screen] = []     # все версии всех сообщений — для поиска приглашений
         self.pushes = 0
         self._ids = itertools.count(1)
 
@@ -68,12 +71,14 @@ class Messenger:
         screen.validate()
         ref = f"m{next(self._ids)}"
         self.screens[ref] = screen
+        self.history.append(screen)
         return ref
 
     def edit(self, ref: str, screen: Screen) -> None:
         assert ref in self.screens, f"правка несуществующего сообщения {ref!r}"
         screen.validate()
         self.screens[ref] = screen
+        self.history.append(screen)
 
     async def push(self, ref: str, screen: Screen) -> None:
         self.pushes += 1
@@ -146,16 +151,51 @@ class Chat:
                 return b
         raise AssertionError(f"нет клетки {(r, c)} на экране\n{self.text}")
 
+    async def start(self, start_param: str) -> Screen:
+        """Переход по ссылке ?start=… (в Max — событие bot_started): ответ — новым сообщением."""
+        return await self.send(start_payload(start_param))
+
+    def mp_cell(self, r: int, c: int) -> Button:
+        for b in self.buttons:
+            parts = b.data.split(":")
+            if parts[0] in ("mpf", "mpp") and parts[2:] == [str(r), str(c)]:
+                return b
+        raise AssertionError(f"нет клетки {(r, c)} поля боя на экране\n{self.text}")
+
     async def click(self, text: str) -> Screen:
         return await self.press(self.find(text).data)
 
     async def tap(self, r: int, c: int) -> Screen:
+        if any(b.data.split(":")[0] in ("mpf", "mpp") for b in self.buttons):
+            return await self.press(self.mp_cell(r, c).data)
         return await self.press(self.cell(r, c).data)
 
     async def play_right(self) -> Screen:
         cell = right_move(self.session)
         assert cell is not None, "нет верного хода сейчас"
         return await self.tap(*cell)
+
+
+def mp_game(chat) -> Optional[mp.MpGame]:
+    """Бой с другом, в котором участвует игрок (открытый или с мигающим последним кораблём)."""
+    uid = chat.player.user_id
+    return next((g for g in chat.mgr.mp.games.values() if g.side(uid) is not None), None)
+
+
+def mp_targets(game: mp.MpGame, uid: int, ships: bool) -> List[Cell]:
+    """Необстрелянные клетки поля соперника: с кораблями (ships) или пустые."""
+    side, enemy = game.side(uid), {cell for ship in game.opponent(uid).ships for cell in ship}
+    return [(r, c) for r in range(sea.ROWS) for c in range(sea.COLS)
+            if side.shots[r][c] == sea.UNKNOWN and ((r, c) in enemy) == ships]
+
+
+def mp_right_move(chat) -> Optional[Cell]:
+    game = mp_game(chat)
+    uid = chat.player.user_id
+    if game is None or game.status != mp.ACTIVE or game.turn != uid:
+        return None
+    targets = mp_targets(game, uid, ships=True)
+    return targets[0] if targets else None
 
 
 def right_move(s: Optional[Session]) -> Optional[Cell]:
@@ -225,28 +265,63 @@ class World:
         self.storage = Storage(":memory:")
         self.messenger = Messenger()
         self.platform = platform
-        # в TG у Manager свои настройки меню рекордов (sea_fight_aiogram/games_menu.py)
-        options = tg.MANAGER_OPTIONS if platform == tg.PLATFORM else {}
-        self.mgr = Manager(self.storage, platform, self.messenger.push, clock=self.time,
-                           rng=random.Random(seed), sleep=self.time.sleep,
-                           preview_seconds=preview_seconds, countdown_seconds=countdown_seconds,
-                           tick_seconds=tick_seconds, round_seconds=round_seconds,
-                           debug_users=debug_users, **options)
+        self.chats: Dict[int, "Chat"] = {}       # chat_id → чат: туда приходят сообщения send()
         self.errors: List[BaseException] = []   # исключения в таймерах, иначе они пропадут молча
-        spawn = self.mgr._spawn
+        self.rng = random.Random(seed)
+        self._options = dict(preview_seconds=preview_seconds, countdown_seconds=countdown_seconds,
+                             tick_seconds=tick_seconds, round_seconds=round_seconds,
+                             debug_users=debug_users)
+        self.mgr = self._manager()
+
+    def _manager(self) -> Manager:
+        # в TG у Manager свои настройки меню рекордов (sea_fight_aiogram/games_menu.py)
+        options = tg.MANAGER_OPTIONS if self.platform == tg.PLATFORM else {}
+        mgr = Manager(self.storage, self.platform, self.messenger.push, clock=self.time,
+                      rng=self.rng, sleep=self.time.sleep, send=self.send,
+                      invite_link=lambda code: f"https://max.ru/test_bot?start=mp_{code}",
+                      **self._options, **options)
+        spawn = mgr._spawn
 
         def spawn_watched(coro):
             task = spawn(coro)
             task.add_done_callback(self._collect)
             return task
-        self.mgr._spawn = spawn_watched
+        mgr._spawn = spawn_watched
+        return mgr
+
+    async def send(self, chat_id: int, screen: Screen) -> str:
+        """Бот сам пишет в чат (уведомление): новое сообщение становится последним в чате."""
+        ref = self.messenger.new_message(screen)
+        chat = self.chats.get(chat_id)
+        if chat is not None:
+            chat.ref = ref
+        return ref
+
+    async def restart(self) -> None:
+        """Перезапуск бота: таймеры гибнут, БД и сообщения в чатах остаются."""
+        await self.mgr.shutdown()
+        self.mgr = self._manager()
+        self.mgr.restore()
+        for chat in self.chats.values():
+            chat.mgr = self.mgr
+        await settle()
 
     def _collect(self, task: asyncio.Task) -> None:
         if not task.cancelled() and task.exception() is not None:
             self.errors.append(task.exception())
 
     def chat(self, user_id: int = 42, name: str = "Тестер") -> Chat:
-        return Chat(self.mgr, self.messenger, Player(self.platform, user_id, name, chat_id=user_id))
+        chat = Chat(self.mgr, self.messenger, Player(self.platform, user_id, name, chat_id=user_id))
+        self.chats[user_id] = chat
+        return chat
+
+    def invite_link(self) -> Optional[str]:
+        """Параметр start последней ссылки-приглашения, которую бот присылал (её могли и переслать)."""
+        for screen in reversed(self.messenger.history):
+            m = re.search(r"\?start=(mp_[A-Z0-9]+)", screen.text)
+            if m:
+                return m[1]
+        return None
 
     def scores_count(self) -> int:
         return self.storage.conn.execute("SELECT COUNT(*) FROM scores").fetchone()[0]
@@ -278,8 +353,11 @@ async def win_round(world: "World", chat: Chat) -> Optional[str]:
 
 # --- инварианты: что должно быть верно на любом экране ---
 
+MP_CODE = f"[{mp.CODE_ALPHABET}]{{{mp.CODE_LEN}}}"
 KNOWN_PAYLOAD = re.compile(
-    r"^(menu|sea|sea_rec|rec|noop|dbg(:\w+)*"
+    r"^(menu|sea|sea_rec|rec|noop|dbg(:\w+)*|mp|mpb"
+    r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?"
+    rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+"
     rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"
     r"|q:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")
 
@@ -295,13 +373,37 @@ def check_screen(chat) -> None:
     for b in buttons:
         assert KNOWN_PAYLOAD.match(b.data), f"кнопка {b.text!r} с неизвестным payload {b.data!r}"
     tg.tg_rows(chat.screen)   # тот же экран уходит и в Telegram: его лимиты тоже соблюдены
-    assert chat.text == t("menu") or any(b.data == "menu" or b.data.startswith("q:") for b in buttons), \
+    assert chat.text == t("menu") or any(b.data in ("menu", "sea") or b.data.startswith("q:") for b in buttons), \
         "с экрана не уйти в меню"
+    check_mp_screen(chat)
     s = live(chat)
     sids = {b.data.split(":")[1] for b in buttons if b.data[:2] in ("t:", "q:")}
+    if s is not None and s.msg_ref is not None and s.msg_ref != chat.ref:
+        # партия идёт в сообщении повыше: последним бот прислал другое (уведомление боя с другом)
+        assert not sids, "кнопки партии не в её сообщении"
+        screen = chat.messenger.screens[s.msg_ref]
+        sids = {b.data.split(":")[1] for row in screen.rows for b in row if b.data[:2] in ("t:", "q:")}
+    else:
+        screen = chat.screen
     if s is None:
         assert not sids, "кнопки партии на экране без живой партии"
     else:
         assert sids == {s.sid}, f"на экране кнопки чужой партии: {sids} != {s.sid}"
         assert s.progress.level >= 1
-        assert chat.screen.rows == s.screen().rows, "сообщение отстало от состояния партии"
+        assert screen.rows == s.screen().rows, "сообщение отстало от состояния партии"
+
+
+def check_mp_screen(chat) -> None:
+    """Бой с другом: на экране — только своя партия, и сообщение партии не отстаёт от неё."""
+    uid = chat.player.user_id
+    codes = {b.data.split(":")[1] for b in chat.buttons if b.data.split(":")[0] in ("mpf", "mpp", "mpk", "mpz", "mpy", "mpg", "mpx")}
+    games = chat.mgr.mp.games
+    for code in codes:
+        if code in games:
+            assert games[code].side(uid) is not None, f"на экране кнопки чужой партии {code}"
+    game = mp_game(chat)
+    if game is None or chat.mgr.mp.blinking.get(game.code):
+        return
+    side = game.side(uid)
+    if side.msg_ref == chat.ref and game.status in mp.OPEN + (mp.FINISHED,):
+        assert chat.screen.rows == chat.mgr.mp.screen(game, side).rows, "сообщение боя отстало от партии"

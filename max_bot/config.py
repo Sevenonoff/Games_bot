@@ -15,6 +15,7 @@ COUNTDOWN_SECONDS = float(os.getenv("COUNTDOWN_SECONDS", "2.0"))
 TIMER_TICK_SECONDS = float(os.getenv("TIMER_TICK_SECONDS", "5.0"))
 MEMO_CLOSE_SECONDS = float(os.getenv("MEMO_CLOSE_SECONDS", "3.0"))
 REVIEW_SECONDS = float(os.getenv("REVIEW_SECONDS", "2.0"))
+MP_BLINK_SECONDS = float(os.getenv("MP_BLINK_SECONDS", "0.4"))   # мигание потопленного корабля в бою с другом
 # webhook: пусто — long polling. URL публичный (Caddy china-drom.ru → контейнер games-bot), путь содержит секрет;
 # тот же секрет Max присылает в заголовке X-Max-Bot-Api-Secret
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")

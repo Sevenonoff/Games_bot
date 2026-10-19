@@ -20,10 +20,12 @@ NATIVE = {
     "sea_rec": "leaderboard_show",  # «Морской бой» в меню рекордов
 }
 
-# Морской бой в TG свой (мультиплеер, Elo, рекорды в Postgres) — у ядра только мемо, матрица, башня
+# Морской бой в TG свой (мультиплеер, Elo, рекорды в Postgres) — у ядра только мемо, матрица, башня,
+# а бой с другом ядра выключен: код приглашения, присланный текстом, просто откроет меню
 MANAGER_OPTIONS = {
     "record_games": ("memo", "matrix", "tower"),
     "records_extra": [[Button(t("btn_sea"), "sea_rec")]],
+    "multiplayer": False,
 }
 
 # Bot API: до 8 кнопок в ряду, до 100 на клавиатуре, callback_data до 64 байт

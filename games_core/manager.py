@@ -17,6 +17,8 @@ from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Sequence, Set
 
 from . import debug
+from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code, start_payload
+from .seafight_mp import game_type as mp_game_type
 from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
 from .storage import Storage
 from .texts import TITLES, t
@@ -31,17 +33,25 @@ MEMO_CLOSE_SECONDS = 3.0  # несовпавшая пара в мемо закр
 REVIEW_SECONDS = 2.0      # после ошибки в матрице/башне: найденные клетки и ошибочная
 ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
-RECORD_GAMES = ("memo", "matrix", "tower", "sea_full", "sea_reduced")
+MP_BLINK_SECONDS = 0.4    # мигание потопленного корабля в бою с другом
+RECORD_GAMES = ("memo", "matrix", "tower", "sea_full", "sea_reduced", "mp_full", "mp_reduced")
+RATING_GAMES = ("mp_full", "mp_reduced")   # бой с другом: таблица — рейтинг Elo, а не рекорды
 
 Respond = Callable[[Reply], Awaitable[Any]]
 Push = Callable[[Any, Screen], Awaitable[None]]
+Send = Callable[[int, Screen], Awaitable[Any]]    # новое сообщение в чат (chat_id) → его id
 
 
 def text_payload(text: Optional[str]) -> str:
-    """Текстовое сообщение → payload: любое открывает меню, «/dbg …» — отладочная команда."""
+    """Текстовое сообщение → payload: любое открывает меню, «/dbg …» — отладочная команда,
+    «/start mp_КОД» или сам код приглашения — подключиться к бою с другом."""
     words = (text or "").split()
     if words and words[0].lower() == "/dbg":
         return data("dbg", *words[1:])
+    if len(words) == 2 and words[0].lower() == "/start":
+        return start_payload(words[1])
+    if len(words) == 1 and looks_like_code(words[0]):
+        return data("mpj", words[0].upper())
     return "menu"
 
 
@@ -58,10 +68,18 @@ class Manager:
                  round_seconds: int = ROUND_SECONDS,
                  debug_users: Iterable[int] = (),
                  record_games: Sequence[str] = RECORD_GAMES,
-                 records_extra: Sequence[List[Button]] = ()):
+                 records_extra: Sequence[List[Button]] = (),
+                 send: Optional[Send] = None,
+                 invite_link: Callable[[str], str] = lambda code: code,
+                 mp_blink_seconds: float = MP_BLINK_SECONDS,
+                 multiplayer: bool = True):
         self.storage = storage
         self.platform = platform
         self.push = push
+        self.send = send
+        self.invite_link = invite_link        # ссылка-приглашение в бой с другом по коду партии
+        self.mp_blink_seconds = mp_blink_seconds
+        self.multiplayer = multiplayer        # бой с другом ядра (в TG — свой, в sea_fight_aiogram)
         self.clock = clock
         self.rng = rng or random.Random()
         self.sleep = sleep
@@ -79,6 +97,7 @@ class Manager:
         self.sessions: Dict[int, Session] = {}
         self.locks: Dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._tasks: Set[asyncio.Task] = set()
+        self.mp = Multiplayer(self)
 
     # --- вход ---
 
@@ -86,8 +105,19 @@ class Manager:
         uid = player.user_id
         async with self.locks[uid]:
             self._drop_idle()
+            parts = (payload or "menu").split(":")
+            if parts[0] in MP_ACTIONS and not self.multiplayer:
+                payload, parts = "menu", ["menu"]
+            if parts[0] in MP_ACTIONS:
+                # бой с другом: отвечает и правит сообщения соперника сам, под замком партии
+                self._abandon(uid)
+                await self.mp.handle(player, parts, respond)
+                return
             reply, shown = self._dispatch(player, payload or "menu")
-            ref = await respond(reply)
+            async with self.mp.guard(uid):
+                ref = await respond(reply)
+                if ref is not None:
+                    self.mp.detach(uid, ref)    # сообщение партии с другом ушло на другой экран
             if shown is not None and ref is not None:
                 shown.msg_ref = ref
                 shown.rendered_at = self.clock()
@@ -132,7 +162,7 @@ class Manager:
                 return Reply(Screen(t("dbg_off", user_id=uid), [[Button(t("btn_menu"), "menu")]])), None
             return debug.dispatch(self, player, parts[1:])
         if action == "sea":
-            return Reply(self.sea_screen()), None
+            return Reply(self.sea_screen(player)), None
         if action == "rec":
             game = parts[1] if len(parts) > 1 else None
             if game in self.record_games:
@@ -251,6 +281,10 @@ class Manager:
         except Exception:
             logger.exception("push failed for user %s", s.player.user_id)
 
+    def restore(self) -> int:
+        """После перезапуска бота: незаконченные бои с другом и их таймеры."""
+        return self.mp.restore()
+
     async def shutdown(self) -> None:
         for task in list(self._tasks):
             task.cancel()
@@ -267,18 +301,23 @@ class Manager:
             [Button(t("btn_records"), "rec")],
         ])
 
-    def sea_screen(self) -> Screen:
-        return Screen(t("sea_choose"), [
+    def sea_screen(self, player: Player) -> Screen:
+        rows = [
             [Button(t("btn_sea_full"), data("new", "sea_full"))],
             [Button(t("btn_sea_reduced"), data("new", "sea_reduced"))],
-            [Button(t("btn_menu"), "menu")],
-        ])
+        ]
+        if self.multiplayer:
+            rows.append([Button(t("btn_mp_return"), "mpb") if self.mp.open_game(player.user_id)
+                         else Button(t("btn_mp"), "mp")])
+        return Screen(t("sea_choose"), rows + [[Button(t("btn_menu"), "menu")]])
 
     def records_menu(self) -> Screen:
         rows = [[Button(TITLES[g], data("rec", g))] for g in self.record_games]
         return Screen(t("records_choose"), rows + self.records_extra + [[Button(t("btn_menu"), "menu")]])
 
     def records_screen(self, player: Player, game: str) -> Screen:
+        if game in RATING_GAMES:
+            return self.rating_screen(player, game)
         top = self.storage.top(self.platform, game)
         lines = [f"🏆 <b>{TITLES[game]}</b>", ""]
         medals = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -292,5 +331,20 @@ class Manager:
             lines += ["", t("records_mine", score=best)]
         return Screen("\n".join(lines), [
             [Button(t("btn_play"), data("new", game))],
+            [Button(t("btn_records"), "rec"), Button(t("btn_menu"), "menu")],
+        ])
+
+    def rating_screen(self, player: Player, game: str) -> Screen:
+        top = self.storage.top_ratings(self.platform, mp_game_type(game[len("mp_"):]))
+        lines = [t("records_rating", title=TITLES[game]), ""]
+        medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+        for i, (user_id, name, rating, won, lost) in enumerate(top, 1):
+            mark = " ← вы" if user_id == player.user_id else ""
+            lines.append(f"{medals.get(i, f'{i}.')} {html.escape(name, quote=False)} — <b>{rating}</b>"
+                         f" ({won}/{lost}){mark}")
+        if not top:
+            lines.append(t("records_empty"))
+        return Screen("\n".join(lines), [
+            [Button(t("btn_mp"), "mp")],
             [Button(t("btn_records"), "rec"), Button(t("btn_menu"), "menu")],
         ])

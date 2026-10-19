@@ -41,3 +41,17 @@ async def test_tg_records_have_no_core_sea_games():
         assert chat.text == world.mgr.records_menu().text
     finally:
         await world.close()
+
+
+async def test_tg_has_no_core_multiplayer():
+    """В TG бой с другом свой (sea_fight_aiogram): код приглашения текстом и mp-кнопки ведут в меню."""
+    world = World(platform="tg")
+    chat = world.chat()
+    try:
+        await chat.send("mpj:ABC234")
+        assert chat.text == world.mgr.menu_screen().text
+        await chat.press("mp")
+        assert chat.text == world.mgr.menu_screen().text
+        assert not world.mgr.mp.games
+    finally:
+        await world.close()

@@ -24,7 +24,7 @@ async def test_sea_reduced_win_then_records(world):
 
     await chat.click("Меню")
     await chat.click("Рекорды")
-    await chat.click("(малый)")
+    await chat.click("Морской бой (малый)")
     assert "Тестер" in chat.text and "← вы" in chat.text
     await chat.click("Играть")
     assert chat.session.game == "sea_reduced"

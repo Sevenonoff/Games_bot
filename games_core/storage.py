@@ -4,8 +4,9 @@
 Ключ пользователя — (platform, user_id), чтобы один файл мог обслуживать
 несколько мессенджеров.
 """
+import json
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .progression import Progress
 
@@ -41,6 +42,24 @@ CREATE TABLE IF NOT EXISTS scores (
     played_at   REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS scores_game_score ON scores (platform, game, score DESC);
+CREATE TABLE IF NOT EXISTS mp_games (
+    platform    TEXT NOT NULL,
+    code        TEXT NOT NULL,
+    status      TEXT NOT NULL,
+    state       TEXT NOT NULL,          -- MpGame.to_dict() в JSON
+    updated_at  REAL NOT NULL,
+    PRIMARY KEY (platform, code)
+);
+CREATE TABLE IF NOT EXISTS ratings (
+    platform    TEXT NOT NULL,
+    user_id     INTEGER NOT NULL,
+    game_type   TEXT NOT NULL,          -- mp_full / mp_reduced
+    rating      INTEGER NOT NULL,
+    won         INTEGER NOT NULL,
+    lost        INTEGER NOT NULL,
+    updated_at  REAL NOT NULL,
+    PRIMARY KEY (platform, user_id, game_type)
+);
 """
 
 
@@ -119,7 +138,7 @@ class Storage:
     def reset_user(self, platform: str, user_id: int) -> None:
         """Стереть уровни и результаты игрока (для отладки)."""
         with self.conn:
-            for table in ("progress", "scores"):
+            for table in ("progress", "scores", "ratings"):
                 self.conn.execute(f"DELETE FROM {table} WHERE platform = ? AND user_id = ?",
                                   (platform, user_id))
 
@@ -136,3 +155,61 @@ class Storage:
             (platform, game, limit),
         ).fetchall()
         return [(r["user_id"], r["name"], r["best"]) for r in rows]
+
+    # --- морской бой с другом ---
+
+    def save_mp(self, platform: str, code: str, status: str, state: dict, now: float) -> None:
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO mp_games (platform, code, status, state, updated_at) VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT (platform, code) DO UPDATE SET
+                       status = excluded.status, state = excluded.state, updated_at = excluded.updated_at""",
+                (platform, code, status, json.dumps(state, ensure_ascii=False), now),
+            )
+
+    def load_mp(self, platform: str, statuses: Tuple[str, ...]) -> List[dict]:
+        """Партии с этими статусами (незаконченные — при старте бота)."""
+        marks = ",".join("?" * len(statuses))
+        rows = self.conn.execute(
+            f"SELECT state FROM mp_games WHERE platform = ? AND status IN ({marks})",
+            (platform, *statuses),
+        ).fetchall()
+        return [json.loads(r["state"]) for r in rows]
+
+    def mp_code_used(self, platform: str, code: str) -> bool:
+        return self.conn.execute("SELECT 1 FROM mp_games WHERE platform = ? AND code = ?",
+                                 (platform, code)).fetchone() is not None
+
+    def rating(self, platform: str, user_id: int, game_type: str, default: int) -> int:
+        row = self.conn.execute(
+            "SELECT rating FROM ratings WHERE platform = ? AND user_id = ? AND game_type = ?",
+            (platform, user_id, game_type),
+        ).fetchone()
+        return row["rating"] if row else default
+
+    def save_match(self, platform: str, game_type: str, winner: int, loser: int,
+                   ratings: Dict[int, int], now: float) -> None:
+        """Новые рейтинги обоих и счётчики побед/поражений — одной транзакцией."""
+        with self.conn:
+            for uid, won in ((winner, 1), (loser, 0)):
+                self.conn.execute(
+                    """INSERT INTO ratings (platform, user_id, game_type, rating, won, lost, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT (platform, user_id, game_type) DO UPDATE SET
+                           rating = excluded.rating, won = ratings.won + excluded.won,
+                           lost = ratings.lost + excluded.lost, updated_at = excluded.updated_at""",
+                    (platform, uid, game_type, ratings[uid], won, 1 - won, now),
+                )
+
+    def top_ratings(self, platform: str, game_type: str, limit: int = 10) -> List[Tuple[int, str, int, int, int]]:
+        """[(user_id, name, rating, won, lost)] по убыванию рейтинга."""
+        rows = self.conn.execute(
+            """SELECT r.user_id, COALESCE(u.name, '?') AS name, r.rating, r.won, r.lost
+               FROM ratings r
+               LEFT JOIN users u ON u.platform = r.platform AND u.user_id = r.user_id
+               WHERE r.platform = ? AND r.game_type = ?
+               ORDER BY r.rating DESC, r.updated_at
+               LIMIT ?""",
+            (platform, game_type, limit),
+        ).fetchall()
+        return [(r["user_id"], r["name"], r["rating"], r["won"], r["lost"]) for r in rows]

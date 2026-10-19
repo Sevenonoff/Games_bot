@@ -13,9 +13,11 @@ from urllib.parse import urlparse
 from maxapi import Bot, Dispatcher
 from maxapi.enums.parse_mode import ParseMode
 from maxapi.types import BotStarted, CallbackButton, MessageCallback, MessageCreated
+from maxapi.utils.deep_linking import create_start_link
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 from games_core.manager import Manager, text_payload
+from games_core.multiplayer import start_payload
 from games_core.sessions import Player
 from games_core.storage import Storage
 from games_core.ui import Reply, Screen
@@ -104,14 +106,24 @@ def callback_responder(event: MessageCallback, timing: dict):
     return respond
 
 
-def build(bot: Bot, storage: Storage) -> tuple[Dispatcher, Manager]:
+def build(bot: Bot, storage: Storage, bot_username: str = "") -> tuple[Dispatcher, Manager]:
     dp = Dispatcher(use_create_task=True)
 
     async def push(ref, screen: Screen) -> None:
         await bot.edit_message(message_id=ref, text=screen.text,
                                attachments=render(screen), format=ParseMode.HTML)
 
-    manager = Manager(storage, config.PLATFORM, push,
+    async def send(chat_id: int, screen: Screen):
+        """Бот сам пишет игроку (бой с другом: соперник подключился, сдался…)."""
+        sent = await bot.send_message(chat_id=chat_id, text=screen.text,
+                                      attachments=render(screen), format=ParseMode.HTML)
+        return message_id(sent.message) if sent else None
+
+    def invite_link(code: str) -> str:
+        return create_start_link(bot_username, f"mp_{code}")
+
+    manager = Manager(storage, config.PLATFORM, push, send=send, invite_link=invite_link,
+                      mp_blink_seconds=config.MP_BLINK_SECONDS,
                       preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
                       countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
                       memo_close_seconds=config.MEMO_CLOSE_SECONDS, review_seconds=config.REVIEW_SECONDS,
@@ -125,7 +137,9 @@ def build(bot: Bot, storage: Storage) -> tuple[Dispatcher, Manager]:
 
     @dp.bot_started()
     async def on_bot_started(event: BotStarted):
-        await safe_handle(player_from(event.user, event.chat_id), "menu",
+        # ссылка-приглашение https://max.ru/<бот>?start=mp_<код> приходит сюда в payload
+        logger.info("bot_started user=%s payload=%r", event.user.user_id, event.payload)
+        await safe_handle(player_from(event.user, event.chat_id), start_payload(event.payload),
                           main_screen_sender(bot, event.chat_id))
 
     @dp.message_created()
@@ -165,9 +179,11 @@ async def main() -> None:
     Path(config.DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     storage = Storage(config.DB_PATH)
     bot = Bot(config.MAX_BOT_TOKEN)
-    dp, manager = build(bot, storage)
     me = await bot.get_me()
-    logger.info("started as @%s (id %s), db=%s", me.username, me.user_id, config.DB_PATH)
+    dp, manager = build(bot, storage, me.username)
+    restored = manager.restore()
+    logger.info("started as @%s (id %s), db=%s, restored mp games: %d",
+                me.username, me.user_id, config.DB_PATH, restored)
     try:
         if config.WEBHOOK_URL:
             if not config.WEBHOOK_SECRET:
