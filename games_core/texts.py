@@ -52,6 +52,7 @@ RU = {
     "note_sunk": "💢 Корабль потоплен!",
     "note_miss": "💠 Мимо",
     "note_stale": "Эта партия уже завершена",
+    "note_old_button": "Эта кнопка устарела — напишите /start",
     "result_title": "🏁 <b>Партия окончена</b> · {title}",
     "result_score": "Очки: <b>{score}</b>",
     "result_record_new": "🏆 Новый рекорд!",

@@ -2,31 +2,16 @@
 
 Без aiogram — модуль проверяется тестами ядра (.venv). Связка с aiogram — games_tg.py.
 
-Кнопки ядра уходят в Telegram с префиксом «g:» — так их callback_data не
-пересекаются с callback'ами морского боя. Исключения — кнопки, которые ведут
-в родной TG-морской бой (NATIVE).
+С 2.0.0 все игры, включая морской бой и бой с другом, — из ядра, как в Max.
+Кнопки ядра уходят в Telegram с префиксом «g:»: по нему старые кнопки aiogram-боя
+(fire_…, mpfire_…) отличаются от кнопок ядра и получают «кнопка устарела».
 """
 from typing import List, Optional, Tuple
 
-from games_core.texts import t
-from games_core.ui import Button, Screen
+from games_core.ui import Screen
 
 PLATFORM = "tg"
 PREFIX = "g:"
-
-# кнопка ядра → callback родного морского боя (sea_fight_aiogram/main.py)
-NATIVE = {
-    "sea": "sea_menu",              # «Морской бой» в главном меню
-    "sea_rec": "leaderboard_show",  # «Морской бой» в меню рекордов
-}
-
-# Морской бой в TG свой (мультиплеер, Elo, рекорды в Postgres) — у ядра только мемо, матрица, башня,
-# а бой с другом ядра выключен: код приглашения, присланный текстом, просто откроет меню
-MANAGER_OPTIONS = {
-    "record_games": ("memo", "matrix", "tower"),
-    "records_extra": [[Button(t("btn_sea"), "sea_rec")]],
-    "multiplayer": False,
-}
 
 # Bot API: до 8 кнопок в ряду, до 100 на клавиатуре, callback_data до 64 байт
 TG_MAX_COLS = 8
@@ -35,7 +20,7 @@ TG_MAX_DATA_BYTES = 64
 
 
 def tg_data(core: str) -> str:
-    return NATIVE.get(core, PREFIX + core)
+    return PREFIX + core
 
 
 def core_payload(callback_data: Optional[str]) -> Optional[str]:

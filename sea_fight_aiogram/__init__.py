@@ -1,8 +1,6 @@
 """
-Sea Fight Bot - Aiogram + PostgreSQL
-
-Telegram бот "Морской бой" на aiogram 3.x с PostgreSQL базой данных.
+Бот игр для Telegram (@games_telegram_robot): все игры — общее ядро games_core, как в Max.
 """
 
-__version__ = "1.3.1"
+__version__ = "2.0.0"
 __author__ = "Python_pars"

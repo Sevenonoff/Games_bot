@@ -1,10 +1,10 @@
-# Telegram-бот игр (@games_telegram_robot): мемо, матрица, башня (games_core) + морской бой.
+# Telegram-бот игр (@games_telegram_robot): все игры — ядро games_core, как в Max.
 # User-юнит systemd (linger включён), sudo не нужен:
 #   cp deploy/games-tg-bot.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload && systemctl --user enable --now games-tg-bot
 # Лог: ~/projects/Games_bot/logs/tg_bot.log; ошибки запуска — journalctl --user -u games-tg-bot
 [Unit]
-Description=Games Telegram bot (games_core + sea fight)
+Description=Games Telegram bot (games_core)
 After=network-online.target
 
 [Service]

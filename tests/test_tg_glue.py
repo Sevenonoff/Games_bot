@@ -106,7 +106,7 @@ async def test_photo_message_gets_new_text_message(calls):
 
 async def test_push_edits_by_ref_and_ignores_not_modified():
     bot = FakeBot()
-    mgr = games_tg.build_manager(bot, Storage(":memory:"))
+    mgr = games_tg.build_manager(bot, Storage(":memory:"), "games_bot")
     await mgr.push((CHAT, 55), SCREEN)
     assert bot.edits[0][:3] == (CHAT, 55, SCREEN.text)
     bot.edit_error = bad_request("message is not modified")
@@ -116,12 +116,28 @@ async def test_push_edits_by_ref_and_ignores_not_modified():
         await mgr.push((CHAT, 55), SCREEN)
 
 
-async def test_menu_goes_out_as_new_message():
+async def test_start_sends_menu_as_new_message():
     bot = FakeBot()
-    mgr = games_tg.build_manager(bot, Storage(":memory:"))
+    mgr = games_tg.build_manager(bot, Storage(":memory:"), "games_bot")
     player = games_tg.make_player(7, "@anya", "Аня", CHAT)
     assert player.name == "anya" and player.platform == "tg"
-    await games_tg.send_menu(mgr, bot, player)
+    await games_tg.safe_handle(mgr, player, "menu", games_tg.new_message_sender(bot, CHAT))
     chat_id, text, markup = bot.sent[0]
     data = [b.callback_data for row in markup.inline_keyboard for b in row]
-    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "sea_menu", "g:rec"]
+    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "g:sea", "g:rec"]
+
+
+async def test_invite_link_and_opponent_message():
+    """Бой с другом: ссылка t.me с кодом; подключение друга присылает хозяину новое сообщение."""
+    bot = FakeBot()
+    mgr = games_tg.build_manager(bot, Storage(":memory:"), "games_bot")
+    host = games_tg.make_player(7, "anya", "Аня", CHAT)
+    guest = games_tg.make_player(8, "bob", "Боб", 600)
+    await mgr.handle(host, "mpn:0:reduced:auto", games_tg.new_message_sender(bot, CHAT))
+    invite = bot.sent[-1][1]
+    code = next(iter(mgr.mp.games))
+    assert f"https://t.me/games_bot?start=mp_{code}" in invite
+    await mgr.handle(guest, games_tg.start_payload(f"mp_{code}"), games_tg.new_message_sender(bot, 600))
+    assert bot.sent[-2][0] == 600 and "Вы против" in bot.sent[-2][1]      # гостю — партия
+    assert bot.sent[-1][0] == CHAT and "Ваш ход" in bot.sent[-1][1]       # хозяину — новое сообщение
+    await mgr.shutdown()

@@ -274,12 +274,10 @@ class World:
         self.mgr = self._manager()
 
     def _manager(self) -> Manager:
-        # в TG у Manager свои настройки меню рекордов (sea_fight_aiogram/games_menu.py)
-        options = tg.MANAGER_OPTIONS if self.platform == tg.PLATFORM else {}
         mgr = Manager(self.storage, self.platform, self.messenger.push, clock=self.time,
                       rng=self.rng, sleep=self.time.sleep, send=self.send,
                       invite_link=lambda code: f"https://max.ru/test_bot?start=mp_{code}",
-                      **self._options, **options)
+                      **self._options)
         spawn = mgr._spawn
 
         def spawn_watched(coro):

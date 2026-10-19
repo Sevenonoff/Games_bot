@@ -1,7 +1,7 @@
-"""Игры ядра games_core в Telegram-боте: aiogram-транспорт для Manager.
+"""Telegram-транспорт для Manager ядра games_core (по образцу max_bot/main.py).
 
-По образцу max_bot/main.py: Manager выдаёт Screen, здесь он превращается в
-сообщение Telegram. Ссылка на сообщение для правок по таймеру — (chat_id, message_id).
+Manager выдаёт Screen, здесь он превращается в сообщение Telegram. Ссылка на
+сообщение для правок по таймеру — (chat_id, message_id).
 """
 import logging
 import time
@@ -9,15 +9,18 @@ from typing import Optional
 
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from games_core.manager import Manager, text_payload
+from games_core.multiplayer import start_payload
 from games_core.sessions import Player
 from games_core.storage import Storage
+from games_core.texts import t
 from games_core.ui import Reply, Screen
 
 import config
-from games_menu import MANAGER_OPTIONS, PLATFORM, core_payload, format_player_name, tg_rows
+from games_menu import PLATFORM, core_payload, format_player_name, tg_rows
 
 logger = logging.getLogger("games_tg")
 
@@ -44,14 +47,18 @@ def not_modified(e: TelegramBadRequest) -> bool:
     return "message is not modified" in str(e)
 
 
+async def send_screen(bot: Bot, chat_id: int, screen: Screen):
+    sent = await bot.send_message(chat_id=chat_id, text=screen.text,
+                                  reply_markup=render(screen), parse_mode=HTML)
+    return sent.chat.id, sent.message_id
+
+
 def new_message_sender(bot: Bot, chat_id: int):
     """respond для текстовых команд: экран уходит новым сообщением."""
     async def respond(reply: Reply):
         if reply.screen is None:
             return None
-        sent = await bot.send_message(chat_id=chat_id, text=reply.screen.text,
-                                      reply_markup=render(reply.screen), parse_mode=HTML)
-        return sent.chat.id, sent.message_id
+        return await send_screen(bot, chat_id, reply.screen)
     return respond
 
 
@@ -82,11 +89,11 @@ def callback_responder(bot: Bot, callback: types.CallbackQuery, timing: dict):
                     raise
             return message.chat.id, message.message_id
         chat_id = message.chat.id if message is not None else callback.from_user.id
-        return await new_message_sender(bot, chat_id)(Reply(screen))
+        return await send_screen(bot, chat_id, screen)
     return respond
 
 
-def build_manager(bot: Bot, storage: Storage) -> Manager:
+def build_manager(bot: Bot, storage: Storage, bot_username: str = "") -> Manager:
     async def push(ref, screen: Screen) -> None:
         chat_id, message_id = ref
         try:
@@ -96,11 +103,18 @@ def build_manager(bot: Bot, storage: Storage) -> Manager:
             if not not_modified(e):
                 raise
 
-    return Manager(storage, PLATFORM, push,
+    async def send(chat_id: int, screen: Screen):
+        """Бот сам пишет игроку (бой с другом: соперник подключился, сдался…)."""
+        return await send_screen(bot, chat_id, screen)
+
+    def invite_link(code: str) -> str:
+        return f"https://t.me/{bot_username}?start=mp_{code}"
+
+    return Manager(storage, PLATFORM, push, send=send, invite_link=invite_link,
                    preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
                    countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
                    memo_close_seconds=config.MEMO_CLOSE_SECONDS, review_seconds=config.REVIEW_SECONDS,
-                   debug_users=config.DEBUG_USER_IDS, **MANAGER_OPTIONS)
+                   mp_blink_seconds=config.MP_BLINK_SECONDS, debug_users=config.DEBUG_USER_IDS)
 
 
 async def safe_handle(manager: Manager, player: Player, payload: str, respond) -> None:
@@ -110,15 +124,7 @@ async def safe_handle(manager: Manager, player: Player, payload: str, respond) -
         logger.exception("handle failed: user=%s payload=%r", player.user_id, payload)
 
 
-async def send_menu(manager: Manager, bot: Bot, player: Player) -> None:
-    """Главное меню (игры ядра + морской бой) новым сообщением."""
-    await safe_handle(manager, player, "menu", new_message_sender(bot, player.chat_id))
-
-
 def register(dp: Dispatcher, bot: Bot, manager: Manager) -> None:
-    """Обработчики игр ядра. Вызывать после регистрации обработчиков морского боя:
-    обработчик текста ловит всё, что не поймали они."""
-
     async def on_callback(callback: types.CallbackQuery, payload: str) -> None:
         chat_id = callback.message.chat.id if callback.message else None
         received = time.monotonic()
@@ -136,10 +142,19 @@ def register(dp: Dispatcher, bot: Bot, manager: Manager) -> None:
     async def on_core_callback(callback: types.CallbackQuery):
         await on_callback(callback, core_payload(callback.data))
 
-    # «🏠 Главное меню» из экранов морского боя
-    @dp.callback_query(F.data == "menu")
-    async def on_menu_callback(callback: types.CallbackQuery):
-        await on_callback(callback, "menu")
+    @dp.callback_query()
+    async def on_old_callback(callback: types.CallbackQuery):
+        # кнопки aiogram-версии до 2.0.0 (fire_…, mpfire_…, menu…) в старых сообщениях
+        try:
+            await callback.answer(text=t("note_old_button"))
+        except TelegramBadRequest as e:
+            logger.debug("answer failed: %s", e)
+
+    @dp.message(CommandStart())
+    async def on_start(message: types.Message, command: CommandObject):
+        # ссылка-приглашение https://t.me/<бот>?start=mp_<код> приходит как «/start mp_<код>»
+        await safe_handle(manager, player_from(message.from_user, message.chat.id),
+                          start_payload(command.args), new_message_sender(bot, message.chat.id))
 
     @dp.message()
     async def on_message(message: types.Message):
