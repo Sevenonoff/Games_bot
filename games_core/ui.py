@@ -11,6 +11,10 @@ MAX_COLS = 7
 MAX_ROWS = 15
 MAX_DATA_LEN = 256
 MAX_TEXT_LEN = 64
+# поле игр с уровнями — не меньше FIELD_SIDE × FIELD_SIDE, чтобы клавиатура не меняла размер;
+# клетки вне игрового поля — чёрные и ничего не делают
+FIELD_SIDE = 7
+BLANK = "⬛"
 
 
 @dataclass(frozen=True)

@@ -20,7 +20,7 @@ from . import debug, friends, notify
 from . import seafight_mp as mp
 from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
-from .sessions import COUNTDOWN_FROM, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
+from .sessions import COUNTDOWN_FROM, DONE, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
 from .storage import Storage
 from .texts import TITLES, t
 from .ui import Button, Reply, Screen, data
@@ -31,7 +31,7 @@ PREVIEW_SECONDS = 1.0
 COUNTDOWN_SECONDS = 2.0   # «3, 2, 1» перед каждым показом
 TIMER_TICK_SECONDS = 5.0  # как часто обновлять таймер партии, если игрок не нажимает
 MEMO_CLOSE_SECONDS = 3.0  # несовпавшая пара в мемо закрывается сама (или раньше — нажатием)
-REVIEW_SECONDS = 2.0      # после ошибки в матрице/башне: найденные клетки и ошибочная
+REVIEW_SECONDS = 2.0      # разбор ошибки (найденные клетки и ошибочная) и итог пройденного раунда
 ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
 MP_BLINK_SECONDS = 0.4    # мигание потопленного корабля в бою с другом
@@ -137,13 +137,19 @@ class Manager:
         action = parts[0]
         uid = player.user_id
 
-        if action in ("t", "q"):
+        if action in ("t", "q", "b"):
             s = self.sessions.get(uid)
             if s is None or len(parts) < 2 or s.sid != parts[1] or s.finished:
                 return Reply(note=t("note_stale")), None
             s.last_activity = self.clock()
-            if action == "q" or (s.timed and s.time_is_up()):
+            if action == "q":
                 return Reply(s.finish()), s
+            if s.in_done():
+                # итог раунда или собранного поля: любое нажатие — дальше
+                return Reply(s.skip_done()), s
+            if action == "b":
+                # чёрная клетка вне поля
+                return Reply(), None
             try:
                 r, c = int(parts[2]), int(parts[3])
             except (IndexError, ValueError):
@@ -199,9 +205,13 @@ class Manager:
     def _drop_idle(self) -> None:
         now = self.clock()
         for uid, s in list(self.sessions.items()):
-            # партии на время кончаются сами; остальные убираем после простоя
-            ends_itself = isinstance(s, TimedSession) and s.clock_limited
-            if s.finished or (not ends_itself and now - s.last_activity > IDLE_SECONDS):
+            # матрица, пока время не вышло, кончится сама; остальные партии убираем после простоя
+            on_clock = isinstance(s, TimedSession) and s.clock_limited
+            if s.finished:
+                del self.sessions[uid]
+            elif now - s.last_activity > IDLE_SECONDS and not (on_clock and s.seconds_left() > 0):
+                if on_clock:
+                    s.finish()      # время вышло, а последний раунд так и не доигран: очки партии записываем
                 del self.sessions[uid]
 
     # --- таймеры ---
@@ -210,6 +220,9 @@ class Manager:
         if isinstance(s, MemoSession) and s.close_pending:
             s.close_pending = False
             self._spawn(self._close_mismatch_later(uid, s, s.mismatch_id))
+        if isinstance(s, MemoSession) and s.done_pending:
+            s.done_pending = False
+            self._spawn(self._finish_later(uid, s))
         if isinstance(s, TimedSession) and s.review_pending:
             s.review_pending = False
             self._spawn(self._review_then_next(uid, s, s.round_id))
@@ -244,18 +257,23 @@ class Manager:
                 return
             await self._push(s, s.screen())
 
-    async def _review_then_next(self, uid: int, s: TimedSession, round_id: int) -> None:
-        """Разбор ошибки review_seconds, затем новый раунд с отсчётом (или конец партии по числу раундов)."""
+    async def _finish_later(self, uid: int, s: MemoSession) -> None:
+        """Собранное поле мемо видно review_seconds, затем результат (если игрок не нажал раньше)."""
         await self.sleep(self.review_seconds)
         async with self.locks[uid]:
-            if not self._alive(uid, s, round_id) or s.phase != REVIEW:
-                return
-            if s.rounds_done():
+            if self.sessions.get(uid) is s and not s.finished:
                 await self._push(s, s.finish())
+
+    async def _review_then_next(self, uid: int, s: TimedSession, round_id: int) -> None:
+        """Разбор ошибки или итог раунда review_seconds, затем новый раунд с отсчётом
+        (или конец партии: раунды кончились или вышло время)."""
+        await self.sleep(self.review_seconds)
+        async with self.locks[uid]:
+            if not self._alive(uid, s, round_id) or s.phase not in (REVIEW, DONE):
                 return
-            s._new_round()
-            await self._push(s, s.screen())
-            self._schedule(uid, s)
+            await self._push(s, s.advance())
+            if not s.finished:
+                self._schedule(uid, s)
 
     async def _run_round(self, uid: int, s: TimedSession, round_id: int) -> None:
         """Отсчёт «3, 2, 1» → показ → ввод с ходом таймера до конца раунда или партии."""
@@ -279,7 +297,8 @@ class Manager:
                 if not self._alive(uid, s, round_id) or s.phase != INPUT:
                     return
                 if s.time_is_up():
-                    await self._push(s, s.finish())
+                    # время вышло: раунд доигрывается, партию закончит итог или разбор
+                    await self._push(s, s.screen())
                     return
                 # нажатие только что обновило экран — таймер на нём свежий
                 if self.clock() - s.rendered_at >= 1.0:

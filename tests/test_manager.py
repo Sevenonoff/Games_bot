@@ -5,7 +5,7 @@ import pytest
 
 from games_core.manager import Manager
 from games_core.progression import Progress
-from games_core.sessions import COUNTDOWN, GAMES, INPUT, REVIEW, Player
+from games_core.sessions import COUNTDOWN, DONE, GAMES, INPUT, REVIEW, Player
 from games_core.storage import Storage
 from sea_fight_aiogram.games_menu import tg_rows
 
@@ -67,14 +67,20 @@ async def test_matrix_preview_then_hide_and_timeout(env):
     await asyncio.sleep(0.1)
     assert s.phase == INPUT and tr.pushes[-1][0] == "mid-1"
 
-    target = sorted(s.round.targets)[0]
-    await press(mgr, tr, tap_payload(s, *target))
+    targets = sorted(s.round.targets)
+    await press(mgr, tr, tap_payload(s, *targets[0]))
     assert s.score == 10
 
+    # время вышло: партия ждёт, пока раунд доиграют
     await asyncio.sleep(0.25)
+    assert not s.finished and s.phase == INPUT and "Время вышло" in tr.pushes[-1][1].text
+    for cell in targets[1:]:
+        await press(mgr, tr, tap_payload(s, *cell))
+    assert s.phase == DONE and not s.finished
+    await asyncio.sleep(0.05)          # итог раунда — и конец партии
     assert s.finished
     assert "Партия окончена" in tr.pushes[-1][1].text
-    assert storage.top("max", "matrix") == [(42, "Тестер", 10)]
+    assert storage.top("max", "matrix") == [(42, "Тестер", s.score)]
 
 
 async def test_stale_session_rejected(env):
@@ -112,7 +118,10 @@ async def test_memo_full_board_is_win(env):
     for a, c in by_icon.values():
         await press(mgr, tr, tap_payload(s, a // b.cols, a % b.cols))
         reply = await press(mgr, tr, tap_payload(s, c // b.cols, c % b.cols))
-    assert s.finished and "Поле собрано" in reply.screen.text
+    # собранное поле видно до таймера или до любого нажатия
+    assert s.in_done() and not s.finished and "Поле собрано!" in reply.screen.text
+    reply = await press(mgr, tr, f"b:{s.sid}")
+    assert s.finished and "Поле собрано за" in reply.screen.text
     # 3 пары без промахов на 1 уровне: 10 + 10 + 10
     assert s.score == 30
     # 3 хода при лимите 6 — сразу следующий уровень

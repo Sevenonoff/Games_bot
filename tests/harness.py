@@ -22,7 +22,7 @@ from games_core.manager import RECORD_GAMES, Manager, start_payload
 from games_core.sessions import GAMES, INPUT, Player, Session, TimedSession
 from games_core.storage import Storage
 from games_core.texts import t
-from games_core.ui import Button, Screen
+from games_core.ui import FIELD_SIDE, Button, Screen
 from sea_fight_aiogram import games_menu as tg
 
 Cell = Tuple[int, int]
@@ -202,7 +202,7 @@ def mp_right_move(chat) -> Optional[Cell]:
 
 def right_move(s: Optional[Session]) -> Optional[Cell]:
     """Верное нажатие в текущей партии; None — сейчас нажимать нечего (показ, конец)."""
-    if s is None or s.finished or s.over:
+    if s is None or s.finished or s.over or s.in_done():
         return None
     if isinstance(s, TimedSession):
         if s.phase != INPUT:
@@ -231,63 +231,46 @@ def right_move(s: Optional[Session]) -> Optional[Cell]:
 
 
 def path_next(rnd: path.PathRound) -> Optional[Cell]:
-    """Соедини зелёные: следующий шаг кратчайшего пути от конца пути игрока (None — тупик)."""
-    if not rnd.path:
-        return rnd.solution[0]
-    goal = rnd.near(rnd.other_green(rnd.start_green))
-    route = rnd.route(rnd.neighbors(rnd.path[-1]), goal, blocked=set(rnd.path))
-    return route[0] if route else None
+    """Проложи дорогу: следующая клетка кратчайшей дороги, которой ещё нет на поле."""
+    return next((x for x in rnd.solution if x not in rnd.road), None)
 
 
 def path_detour(rnd: path.PathRound) -> Optional[List[Cell]]:
-    """Путь от первого зелёного ко второму длиннее кратчайшего (перебор простых путей)."""
-    a, b = rnd.greens
-    goal, free = rnd.near(b), lambda x: x not in rnd.reds and x not in rnd.greens
+    """Дорога от человека к дому длиннее кратчайшей (перебор простых путей)."""
+    a, b = rnd.ends
+    goal = set(rnd.neighbors(b))
 
     def walk(route: List[Cell]) -> Optional[List[Cell]]:
         if route[-1] in goal:
             return route if len(route) > rnd.shortest else None
         for x in rnd.neighbors(route[-1]):
-            if free(x) and x not in route:
+            if rnd.free(x) and x not in route:
                 found = walk(route + [x])
                 if found:
                     return found
         return None
 
-    for start in sorted(rnd.near(a) - {a}):
+    for start in sorted(x for x in rnd.neighbors(a) if rnd.free(x)):
         found = walk([start])
         if found:
             return found
     return None
 
 
-def path_wrong(rnd: path.PathRound, kind: str) -> Cell:
-    """Ошибочное нажатие нужного вида: красная, начало вдали от зелёных, не соседняя, пройденная."""
-    cells = [(r, c) for r in range(rnd.rows) for c in range(rnd.cols)]
-    free = [x for x in cells if x not in rnd.reds and x not in rnd.greens]
-    if kind == path.RED:
-        return min(rnd.reds)
-    if kind == path.FAR_START:
-        assert not rnd.path, "путь уже начат"
-        found = [x for x in free if all(x not in rnd.near(g) for g in rnd.greens)]
-    elif kind == path.NOT_ADJACENT:
-        assert rnd.path, "путь ещё не начат"
-        found = [x for x in free if x not in rnd.path and x not in rnd.neighbors(rnd.path[-1])]
-    else:
-        assert rnd.path, "путь ещё не начат"
-        found = [rnd.path[0]]
-    assert found, f"на поле нет клетки для ошибки {kind}"
-    return found[0]
+def path_middle_first(rnd: path.PathRound) -> List[Cell]:
+    """Кратчайшая дорога, положенная с середины: от середины к дому, потом от середины к человеку."""
+    mid = len(rnd.solution) // 2
+    return rnd.solution[mid:] + rnd.solution[:mid][::-1]
 
 
 def wrong_move(s: TimedSession) -> Cell:
-    """Ошибочное нажатие: в матрице — пустая клетка, в башне — не то число (пустые неактивны),
-    в «Соедини зелёные» — красная."""
+    """Ошибочное нажатие: в матрице — пустая клетка, в поездке на числах — не то число
+    (пустые неактивны), в «Проложи дорогу» — препятствие."""
     if s.game == "matrix":
         return next((r, c) for r in range(s.round.rows) for c in range(s.round.cols)
                     if (r, c) not in s.round.targets)
     if s.game == "path":
-        return path_wrong(s.round, path.RED)
+        return min(s.round.blocks)
     right = right_move(s)
     cell = next((cell for cell in s.round.cells if cell != right and not s.round.is_opened(cell)), None)
     assert cell is not None, "осталось одно число — ошибиться нельзя"
@@ -399,21 +382,25 @@ class World:
 
 
 async def wait_preview(world: "World", chat: Chat) -> None:
-    """Если идёт отсчёт или показ фигур — дождаться начала ввода."""
+    """Если идёт отсчёт, показ фигур, разбор или итог — дождаться начала ввода (или конца партии)."""
     s = chat.session
-    for _ in range(100):
-        if not isinstance(s, TimedSession) or s.finished or s.phase == INPUT:
+    for _ in range(200):
+        if s is None or s.finished:
+            return
+        if isinstance(s, TimedSession) and s.phase == INPUT:
+            return
+        if not isinstance(s, TimedSession) and not s.in_done():
             return
         await world.time.advance(0.1)
-    raise AssertionError(f"ввод не начался: фаза {s.phase}")
+    raise AssertionError(f"ввод не начался: фаза {getattr(s, 'phase', None)}")
 
 
 async def win_round(world: "World", chat: Chat) -> Optional[str]:
-    """Пройти текущий раунд матрицы или башни. Возвращает уведомление."""
+    """Пройти текущий раунд матрицы, поездки на числах или дороги; партия остаётся на итоге раунда.
+    Возвращает уведомление."""
     await wait_preview(world, chat)
     s = chat.session
-    first = s.round_id
-    while s.round_id == first and not s.finished:
+    while s.phase == INPUT and not s.finished:
         await chat.play_right()
     return chat.note
 
@@ -428,7 +415,7 @@ KNOWN_PAYLOAD = re.compile(
     r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?"
     rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+"
     rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"
-    r"|q:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")
+    r"|q:[0-9a-f]{6}|b:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")
 
 
 def live(chat):
@@ -446,12 +433,12 @@ def check_screen(chat) -> None:
         "с экрана не уйти в меню"
     check_mp_screen(chat)
     s = live(chat)
-    sids = {b.data.split(":")[1] for b in buttons if b.data[:2] in ("t:", "q:")}
+    sids = {b.data.split(":")[1] for b in buttons if b.data[:2] in ("t:", "q:", "b:")}
     if s is not None and s.msg_ref is not None and s.msg_ref != chat.ref:
         # партия идёт в сообщении повыше: последним бот прислал другое (уведомление боя с другом)
         assert not sids, "кнопки партии не в её сообщении"
         screen = chat.messenger.screens[s.msg_ref]
-        sids = {b.data.split(":")[1] for row in screen.rows for b in row if b.data[:2] in ("t:", "q:")}
+        sids = {b.data.split(":")[1] for row in screen.rows for b in row if b.data[:2] in ("t:", "q:", "b:")}
     else:
         screen = chat.screen
     if s is None:
@@ -460,6 +447,14 @@ def check_screen(chat) -> None:
         assert sids == {s.sid}, f"на экране кнопки чужой партии: {sids} != {s.sid}"
         assert s.progress.level >= 1
         assert screen.rows == s.screen().rows, "сообщение отстало от состояния партии"
+        check_field(screen)
+
+
+def check_field(screen: Screen) -> None:
+    """Поле партии — сетка шириной FIELD_SIDE и не ниже FIELD_SIDE рядов: клавиатура не меняет размер."""
+    field = [row for row in screen.rows if row[0].data[:2] in ("t:", "b:")]
+    assert len(field) >= FIELD_SIDE, f"поле из {len(field)} рядов, меньше {FIELD_SIDE}"
+    assert all(len(row) == FIELD_SIDE for row in field), f"ряды поля: {[len(row) for row in field]}"
 
 
 def check_mp_screen(chat) -> None:

@@ -6,7 +6,7 @@ from sea_fight_aiogram import games_menu as tg
 
 
 def test_core_buttons_get_prefix_and_come_back():
-    for core in ("menu", "sea", "rec", "rec:mp_full", "new:tower", "t:abc123:13:6", "q:abc123",
+    for core in ("menu", "sea", "rec", "rec:mp_full", "new:tower", "t:abc123:13:6", "q:abc123", "b:abc123",
                  "dbg:level:memo:5", "mpn:3600:reduced:manual", "mpf:ABC234:7:6"):
         assert tg.tg_data(core) == "g:" + core
         assert tg.core_payload(tg.tg_data(core)) == core
@@ -30,3 +30,10 @@ def test_player_name_without_at():
     assert tg.format_player_name("@anya", "Аня", 7) == "anya"
     assert tg.format_player_name(None, "Аня", 7) == "Аня"
     assert tg.format_player_name(None, None, 7) == "7"
+
+
+def test_every_message_is_full_width():
+    """Клавиатура шириной с сообщение: в конце каждого текста — длинная невидимая строка."""
+    text = tg.tg_text(Screen("<b>Меню</b>"))
+    assert text.startswith("<b>Меню</b>\n") and text.endswith(tg.WIDTH_LINE)
+    assert len(tg.WIDTH_LINE) >= 30 and not tg.WIDTH_LINE.strip("⠀")

@@ -19,7 +19,7 @@ from games_core.texts import t
 from games_core.ui import Reply, Screen
 
 import config
-from games_menu import PLATFORM, core_payload, format_player_name, tg_rows
+from games_menu import PLATFORM, core_payload, format_player_name, tg_rows, tg_text
 
 logger = logging.getLogger("games_tg")
 
@@ -47,7 +47,7 @@ def not_modified(e: TelegramBadRequest) -> bool:
 
 
 async def send_screen(bot: Bot, chat_id: int, screen: Screen):
-    sent = await bot.send_message(chat_id=chat_id, text=screen.text,
+    sent = await bot.send_message(chat_id=chat_id, text=tg_text(screen),
                                   reply_markup=render(screen), parse_mode=HTML)
     return sent.chat.id, sent.message_id
 
@@ -82,7 +82,7 @@ def callback_responder(bot: Bot, callback: types.CallbackQuery, timing: dict):
         # фото (старое меню с картинкой) и сообщения старше 48 ч не правятся текстом — шлём новое
         if isinstance(message, types.Message) and not message.photo:
             try:
-                await message.edit_text(text=screen.text, reply_markup=render(screen), parse_mode=HTML)
+                await message.edit_text(text=tg_text(screen), reply_markup=render(screen), parse_mode=HTML)
             except TelegramBadRequest as e:
                 if not not_modified(e):
                     raise
@@ -96,7 +96,7 @@ def build_manager(bot: Bot, storage: Storage, bot_username: str = "") -> Manager
     async def push(ref, screen: Screen) -> None:
         chat_id, message_id = ref
         try:
-            await bot.edit_message_text(text=screen.text, chat_id=chat_id, message_id=message_id,
+            await bot.edit_message_text(text=tg_text(screen), chat_id=chat_id, message_id=message_id,
                                         reply_markup=render(screen), parse_mode=HTML)
         except TelegramBadRequest as e:
             if not not_modified(e):

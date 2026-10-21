@@ -18,6 +18,11 @@ TG_MAX_COLS = 8
 TG_MAX_BUTTONS = 100
 TG_MAX_DATA_BYTES = 64
 
+# Клавиатура в Telegram шириной с текст сообщения: чтобы она не «прыгала» от экрана к экрану,
+# каждое сообщение заканчивается строкой невидимых символов (пустой Брайль U+2800 — Telegram
+# не обрезает его, как пробелы) шириной во весь экран телефона
+WIDTH_LINE = "\u2800" * 45
+
 
 def tg_data(core: str) -> str:
     return PREFIX + core
@@ -28,6 +33,11 @@ def core_payload(callback_data: Optional[str]) -> Optional[str]:
     if callback_data and callback_data.startswith(PREFIX):
         return callback_data[len(PREFIX):]
     return None
+
+
+def tg_text(screen: Screen) -> str:
+    """Текст сообщения Telegram: текст экрана и строка во всю ширину."""
+    return f"{screen.text}\n{WIDTH_LINE}"
 
 
 def tg_rows(screen: Screen) -> List[List[Tuple[str, str]]]:

@@ -16,11 +16,12 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from games_core import days, path
+from games_core.ui import BLANK
 from games_core.manager import text_payload
 from games_core.sessions import TimedSession
 from games_core import seafight_mp as mp
 from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, mp_targets, path_detour,
-                           path_wrong, right_move, settle, wait_preview, win_round, wrong_moves)
+                           path_middle_first, right_move, settle, wait_preview, win_round, wrong_moves)
 
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
 DEFAULT_PLAYER = "Тестер"
@@ -74,6 +75,8 @@ STEP_PATTERNS = [
     (r"расставляю корабли", "mp_place"),
     (r"перезапускаю бота", "restart"),
     (r"жму клетку (\d+)[ ,]+(\d+)", "tap"),
+    (r"жму чёрную клетку", "tap_blank"),
+    (r"жму клетку дороги ещё раз", "path_again"),
     (r"жму (.+)", "click"),
     (r"хожу верно до (.+)", "right_until"),
     (r"хожу верно(?: (\d+) раза?)?", "right"),
@@ -88,12 +91,12 @@ STEP_PATTERNS = [
     (r"есть кнопка (.+)", "has_button"),
     (r"кнопки: (.+)", "buttons"),
     (r"открыто клеток:? (\d+)", "open_cells"),
-    (r"иду кратчайшим путём( от зелёного)?", "path_shortest"),
+    (r"на поле есть (.+)", "field_has"),
+    (r"на поле нет (.+)", "field_lacks"),
+    (r"иду кратчайшим путём", "path_shortest"),
     (r"иду в обход", "path_detour"),
-    (r"наступаю на красную", "path_red"),
-    (r"начинаю далеко от зелёного", "path_far"),
-    (r"шагаю не в соседнюю клетку", "path_jump"),
-    (r"шагаю на пройденную клетку", "path_back"),
+    (r"кладу дорогу с середины", "path_middle"),
+    (r"наступаю на препятствие", "path_block"),
     (r"наступает (\d{1,2}):(\d{2})", "clock"),
     (r"приходит сообщение (.+)", "incoming"),
     (r"сообщений не приходило", "no_incoming"),
@@ -183,7 +186,7 @@ def plain(text: str) -> str:
 def labels(chat: Chat) -> List[str]:
     """Подписи кнопок, кроме клеток поля."""
     return [b.text for b in chat.buttons
-            if b.data != "noop" and b.data.split(":")[0] not in ("t", "mpf", "mpp")]
+            if b.data != "noop" and b.data.split(":")[0] not in ("t", "b", "mpf", "mpp")]
 
 
 async def do_send(world: World, chat: Chat, text: str) -> None:
@@ -196,6 +199,13 @@ async def do_click(world: World, chat: Chat, label: str) -> None:
 
 async def do_tap(world: World, chat: Chat, r: str, c: str) -> None:
     await chat.tap(int(r), int(c))
+
+
+async def do_tap_blank(world: World, chat: Chat) -> None:
+    blank = next((b for b in chat.buttons if b.data.startswith("b:")), None)
+    assert blank is not None, "на экране нет чёрных клеток"
+    assert blank.text == BLANK
+    await chat.press(blank.data)
 
 
 async def right_once(world: World, chat: Chat) -> None:
@@ -220,6 +230,11 @@ async def do_right_until(world: World, chat: Chat, text: str) -> None:
     for _ in range(MAX_MOVES):
         if text in plain(chat.text):
             return
+        if mp_game(chat) is None:
+            # итог раунда или собранного поля проходит сам — текст может появиться и после него
+            await wait_preview(world, chat)
+            if text in plain(chat.text):
+                return
         await right_once(world, chat)
     raise AssertionError(f"за {MAX_MOVES} верных ходов «{text}» так и не появилось")
 
@@ -233,7 +248,7 @@ async def do_wrong(world: World, chat: Chat) -> None:
 
 
 async def do_win_round(world: World, chat: Chat) -> None:
-    assert isinstance(live(chat), TimedSession), "«выигрываю раунд» — только в матрице и башне"
+    assert isinstance(live(chat), TimedSession), "«выигрываю раунд» — только в играх с раундами"
     await win_round(world, chat)
 
 
@@ -265,6 +280,20 @@ async def do_open_cells(world: World, chat: Chat, count: str) -> None:
     cells = [b.text for b in chat.buttons if b.data.startswith("t:")]
     opened = sum(1 for text in cells if text not in CLOSED_CELLS)
     assert opened == int(count), f"открыто клеток: {opened}, ожидалось {count}; поле {cells}"
+
+
+def field_cells(chat: Chat) -> List[str]:
+    return [b.text for b in chat.buttons if b.data[:2] in ("t:", "b:")]
+
+
+async def do_field_has(world: World, chat: Chat, symbol: str) -> None:
+    assert any(unquote(symbol) in x for x in field_cells(chat)), \
+        f"на поле нет «{unquote(symbol)}»: {field_cells(chat)}"
+
+
+async def do_field_lacks(world: World, chat: Chat, symbol: str) -> None:
+    assert not any(unquote(symbol) in x for x in field_cells(chat)), \
+        f"на поле есть «{unquote(symbol)}», а не должно быть"
 
 
 async def do_has_button(world: World, chat: Chat, label: str) -> None:
@@ -348,12 +377,12 @@ async def do_restart(world: World, chat: Chat) -> None:
     await world.restart()
 
 
-# --- Соедини зелёные ---
+# --- Проложи дорогу ---
 
 async def _path_round(world: World, chat: Chat) -> path.PathRound:
     await wait_preview(world, chat)
     s = live(chat)
-    assert s is not None and s.game == "path", "сейчас не идёт «Соедини зелёные»"
+    assert s is not None and s.game == "path", "сейчас не идёт «Проложи дорогу»"
     return s.round
 
 
@@ -362,38 +391,34 @@ async def _walk(chat: Chat, cells) -> None:
         await chat.tap(*cell)
 
 
-async def do_path_shortest(world: World, chat: Chat, from_green: str = "") -> None:
+async def do_path_shortest(world: World, chat: Chat) -> None:
     rnd = await _path_round(world, chat)
-    assert not rnd.path, "путь уже начат"
-    await _walk(chat, ([rnd.greens[0]] if from_green else []) + rnd.solution)
+    assert not rnd.road, "дорога уже начата"
+    await _walk(chat, rnd.solution)
 
 
 async def do_path_detour(world: World, chat: Chat) -> None:
     rnd = await _path_round(world, chat)
-    assert not rnd.path, "путь уже начат"
+    assert not rnd.road, "дорога уже начата"
     route = path_detour(rnd)
-    assert route is not None, "на этом поле нет пути длиннее кратчайшего"
+    assert route is not None, "на этом поле нет дороги длиннее кратчайшей"
     await _walk(chat, route)
 
 
-async def _path_wrong(world: World, chat: Chat, kind: str) -> None:
-    await chat.tap(*path_wrong(await _path_round(world, chat), kind))
+async def do_path_middle(world: World, chat: Chat) -> None:
+    rnd = await _path_round(world, chat)
+    assert not rnd.road, "дорога уже начата"
+    await _walk(chat, path_middle_first(rnd))
 
 
-async def do_path_red(world: World, chat: Chat) -> None:
-    await _path_wrong(world, chat, path.RED)
+async def do_path_again(world: World, chat: Chat) -> None:
+    rnd = await _path_round(world, chat)
+    assert rnd.road, "дорога ещё не начата"
+    await chat.tap(*rnd.road[-1])
 
 
-async def do_path_far(world: World, chat: Chat) -> None:
-    await _path_wrong(world, chat, path.FAR_START)
-
-
-async def do_path_jump(world: World, chat: Chat) -> None:
-    await _path_wrong(world, chat, path.NOT_ADJACENT)
-
-
-async def do_path_back(world: World, chat: Chat) -> None:
-    await _path_wrong(world, chat, path.REVISIT)
+async def do_path_block(world: World, chat: Chat) -> None:
+    await chat.tap(*min((await _path_round(world, chat)).blocks))
 
 
 # --- время суток и сообщения от бота ---
@@ -426,13 +451,13 @@ async def do_no_incoming(world: World, chat: Chat) -> None:
 ACTIONS: Dict[str, Callable] = {
     "send_code": do_send_code, "follow_invite": do_follow_invite, "mp_miss": do_mp_miss,
     "mp_hit": do_mp_hit, "mp_endgame": do_mp_endgame, "mp_place": do_mp_place, "restart": do_restart,
-    "send": do_send, "click": do_click, "tap": do_tap,
+    "send": do_send, "click": do_click, "tap": do_tap, "tap_blank": do_tap_blank,
     "right": do_right, "right_until": do_right_until, "wrong": do_wrong, "win_round": do_win_round,
     "wait": do_wait, "see": do_see, "not_see": do_not_see, "note": do_note, "no_note": do_no_note,
     "has_button": do_has_button, "no_button": do_no_button, "buttons": do_buttons,
-    "open_cells": do_open_cells,
-    "path_shortest": do_path_shortest, "path_detour": do_path_detour, "path_red": do_path_red,
-    "path_far": do_path_far, "path_jump": do_path_jump, "path_back": do_path_back,
+    "open_cells": do_open_cells, "field_has": do_field_has, "field_lacks": do_field_lacks,
+    "path_shortest": do_path_shortest, "path_detour": do_path_detour, "path_middle": do_path_middle,
+    "path_again": do_path_again, "path_block": do_path_block,
     "clock": do_clock, "incoming": do_incoming, "no_incoming": do_no_incoming,
 }
 
@@ -446,7 +471,7 @@ def describe(chat: Chat, with_field: bool = False) -> str:
     out = text if text else "(пусто)"
     if with_field:
         for row in chat.screen.rows:
-            if all(b.data.startswith("t:") for b in row):
+            if all(b.data[:2] in ("t:", "b:") for b in row):
                 out += "\n" + " ".join(b.text for b in row)
     if labels(chat):
         out += "\n[" + "] [".join(labels(chat)) + "]"
@@ -476,9 +501,9 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
             for c in chats.values():
                 if c.ref is not None:
                     check_screen(c)
-            if step.action in ("send", "click", "tap", "right", "right_until", "wrong", "win_round", "wait",
-                               "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place",
-                               "path_shortest", "path_detour", "path_red", "path_far", "path_jump", "path_back",
+            if step.action in ("send", "click", "tap", "tap_blank", "right", "right_until", "wrong", "win_round",
+                               "wait", "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place",
+                               "path_shortest", "path_detour", "path_middle", "path_again", "path_block",
                                "clock", "incoming"):
                 log.append(f"{step.line:>3}  [{step.player}] {step.source}\n"
                            f"{indent(describe(chat, with_field=verbose))}")

@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from games_core import days, matrix, memo, path, progression as pr, scoring, seafight_solo as sea, tower
+from games_core import days, matrix, memo, path, progression as pr, scoring, seafight_solo as sea, tower, trips
 from games_core.ui import MAX_COLS, MAX_ROWS
 
 
@@ -119,68 +119,63 @@ def test_tower_order():
     assert rnd.tap(*empty) == tower.IGNORED
 
 
-# --- соедини зелёные ---
+# --- проложи дорогу ---
 
 @pytest.mark.parametrize("level", range(1, 30))
 def test_path_solvable_and_fits(level):
     for seed in range(40):
         rnd = path.PathRound.generate(level, random.Random(seed * 100 + level))
-        a, b = rnd.greens
-        assert path.distance(a, b) >= path.MIN_GREEN_DISTANCE
-        assert rnd.reds and not rnd.reds & set(rnd.greens)
+        a, b = rnd.ends
+        assert path.distance(a, b) >= path.MIN_ENDS_DISTANCE
+        assert rnd.blocks and not rnd.blocks & set(rnd.ends)
+        assert rnd.icons[0] in path.PEOPLE and rnd.icons[1] in path.HOUSES
         assert rnd.solution and rnd.shortest >= 2
         assert rnd.cols <= MAX_COLS and rnd.rows <= MAX_ROWS - 1
-        # кратчайший путь проходится нажатиями и даёт CLEARED ровно на последней клетке
+        # кратчайшая дорога кладётся нажатиями и даёт CLEARED ровно на последней клетке
         results = [rnd.tap(*cell) for cell in rnd.solution]
         assert results[-1] == path.CLEARED and set(results[:-1]) <= {path.HIT}
         assert rnd.is_shortest()
 
 
-def test_path_bigger_and_redder_with_level():
+def test_path_bigger_and_denser_with_level():
     small = path.path_params(1)
     big = path.path_params(20)
     assert small[0] * small[1] < big[0] * big[1] and small[2] < big[2] and small[3] < big[3]
 
 
 def straight_round() -> path.PathRound:
-    """Поле 5×5: зелёные (0,0) и (0,4), красная (1,2). Кратчайший путь — (0,1),(0,2),(0,3)."""
+    """Поле 5×5: человек (0,0), дом (0,4), препятствие (1,2). Кратчайшая дорога — (0,1),(0,2),(0,3)."""
     return path.PathRound(5, 5, ((0, 0), (0, 4)), {(1, 2)})
 
 
-def test_path_start_on_green_or_next_to_it():
+def test_path_any_order():
     rnd = straight_round()
     assert rnd.shortest == 3
-    for start in ((0, 0), (0, 1), (1, 0)):
-        rnd = straight_round()
-        assert rnd.tap(*start) == path.HIT
-    # начать можно и от второго зелёного
+    # с середины, потом к краям
+    assert [rnd.tap(*x) for x in ((0, 2), (0, 3), (0, 1))] == [path.HIT, path.HIT, path.CLEARED]
+    assert rnd.length() == 3 and rnd.is_shortest()
+    # клетки вдали от концов и не по соседству друг с другом — не ошибка
     rnd = straight_round()
-    assert [rnd.tap(*x) for x in ((0, 3), (0, 2), (0, 1))] == [path.HIT, path.HIT, path.CLEARED]
+    assert [rnd.tap(*x) for x in ((4, 4), (2, 0), (0, 2))] == [path.HIT] * 3
 
 
-def test_path_ends_on_green_or_next_to_it():
+def test_path_detour_and_extra_cells_are_not_shortest():
     rnd = straight_round()
-    assert [rnd.tap(*x) for x in ((0, 0), (0, 1), (0, 2), (0, 3))] == [path.HIT] * 3 + [path.CLEARED]
-    assert rnd.length() == 3 and rnd.is_shortest()      # сам зелёный в длину не входит
-    rnd = straight_round()
-    route = [(1, 0), (2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (1, 4)]    # в обход красной, рядом с (0,4)
+    route = [(1, 0), (2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (1, 4)]    # в обход препятствия
     assert [rnd.tap(*x) for x in route] == [path.HIT] * 6 + [path.CLEARED]
     assert rnd.length() == 7 and not rnd.is_shortest()
-
-
-@pytest.mark.parametrize("taps, reason", [
-    ([(1, 2)], path.RED),
-    ([(3, 3)], path.FAR_START),
-    ([(0, 1), (2, 1)], path.NOT_ADJACENT),
-    ([(0, 1), (1, 1), (0, 1)], path.REVISIT),
-    ([(0, 1), (0, 1)], path.REVISIT),
-    ([(0, 1), (1, 1), (1, 2)], path.RED),
-])
-def test_path_any_wrong_tap_is_error(taps, reason):
     rnd = straight_round()
-    results = [rnd.tap(*x) for x in taps]
-    assert results[-1] == path.MISS and rnd.miss_reason == reason
-    assert set(results[:-1]) <= {path.HIT}
+    assert [rnd.tap(*x) for x in ((4, 4), (0, 1), (0, 2), (0, 3))] == [path.HIT] * 3 + [path.CLEARED]
+    assert not rnd.is_shortest()
+
+
+def test_path_taps_that_do_nothing_and_block():
+    rnd = straight_round()
+    assert rnd.tap(0, 0) == path.IGNORED and rnd.tap(0, 4) == path.IGNORED     # человек и дом
+    assert rnd.tap(0, 1) == path.HIT and rnd.tap(0, 1) == path.IGNORED         # уже на дороге
+    assert rnd.tap(5, 0) == path.IGNORED                                       # вне поля
+    assert rnd.tap(1, 2) == path.MISS                                          # препятствие
+    assert rnd.road == [(0, 1)]
 
 
 def test_moscow_days():
@@ -271,3 +266,16 @@ def test_level_down_carries_to_next_partia():
 def test_single_win_level_up():
     p = pr.Progress(level=3, last_success_level=3)
     assert pr.register_win(p, wins_needed=1) == 1 and p.level == 4
+
+
+# --- поездка на числах ---
+
+def test_trip_lines():
+    assert "не завелась" in trips.trip_lines(0)[0]
+    almost = trips.trip_lines(10)
+    assert "10 км" in almost[0] and "Ещё 6 км" in almost[1]
+    cheer, place = trips.trip_lines(270)
+    assert "Отличная поездка" in cheer and "270 км" in cheer and "до Ярославля — 265 км" in place
+    assert "Владивостока — 9200 км" in trips.trip_lines(9300)[1]
+    assert "по экватору" in trips.trip_lines(10 ** 6)[1]
+    assert [d for d, _ in trips.TRIPS] == sorted(d for d, _ in trips.TRIPS)

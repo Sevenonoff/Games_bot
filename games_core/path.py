@@ -1,9 +1,9 @@
-"""Соедини зелёные: на открытом поле два зелёных квадрата и красные клетки.
+"""Проложи дорогу: на поле человек, дом и препятствия.
 
-Игрок прокладывает путь по соседним (по сторонам) клеткам от одного зелёного к другому,
-не наступая на красные. Начать можно с зелёного или рядом с ним; путь готов, как только
-дошёл до второго зелёного или встал рядом с ним. Любое неверное нажатие — ошибка.
-Длина пути — число его не зелёных клеток: так начало «с зелёного» и «рядом» равноценны.
+Игрок кладёт дорогу по клеткам в любом порядке, не наступая на препятствия; раунд пройден,
+как только клетки дороги соединили человека с домом по соседним (по сторонам) клеткам.
+Нажатие на препятствие — ошибка; на человека, дом или уже положенную клетку — ничего.
+Длина дороги — число её клеток.
 """
 import random
 from collections import deque
@@ -11,12 +11,15 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 IGNORED, HIT, CLEARED, MISS = "ignored", "hit", "cleared", "miss"
-RED, FAR_START, NOT_ADJACENT, REVISIT = "red", "far_start", "not_adjacent", "revisit"   # причины ошибки
 
 FIELD_COLS = 7            # больше кнопок в ряду Max не принимает
 FIELD_ROWS_LIMIT = 14     # 15-й ряд — служебные кнопки
-MIN_GREEN_DISTANCE = 3    # никакая клетка не соседствует с обоими зелёными
+MIN_ENDS_DISTANCE = 3     # никакая клетка не соседствует и с человеком, и с домом
 GENERATE_TRIES = 500
+
+# без эмодзи с вариационным селектором: они могут рисоваться как текст
+PEOPLE = ("🧑", "👩", "👨", "👧", "👦", "👵", "👴")
+HOUSES = ("🏠", "🏡", "🏫", "🏥", "🏰", "🏪", "⛺")
 
 # уровень: (рядов, колонок, доля красных, мин. длина кратчайшего пути)
 PATH_LEVELS = {
@@ -49,12 +52,11 @@ def distance(a: Cell, b: Cell) -> int:
 class PathRound:
     rows: int
     cols: int
-    greens: Tuple[Cell, Cell]
-    reds: Set[Cell]
-    path: List[Cell] = field(default_factory=list)
-    start_green: Optional[Cell] = None     # от какого зелёного начат путь
-    miss_reason: Optional[str] = None
-    solution: List[Cell] = field(default_factory=list)   # один из кратчайших путей (для разбора)
+    ends: Tuple[Cell, Cell]                # человек и дом
+    blocks: Set[Cell]
+    icons: Tuple[str, str] = (PEOPLE[0], HOUSES[0])
+    road: List[Cell] = field(default_factory=list)       # клетки дороги в порядке нажатий
+    solution: List[Cell] = field(default_factory=list)   # одна из кратчайших дорог (для разбора)
 
     def __post_init__(self):
         if not self.solution:
@@ -64,23 +66,24 @@ class PathRound:
     def generate(cls, level: int, rng: random.Random) -> "PathRound":
         rows, cols, density, min_len = path_params(level)
         cells = [(r, c) for r in range(rows) for c in range(cols)]
+        icons = (rng.choice(PEOPLE), rng.choice(HOUSES))
         best = None
         for _ in range(GENERATE_TRIES):
             a, b = rng.sample(cells, 2)
-            if distance(a, b) < MIN_GREEN_DISTANCE:
+            if distance(a, b) < MIN_ENDS_DISTANCE:
                 continue
             others = [x for x in cells if x not in (a, b)]
-            reds = set(rng.sample(others, max(1, round(len(cells) * density))))
-            rnd = cls(rows, cols, (a, b), reds)
+            blocks = set(rng.sample(others, max(1, round(len(cells) * density))))
+            rnd = cls(rows, cols, (a, b), blocks, icons)
             if rnd.solution and len(rnd.solution) >= min_len:
                 return rnd
             if rnd.solution and (best is None or len(rnd.solution) > len(best.solution)):
                 best = rnd
         if best is not None:
             return best
-        # почти невероятно: поле без красных, кроме одной в углу подальше от зелёных
+        # почти невероятно: поле без препятствий, кроме одного в углу подальше от концов
         a, b = (0, 0), (rows - 1, cols - 1)
-        return cls(rows, cols, (a, b), {(0, cols - 1)})
+        return cls(rows, cols, (a, b), {(0, cols - 1)}, icons)
 
     # --- геометрия ---
 
@@ -91,19 +94,14 @@ class PathRound:
         r, c = cell
         return [x for x in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)) if self.inside(x)]
 
-    def near(self, green: Cell) -> Set[Cell]:
-        """Зелёный и его не красные соседи: тут путь может начаться или закончиться."""
-        return {green} | {x for x in self.neighbors(green) if x not in self.reds}
-
-    def other_green(self, green: Cell) -> Cell:
-        return self.greens[1] if green == self.greens[0] else self.greens[0]
+    def free(self, cell: Cell) -> bool:
+        """Сюда можно положить дорогу."""
+        return self.inside(cell) and cell not in self.blocks and cell not in self.ends
 
     def route(self, sources: Iterable[Cell], goal: Set[Cell], blocked: Set[Cell] = frozenset()) -> Optional[List[Cell]]:
-        """Кратчайший путь (BFS) от любой из sources до любой клетки goal по свободным клеткам:
-        не красным, не blocked и не зелёным — начинать путь с самого зелёного незачем,
-        а у второго зелёного путь и так готов.
-        """
-        sources = [s for s in sources if s not in self.reds and s not in blocked and s not in self.greens]
+        """Кратчайший путь (BFS) от любой из sources до любой клетки goal по свободным клеткам,
+        кроме blocked."""
+        sources = [s for s in sources if self.free(s) and s not in blocked]
         prev: Dict[Cell, Optional[Cell]] = {s: None for s in sources}
         queue = deque(sources)
         while queue:
@@ -115,14 +113,14 @@ class PathRound:
                     cell = prev[cell]
                 return out[::-1]
             for x in self.neighbors(cell):
-                if x not in prev and x not in self.reds and x not in blocked and x not in self.greens:
+                if x not in prev and self.free(x) and x not in blocked:
                     prev[x] = cell
                     queue.append(x)
         return None
 
     def shortest_route(self) -> Optional[List[Cell]]:
-        a, b = self.greens
-        return self.route(self.near(a) - {a}, self.near(b))
+        a, b = self.ends
+        return self.route(self.neighbors(a), set(self.neighbors(b)))
 
     @property
     def shortest(self) -> int:
@@ -133,35 +131,32 @@ class PathRound:
         return self.shortest
 
     def length(self) -> int:
-        return sum(1 for x in self.path if x not in self.greens)
+        return len(self.road)
 
     def is_shortest(self) -> bool:
         return self.length() == self.shortest
+
+    def connected(self) -> bool:
+        """Дорога соединяет человека с домом."""
+        a, b = self.ends
+        road = set(self.road)
+        seen, queue = {a}, deque([a])
+        while queue:
+            for x in self.neighbors(queue.popleft()):
+                if x == b:
+                    return True
+                if x in road and x not in seen:
+                    seen.add(x)
+                    queue.append(x)
+        return False
 
     # --- ход ---
 
     def tap(self, r: int, c: int) -> str:
         cell = (r, c)
-        if not self.inside(cell):
+        if not self.inside(cell) or cell in self.ends or cell in self.road:
             return IGNORED
-        reason = self._check(cell)
-        if reason is not None:
-            self.miss_reason = reason
+        if cell in self.blocks:
             return MISS
-        if not self.path:
-            self.start_green = next(g for g in self.greens if cell in self.near(g))
-        self.path.append(cell)
-        if cell in self.near(self.other_green(self.start_green)):
-            return CLEARED
-        return HIT
-
-    def _check(self, cell: Cell) -> Optional[str]:
-        if cell in self.reds:
-            return RED
-        if not self.path:
-            return None if any(cell in self.near(g) for g in self.greens) else FAR_START
-        if cell in self.path:
-            return REVISIT
-        if cell not in self.neighbors(self.path[-1]):
-            return NOT_ADJACENT
-        return None
+        self.road.append(cell)
+        return CLEARED if self.connected() else HIT

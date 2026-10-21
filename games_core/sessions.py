@@ -9,13 +9,14 @@ from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
 from . import matrix, memo, path, seafight_solo as sea, tower
+from .trips import trip_lines
 from .progression import Progress, register_fail, register_win, start_partia
 from .scoring import format_multiplier, memo_penalty, round_bonus, tap_points
 from .storage import Storage
-from .texts import TITLES, plural, t
-from .ui import Button, Screen, data
+from .texts import TITLES, t
+from .ui import BLANK, FIELD_SIDE, Button, Screen, data
 
-COUNTDOWN, PREVIEW, INPUT, REVIEW = "countdown", "preview", "input", "review"
+COUNTDOWN, PREVIEW, INPUT, REVIEW, DONE = "countdown", "preview", "input", "review", "done"
 COUNTDOWN_FROM = 3        # «3, 2, 1» перед каждым показом
 ROUND_SECONDS = 60
 TIMER_BAR = 10            # делений в полоске таймера
@@ -26,15 +27,16 @@ TOWER_INACTIVE = "🟨"     # клетка без числа — всегда ж
 TOWER_HIDDEN = "⬜"       # клетка с числом, пока оно скрыто
 WRONG_CELL = "❌"         # ошибочное нажатие на разборе после ошибки
 MATRIX_ANSWER = "🟩"      # на разборе: клетка из ответа, которую игрок не нашёл
-TOWER_ROUNDS = 6          # башня без таймера: партия — 6 раундов
-FLOOR_POINTS = 50         # этаж растущей башни за каждые 50 очков
-TOWER_ART_FLOORS = 5      # столько этажей рисуем во время игры (дальше — только число)
+TOWER_ROUNDS = 6          # поездка на числах без таймера: партия — 6 раундов
+ROAD_CELLS = 10           # длина дороги, по которой едет машинка поездки на числах
+ROAD = "➖"
+ROAD_CAR = "🚗"
+ROAD_FINISH = "🏁"
 MEMO_HIDDEN = "⬜"
 PATH_EMPTY = "⬜"
-PATH_GREEN = "🟩"
-PATH_RED = "🟥"
-PATH_STEP = "🟦"         # клетка пути игрока
-PATH_ANSWER = "🟨"       # на разборе: кратчайший путь
+PATH_BLOCK = "⛔"
+PATH_STEP = "🔵"         # клетка дороги игрока
+PATH_ANSWER = "🟡"       # на разборе: кратчайшая дорога
 PATH_ROUNDS = 6           # как в башне: партия — 6 раундов без таймера
 SEA_SYMBOLS = {sea.UNKNOWN: "🟦", sea.SHOT_MISS: "💠", sea.SHOT_HIT: "💥", sea.SHOT_SUNK: "💢"}
 
@@ -62,7 +64,7 @@ class Session:
         self.level = start_partia(self.progress, clock())
         self.score = 0
         self.combo = 0
-        self.over = False                 # партия закончилась сама (поле собрано, победа)
+        self.over = False                 # партия закончилась сама (победа в морском бое)
         self.finished = False             # результат сохранён
         self.msg_ref: Any = None          # id сообщения в мессенджере, ставит транспорт
         self.on_saved: Optional[Callable[[], None]] = None   # результат записан — Manager разбудит уведомления
@@ -80,6 +82,13 @@ class Session:
     def quit(self) -> Screen:
         return self.finish()
 
+    def in_done(self) -> bool:
+        """Итог: поле собрано и видно целиком, пока Manager не перейдёт дальше (или игрок не нажмёт)."""
+        return False
+
+    def skip_done(self) -> Screen:
+        raise NotImplementedError
+
     def finish(self) -> Screen:
         raise NotImplementedError
 
@@ -91,8 +100,17 @@ class Session:
         return None
 
     def _field(self, rows: int, cols: int, symbol: Callable[[int, int], str]) -> List[List[Button]]:
-        return [[Button(symbol(r, c), data("t", self.sid, r, c)) for c in range(cols)]
-                for r in range(rows)]
+        """Поле игры по центру сетки не меньше FIELD_SIDE × FIELD_SIDE: клавиатура не меняет размер.
+        Клетки вне поля — чёрные, их payload «b:<sid>» без координат."""
+        height, width = max(FIELD_SIDE, rows), max(FIELD_SIDE, cols)
+        top, left = (height - rows) // 2, (width - cols) // 2
+        blank = Button(BLANK, data("b", self.sid))
+
+        def button(r: int, c: int) -> Button:
+            if 0 <= r < rows and 0 <= c < cols:
+                return Button(symbol(r, c), data("t", self.sid, r, c))
+            return blank
+        return [[button(r - top, c - left) for c in range(width)] for r in range(height)]
 
     def _quit_row(self) -> List[Button]:
         return [Button(t("btn_quit"), data("q", self.sid))]
@@ -121,8 +139,11 @@ class Session:
 class TimedSession(Session):
     """Раунды: отсчёт «3, 2, 1», показ, затем ввод; после ошибки — разбор с ответом.
 
+    Пройденный раунд — итог (DONE): поле видно целиком, пока Manager не начнёт следующий
+    раунд или игрок не нажмёт любую клетку.
     Партия ограничена временем (clock_limited: round_seconds идут только в фазе
-    ввода, отсчёт, показ и разбор их не съедают) или числом раундов (rounds_limit).
+    ввода, отсчёт, показ, разбор и итог их не съедают; когда время вышло, текущий
+    раунд доигрывается) или числом раундов (rounds_limit).
     Фазы переключает Manager по таймерам.
     """
     timed = True
@@ -141,7 +162,7 @@ class TimedSession(Session):
         self.rounds_won = 0
         self.rounds_total = 0
         self.round_pending = False              # раунд создан, Manager ещё не запустил его таймеры
-        self.review_pending = False             # ошибка: Manager покажет разбор и начнёт новый раунд
+        self.review_pending = False             # разбор ошибки или итог: Manager позже начнёт новый раунд
         self.wrong_cell: Optional[tuple] = None
         self.phase = COUNTDOWN
         self.countdown = COUNTDOWN_FROM
@@ -180,12 +201,25 @@ class TimedSession(Session):
     def time_is_up(self) -> bool:
         return self.phase == INPUT and self.seconds_left() <= 0
 
+    def in_done(self) -> bool:
+        return self.phase == DONE
+
+    def skip_done(self) -> Screen:
+        return self.advance()
+
+    def advance(self) -> Screen:
+        """После разбора или итога: следующий раунд или конец партии."""
+        if self.rounds_done():
+            return self.finish()
+        self._new_round()
+        return self.screen()
+
     def tap(self, r: int, c: int) -> Optional[str]:
         if self.phase == COUNTDOWN:
             return t("note_countdown")
         if self.phase == PREVIEW:
             return t("note_preview")
-        if self.phase == REVIEW:
+        if self.phase in (REVIEW, DONE):
             return t("note_review")
         level = self.progress.level
         result = self.round.tap(r, c)
@@ -208,21 +242,25 @@ class TimedSession(Session):
             self.rounds_won += 1
             self.rounds_total += 1
             delta = register_win(self.progress)
-            if self.rounds_done():
-                self.over = True
-            else:
-                self._new_round()
+            # итог: собранное поле, новый раунд (или конец партии) начнёт Manager
+            self._pause()
+            self.phase = DONE
+            self.review_pending = True
             return self._level_note(delta) or t("note_round_ok")
         return None
 
     def rounds_done(self) -> bool:
-        return self.rounds_limit is not None and self.rounds_total >= self.rounds_limit
+        if self.clock_limited:
+            return self.seconds_left() <= 0
+        return self.rounds_total >= self.rounds_limit
 
     def timer(self) -> str:
         if not self.clock_limited:
-            current = self.rounds_total if self.phase == REVIEW else self.rounds_total + 1
+            current = self.rounds_total if self.phase in (REVIEW, DONE) else self.rounds_total + 1
             return t("round_of", n=min(current, self.rounds_limit), total=self.rounds_limit)
         left = self.time_left()
+        if left <= 0:
+            return t("timer_overtime")
         filled = math.ceil(TIMER_BAR * left / self.round_seconds) if self.round_seconds else 0
         bar = "▓" * filled + "░" * (TIMER_BAR - filled)
         return t("timer", left=left, bar=bar)
@@ -234,8 +272,10 @@ class TimedSession(Session):
             phase = t("phase_preview")
         elif self.phase == REVIEW:
             phase = self.review_line()
+        elif self.phase == DONE:
+            phase = self.done_line()
         else:
-            phase = t(self.phase_key)
+            phase = self.input_line()
         return "\n".join([
             f"<b>{TITLES[self.game]}</b> · {t('level', level=self.progress.level)}",
             self.timer(),
@@ -250,6 +290,12 @@ class TimedSession(Session):
 
     def review_line(self) -> str:
         return t(self.review_key)
+
+    def done_line(self) -> str:
+        return t("phase_done")
+
+    def input_line(self) -> str:
+        return t(self.phase_key)
 
     def screen(self) -> Screen:
         rows = self._field(self.round.rows, self.round.cols, self.cell_symbol)
@@ -310,11 +356,19 @@ class TowerSession(TimedSession):
             return str(n)
         return TOWER_HIDDEN
 
+    def progress_share(self) -> float:
+        """Какая часть партии проехана: пройденные раунды и открытые числа текущего."""
+        done = self.rounds_total
+        if self.phase == INPUT:
+            done += self.round.opened / self.round.size
+        return min(1.0, done / self.rounds_limit)
+
     def extra_lines(self) -> List[str]:
-        return tower_art(self.score, TOWER_ART_FLOORS)
+        return [road_art(self.progress_share()), t("trip_driven", km=self.score)]
 
     def result_extra(self) -> List[str]:
-        return tower_art(self.score, TOWER_ART_FLOORS * 2)
+        # 1 очко — 1 км
+        return [road_art(1.0), *trip_lines(self.score)]
 
 
 class PathSession(TimedSession):
@@ -341,41 +395,42 @@ class PathSession(TimedSession):
         return shortest if note == t("note_round_ok") else f"{shortest} {note}"
 
     def cell_symbol(self, r: int, c: int) -> str:
-        """Поле видно 1 с (показ) и на разборе; в остальное время — только свой путь, путь вслепую."""
+        """Поле видно 1 с (показ), на разборе и на итоге; во время ввода — только своя дорога,
+        дорога вслепую."""
         cell, rnd = (r, c), self.round
         if cell == self.wrong_cell:
             return WRONG_CELL
-        if cell in rnd.path:
+        if cell in rnd.road:
             return PATH_STEP
-        if self.phase not in (PREVIEW, REVIEW):
+        if self.phase not in (PREVIEW, REVIEW, DONE):
             return PATH_EMPTY
-        if cell in rnd.greens:
-            return PATH_GREEN
-        if cell in rnd.reds:
-            return PATH_RED
+        if cell in rnd.ends:
+            return rnd.icons[rnd.ends.index(cell)]
+        if cell in rnd.blocks:
+            return PATH_BLOCK
         if self.phase == REVIEW and cell in rnd.solution:
             return PATH_ANSWER
         return PATH_EMPTY
 
+    def input_line(self) -> str:
+        person, house = self.round.icons
+        return t("phase_path", person=person, house=house)
+
     def review_line(self) -> str:
-        return t("phase_review_path", reason=t(f"path_miss_{self.round.miss_reason}"))
+        return t("phase_review_path")
+
+    def done_line(self) -> str:
+        return t("phase_done_path")
 
     def result_extra(self) -> List[str]:
         return [t("result_path_shortest", n=self.shortest_count, total=self.rounds_limit)]
 
 
-def floors_word(n: int) -> str:
-    return plural(n, "этаж", "этажа", "этажей")
-
-
-def tower_art(score: int, max_floors: int) -> List[str]:
-    """Растущая башня: этаж за каждые FLOOR_POINTS очков, рисуем не больше max_floors."""
-    floors = max(0, score) // FLOOR_POINTS
-    lines = [t("tower_height", floors=floors, word=floors_word(floors))]
-    if floors:
-        lines.append("🚩" if floors <= max_floors else "🚩 ⋮")
-        lines += ["🧱🧱🧱"] * min(floors, max_floors)
-    return lines
+def road_art(share: float) -> str:
+    """Дорога к финишу 🏁 и машинка, проехавшая share пути; едет справа налево —
+    в большинстве шрифтов 🚗 смотрит влево."""
+    ahead = ROAD_CELLS - round(share * ROAD_CELLS)
+    return ROAD_FINISH + ROAD * ahead + ROAD_CAR + ROAD * (ROAD_CELLS - ahead)
 
 
 class MemoSession(Session):
@@ -387,6 +442,8 @@ class MemoSession(Session):
         self.moves = 0
         self.mismatch_id = 0              # номер несовпадения: таймер закрывает только «своё»
         self.close_pending = False        # Manager ещё не запустил таймер закрытия
+        self.done = False                 # поле собрано: итог, затем результат
+        self.done_pending = False         # Manager ещё не запустил таймер итога
 
     def tap(self, r: int, c: int) -> Optional[str]:
         level = self.progress.level
@@ -406,8 +463,15 @@ class MemoSession(Session):
         self.score += tap_points(level, self.combo)
         self.combo += 1
         if result == memo.CLEARED:
-            self.over = True
+            self.done = True
+            self.done_pending = True
         return None
+
+    def in_done(self) -> bool:
+        return self.done
+
+    def skip_done(self) -> Screen:
+        return self.finish()
 
     def cell_symbol(self, r: int, c: int) -> str:
         idx = r * self.board.cols + c
@@ -420,7 +484,7 @@ class MemoSession(Session):
               score=self.score, mult=format_multiplier(self.combo)),
             t("memo_moves", moves=self.moves, limit=self.board.moves_limit),
             "",
-            t("memo_hint"),
+            t("memo_done") if self.done else t("memo_hint"),
         ])
         rows = self._field(self.board.rows, self.board.cols, self.cell_symbol)
         return Screen(text, rows + [self._quit_row()])

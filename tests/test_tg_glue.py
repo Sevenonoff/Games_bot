@@ -81,7 +81,7 @@ async def test_tap_edits_message_then_answers_note(calls):
     respond = games_tg.callback_responder(FakeBot(), callback(), {})
     ref = await respond(Reply(SCREEN, "Пара!"))
     assert ref == (CHAT, 55)
-    assert calls["edits"][0][:2] == (55, SCREEN.text)
+    assert calls["edits"][0][:2] == (55, games_tg.tg_text(SCREEN))
     assert calls["answers"] == ["Пара!"]
 
 
@@ -102,7 +102,7 @@ async def test_photo_message_gets_new_text_message(calls):
     photo = [types.PhotoSize.model_construct(file_id="f", file_unique_id="u", width=1, height=1)]
     ref = await games_tg.callback_responder(bot, callback(photo), {})(Reply(SCREEN))
     assert calls["edits"] == []
-    assert bot.sent[0][:2] == (CHAT, SCREEN.text)
+    assert bot.sent[0][:2] == (CHAT, games_tg.tg_text(SCREEN))
     assert ref == (CHAT, 100)
 
 
@@ -110,7 +110,7 @@ async def test_push_edits_by_ref_and_ignores_not_modified():
     bot = FakeBot()
     mgr = games_tg.build_manager(bot, Storage(":memory:"), "games_bot")
     await mgr.push((CHAT, 55), SCREEN)
-    assert bot.edits[0][:3] == (CHAT, 55, SCREEN.text)
+    assert bot.edits[0][:3] == (CHAT, 55, games_tg.tg_text(SCREEN))
     bot.edit_error = bad_request("message is not modified")
     await mgr.push((CHAT, 55), SCREEN)
     bot.edit_error = bad_request("message to edit not found")

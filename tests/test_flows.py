@@ -68,15 +68,19 @@ async def test_matrix_minute_passes_on_virtual_time(world):
     assert chat.note == t("note_round_fail") and "⏱ 31 с" in chat.text
 
     await wait_preview(world, chat)
-    await world.time.advance(31.0)       # конец минуты тоже приходит правкой
-    assert "Партия окончена" in chat.text and "Раундов пройдено: 1 из 2" in chat.text
+    await world.time.advance(31.0)       # конец минуты тоже приходит правкой, но раунд доигрывается
+    assert t("timer_overtime") in chat.text and "Партия окончена" not in chat.text
+    assert await win_round(world, chat) == t("note_round_ok")
+    assert t("phase_done") in chat.text  # итог раунда, затем конец партии
+    await world.time.advance(2.0)
+    assert "Партия окончена" in chat.text and "Раундов пройдено: 2 из 3" in chat.text
     assert world.storage.top("max", "matrix")[0][:2] == (42, "Тестер")
 
 
 async def test_tower_level_up_after_three_rounds(world):
     chat = world.chat()
     await chat.send()
-    await chat.click("Башня")
+    await chat.click("Поездка")
     assert await win_round(world, chat) == t("note_round_ok")
     assert await win_round(world, chat) == t("note_round_ok")
     assert await win_round(world, chat) == t("note_level_up", level=2)
@@ -124,7 +128,7 @@ async def test_tower_colors_and_inactive_cells(world):
     """Пустые клетки жёлтые всегда, клетки с числами белые; нажатие по пустой — не ошибка."""
     chat = world.chat()
     await chat.send()
-    await chat.click("Башня")
+    await chat.click("Поездка")
     s = chat.session
     empty = next((r, c) for r in range(s.round.rows) for c in range(s.round.cols)
                  if (r, c) not in s.round.cells)

@@ -1,8 +1,8 @@
 """Отладочные команды /dbg."""
 import pytest
 
-from games_core.texts import t
 from games_core.manager import text_payload
+from games_core.texts import t
 from tests.harness import World, wait_preview
 
 ADMIN = 42
@@ -96,8 +96,8 @@ async def test_short_round_only_for_admin(world):
         await chat.send()
         await chat.click("Матрица")
     await world.time.advance(2.0 + 1.0 + 5.0)    # отсчёт и показ время партии не тратят
-    assert "Партия окончена" in admin.text
-    assert "Партия окончена" not in other.text
+    assert t("timer_overtime") in admin.text      # время вышло — раунд доигрывается
+    assert t("timer_overtime") not in other.text
     await admin.send("dbg:round:0")
     assert ADMIN not in world.mgr.round_overrides
 
