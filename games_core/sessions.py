@@ -8,11 +8,11 @@ import random
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
-from . import matrix, memo, seafight_solo as sea, tower
+from . import matrix, memo, path, seafight_solo as sea, tower
 from .progression import Progress, register_fail, register_win, start_partia
 from .scoring import format_multiplier, memo_penalty, round_bonus, tap_points
 from .storage import Storage
-from .texts import TITLES, t
+from .texts import TITLES, plural, t
 from .ui import Button, Screen, data
 
 COUNTDOWN, PREVIEW, INPUT, REVIEW = "countdown", "preview", "input", "review"
@@ -30,6 +30,12 @@ TOWER_ROUNDS = 6          # башня без таймера: партия — 6
 FLOOR_POINTS = 50         # этаж растущей башни за каждые 50 очков
 TOWER_ART_FLOORS = 5      # столько этажей рисуем во время игры (дальше — только число)
 MEMO_HIDDEN = "⬜"
+PATH_EMPTY = "⬜"
+PATH_GREEN = "🟩"
+PATH_RED = "🟥"
+PATH_STEP = "🟦"         # клетка пути игрока
+PATH_ANSWER = "🟨"       # на разборе: кратчайший путь
+PATH_ROUNDS = 6           # как в башне: партия — 6 раундов без таймера
 SEA_SYMBOLS = {sea.UNKNOWN: "🟦", sea.SHOT_MISS: "💠", sea.SHOT_HIT: "💥", sea.SHOT_SUNK: "💢"}
 
 
@@ -59,6 +65,7 @@ class Session:
         self.over = False                 # партия закончилась сама (поле собрано, победа)
         self.finished = False             # результат сохранён
         self.msg_ref: Any = None          # id сообщения в мессенджере, ставит транспорт
+        self.on_saved: Optional[Callable[[], None]] = None   # результат записан — Manager разбудит уведомления
         self.rendered_at = 0.0            # когда сообщение партии последний раз обновлялось
         self.last_activity = clock()
 
@@ -94,7 +101,10 @@ class Session:
         now = self.clock()
         p = self.player
         self.storage.upsert_user(p.platform, p.user_id, p.name, p.chat_id, now)
-        return self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
+        is_record = self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
+        if score is not None and self.on_saved is not None:
+            self.on_saved()
+        return is_record
 
     def _result_screen(self, lines: List[str], is_record: Optional[bool]) -> Screen:
         text = [t("result_title", title=TITLES[self.game])] + lines
@@ -117,6 +127,7 @@ class TimedSession(Session):
     """
     timed = True
     clock_limited = True
+    has_preview = True        # False — после отсчёта сразу ввод (поле открыто всё время)
     rounds_limit: Optional[int] = None
     round_cls: Any = None
     phase_key = ""
@@ -223,7 +234,7 @@ class TimedSession(Session):
         elif self.phase == PREVIEW:
             phase = t("phase_preview")
         elif self.phase == REVIEW:
-            phase = t(self.review_key)
+            phase = self.review_line()
         else:
             phase = t(self.phase_key)
         return "\n".join([
@@ -237,6 +248,9 @@ class TimedSession(Session):
 
     def extra_lines(self) -> List[str]:
         return []
+
+    def review_line(self) -> str:
+        return t(self.review_key)
 
     def screen(self) -> Screen:
         rows = self._field(self.round.rows, self.round.cols, self.cell_symbol)
@@ -304,12 +318,55 @@ class TowerSession(TimedSession):
         return tower_art(self.score, TOWER_ART_FLOORS * 2)
 
 
+class PathSession(TimedSession):
+    game = "path"
+    round_cls = path.PathRound
+    phase_key = "phase_path"
+    clock_limited = False
+    has_preview = False
+    rounds_limit = PATH_ROUNDS
+
+    def __init__(self, *args, **kwargs):
+        self.shortest_count = 0
+        super().__init__(*args, **kwargs)
+
+    def tap(self, r: int, c: int) -> Optional[str]:
+        rnd, level, won = self.round, self.progress.level, self.rounds_won
+        note = super().tap(r, c)
+        if self.rounds_won == won or not rnd.is_shortest():
+            return note
+        # кратчайший путь: ещё один бонус раунда
+        bonus = round_bonus(level, rnd.shortest)
+        self.score += bonus
+        self.shortest_count += 1
+        shortest = t("note_path_shortest", bonus=bonus)
+        return shortest if note == t("note_round_ok") else f"{shortest} {note}"
+
+    def cell_symbol(self, r: int, c: int) -> str:
+        cell, rnd = (r, c), self.round
+        if self.phase == COUNTDOWN:
+            return PATH_EMPTY
+        if cell == self.wrong_cell:
+            return WRONG_CELL
+        if cell in rnd.greens:
+            return PATH_GREEN
+        if cell in rnd.reds:
+            return PATH_RED
+        if cell in rnd.path:
+            return PATH_STEP
+        if self.phase == REVIEW and cell in rnd.solution:
+            return PATH_ANSWER
+        return PATH_EMPTY
+
+    def review_line(self) -> str:
+        return t("phase_review_path", reason=t(f"path_miss_{self.round.miss_reason}"))
+
+    def result_extra(self) -> List[str]:
+        return [t("result_path_shortest", n=self.shortest_count, total=self.rounds_limit)]
+
+
 def floors_word(n: int) -> str:
-    if n % 10 == 1 and n % 100 != 11:
-        return "этаж"
-    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
-        return "этажа"
-    return "этажей"
+    return plural(n, "этаж", "этажа", "этажей")
 
 
 def tower_art(score: int, max_floors: int) -> List[str]:
@@ -435,7 +492,7 @@ class SeaReducedSession(SeaSession):
     ship_set = "reduced"
 
 
-GAMES = {cls.game: cls for cls in (MemoSession, MatrixSession, TowerSession,
+GAMES = {cls.game: cls for cls in (MemoSession, MatrixSession, TowerSession, PathSession,
                                    SeaFullSession, SeaReducedSession)}
 
 

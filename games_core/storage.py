@@ -6,7 +6,7 @@
 """
 import json
 import sqlite3
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from .progression import Progress
 
@@ -60,7 +60,33 @@ CREATE TABLE IF NOT EXISTS ratings (
     updated_at  REAL NOT NULL,
     PRIMARY KEY (platform, user_id, game_type)
 );
+CREATE TABLE IF NOT EXISTS friend_codes (
+    platform    TEXT NOT NULL,
+    user_id     INTEGER NOT NULL,
+    code        TEXT NOT NULL,          -- постоянная ссылка-приглашение ?start=fr_<code>
+    PRIMARY KEY (platform, code),
+    UNIQUE (platform, user_id)
+);
+CREATE TABLE IF NOT EXISTS friends (
+    platform    TEXT NOT NULL,
+    user_id     INTEGER NOT NULL,
+    friend_id   INTEGER NOT NULL,       -- дружба записана в обе стороны
+    created_at  REAL NOT NULL,
+    PRIMARY KEY (platform, user_id, friend_id)
+);
+CREATE TABLE IF NOT EXISTS settings (
+    platform            TEXT NOT NULL,
+    user_id             INTEGER NOT NULL,
+    friend_notify       INTEGER NOT NULL DEFAULT 1,
+    reminder_hour       INTEGER,        -- NULL — напоминание выключено
+    friend_notified_day TEXT,           -- день (по Москве) последнего уведомления от друзей
+    reminded_day        TEXT,           -- день последнего напоминания
+    PRIMARY KEY (platform, user_id)
+);
+CREATE INDEX IF NOT EXISTS scores_user_time ON scores (platform, user_id, played_at);
 """
+
+SETTING_FIELDS = ("friend_notify", "reminder_hour", "friend_notified_day", "reminded_day")
 
 
 class Storage:
@@ -213,3 +239,147 @@ class Storage:
             (platform, game_type, limit),
         ).fetchall()
         return [(r["user_id"], r["name"], r["rating"], r["won"], r["lost"]) for r in rows]
+
+    # --- игроки ---
+
+    def user(self, platform: str, user_id: int) -> Optional[sqlite3.Row]:
+        return self.conn.execute("SELECT * FROM users WHERE platform = ? AND user_id = ?",
+                                 (platform, user_id)).fetchone()
+
+    def names(self, platform: str, user_ids: List[int]) -> Dict[int, str]:
+        if not user_ids:
+            return {}
+        marks = ",".join("?" * len(user_ids))
+        rows = self.conn.execute(f"SELECT user_id, name FROM users WHERE platform = ? AND user_id IN ({marks})",
+                                 (platform, *user_ids)).fetchall()
+        return {r["user_id"]: r["name"] for r in rows}
+
+    def records(self, platform: str, user_id: int) -> List[Tuple[str, int, int]]:
+        """[(game, best_score, level)] — где есть рекорд."""
+        rows = self.conn.execute(
+            "SELECT game, best_score, level FROM progress WHERE platform = ? AND user_id = ? AND best_score > 0",
+            (platform, user_id)).fetchall()
+        return [(r["game"], r["best_score"], r["level"]) for r in rows]
+
+    def ratings_of(self, platform: str, user_id: int) -> List[Tuple[str, int, int, int]]:
+        """[(game_type, rating, won, lost)]"""
+        rows = self.conn.execute(
+            "SELECT game_type, rating, won, lost FROM ratings WHERE platform = ? AND user_id = ?",
+            (platform, user_id)).fetchall()
+        return [(r["game_type"], r["rating"], r["won"], r["lost"]) for r in rows]
+
+    def played_since(self, platform: str, user_ids: List[int], since: float) -> Dict[int, Dict[str, Tuple[int, int]]]:
+        """Партии с момента since: {user_id: {game: (партий, лучший счёт)}}."""
+        if not user_ids:
+            return {}
+        marks = ",".join("?" * len(user_ids))
+        rows = self.conn.execute(
+            f"""SELECT user_id, game, COUNT(*) AS n, MAX(score) AS best FROM scores
+                WHERE platform = ? AND played_at >= ? AND user_id IN ({marks})
+                GROUP BY user_id, game""",
+            (platform, since, *user_ids)).fetchall()
+        out: Dict[int, Dict[str, Tuple[int, int]]] = {}
+        for r in rows:
+            out.setdefault(r["user_id"], {})[r["game"]] = (r["n"], r["best"])
+        return out
+
+    # --- друзья ---
+
+    def friend_code(self, platform: str, user_id: int, make_code: Callable[[], str]) -> str:
+        """Постоянный код ссылки-приглашения игрока; при первом запросе — новый."""
+        row = self.conn.execute("SELECT code FROM friend_codes WHERE platform = ? AND user_id = ?",
+                                (platform, user_id)).fetchone()
+        if row is not None:
+            return row["code"]
+        while True:
+            code = make_code()
+            try:
+                with self.conn:
+                    self.conn.execute("INSERT INTO friend_codes (platform, user_id, code) VALUES (?, ?, ?)",
+                                      (platform, user_id, code))
+                return code
+            except sqlite3.IntegrityError:
+                continue    # такой код уже у кого-то есть
+
+    def code_owner(self, platform: str, code: str) -> Optional[int]:
+        row = self.conn.execute("SELECT user_id FROM friend_codes WHERE platform = ? AND code = ?",
+                                (platform, code)).fetchone()
+        return row["user_id"] if row else None
+
+    def add_friends(self, platform: str, a: int, b: int, now: float) -> bool:
+        """Подружить a и b. False — уже были друзьями."""
+        if self.are_friends(platform, a, b):
+            return False
+        with self.conn:
+            for x, y in ((a, b), (b, a)):
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO friends (platform, user_id, friend_id, created_at) VALUES (?, ?, ?, ?)",
+                    (platform, x, y, now))
+        return True
+
+    def are_friends(self, platform: str, a: int, b: int) -> bool:
+        return self.conn.execute("SELECT 1 FROM friends WHERE platform = ? AND user_id = ? AND friend_id = ?",
+                                 (platform, a, b)).fetchone() is not None
+
+    def friends(self, platform: str, user_id: int) -> List[int]:
+        rows = self.conn.execute("SELECT friend_id FROM friends WHERE platform = ? AND user_id = ?",
+                                 (platform, user_id)).fetchall()
+        return [r["friend_id"] for r in rows]
+
+    # --- настройки и уведомления ---
+
+    def settings(self, platform: str, user_id: int) -> Dict[str, object]:
+        row = self.conn.execute("SELECT * FROM settings WHERE platform = ? AND user_id = ?",
+                                (platform, user_id)).fetchone()
+        if row is None:
+            return {"friend_notify": 1, "reminder_hour": None, "friend_notified_day": None, "reminded_day": None}
+        return {k: row[k] for k in SETTING_FIELDS}
+
+    def update_settings(self, platform: str, user_id: int, **fields) -> None:
+        unknown = set(fields) - set(SETTING_FIELDS)
+        if unknown:
+            raise ValueError(unknown)
+        current = self.settings(platform, user_id)
+        current.update(fields)
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO settings (platform, user_id, friend_notify, reminder_hour,
+                                         friend_notified_day, reminded_day)
+                   VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT (platform, user_id) DO UPDATE SET
+                       friend_notify = excluded.friend_notify, reminder_hour = excluded.reminder_hour,
+                       friend_notified_day = excluded.friend_notified_day, reminded_day = excluded.reminded_day""",
+                (platform, user_id, *(current[k] for k in SETTING_FIELDS)))
+
+    def friend_notify_due(self, platform: str, since: float, today: str) -> Dict[int, List[int]]:
+        """Кому пора уведомление от друзей: {user_id: [друзья в порядке первой партии с since]}.
+
+        Уведомления включены, сегодня ещё не приходили, сам с since не играл, а кто-то из друзей — играл.
+        """
+        rows = self.conn.execute(
+            """SELECT f.user_id, f.friend_id, MIN(s.played_at) AS first FROM friends f
+               JOIN scores s ON s.platform = f.platform AND s.user_id = f.friend_id AND s.played_at >= :since
+               LEFT JOIN settings st ON st.platform = f.platform AND st.user_id = f.user_id
+               WHERE f.platform = :platform AND COALESCE(st.friend_notify, 1) = 1
+                 AND COALESCE(st.friend_notified_day, '') != :today
+                 AND NOT EXISTS (SELECT 1 FROM scores m WHERE m.platform = f.platform
+                                 AND m.user_id = f.user_id AND m.played_at >= :since)
+               GROUP BY f.user_id, f.friend_id
+               ORDER BY f.user_id, first""",
+            {"platform": platform, "since": since, "today": today}).fetchall()
+        out: Dict[int, List[int]] = {}
+        for r in rows:
+            out.setdefault(r["user_id"], []).append(r["friend_id"])
+        return out
+
+    def reminders_due(self, platform: str, hour: int, since: float, today: str) -> List[int]:
+        """Кому пора напоминание: час наступил (с запасом в 2 часа), сегодня не было, сам не играл."""
+        rows = self.conn.execute(
+            """SELECT st.user_id FROM settings st
+               WHERE st.platform = :platform AND st.reminder_hour IS NOT NULL
+                 AND st.reminder_hour <= :hour AND :hour < st.reminder_hour + 2
+                 AND COALESCE(st.reminded_day, '') != :today
+                 AND NOT EXISTS (SELECT 1 FROM scores m WHERE m.platform = st.platform
+                                 AND m.user_id = st.user_id AND m.played_at >= :since)""",
+            {"platform": platform, "hour": hour, "since": since, "today": today}).fetchall()
+        return [r["user_id"] for r in rows]

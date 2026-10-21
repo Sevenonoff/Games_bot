@@ -14,10 +14,11 @@ import random
 import re
 from typing import Dict, List, Optional, Tuple
 
+from games_core import friends
+from games_core import path
 from games_core import seafight_mp as mp
 from games_core import seafight_solo as sea
-from games_core.manager import RECORD_GAMES, Manager
-from games_core.multiplayer import start_payload
+from games_core.manager import RECORD_GAMES, Manager, start_payload
 from games_core.sessions import GAMES, INPUT, Player, Session, TimedSession
 from games_core.storage import Storage
 from games_core.texts import t
@@ -92,6 +93,7 @@ class Chat:
         self.player = player
         self.ref: Optional[str] = None     # последнее сообщение бота в чате
         self.note: Optional[str] = None    # всплывающее уведомление последнего нажатия
+        self.seen_sent = 0                 # сколько сообщений от бота (World.send) уже проверено
 
     async def send(self, payload: str = "menu") -> Screen:
         """Текстовое сообщение боту: экран приходит новым сообщением."""
@@ -207,6 +209,8 @@ def right_move(s: Optional[Session]) -> Optional[Cell]:
             return None
         if s.game == "matrix":
             return min(s.round.targets - s.round.found)
+        if s.game == "path":
+            return path_next(s.round)
         by_number = {n: cell for cell, n in s.round.cells.items()}
         return by_number[s.round.numbers[s.round.opened]]
     if s.game == "memo":
@@ -226,11 +230,64 @@ def right_move(s: Optional[Session]) -> Optional[Cell]:
     return None
 
 
+def path_next(rnd: path.PathRound) -> Optional[Cell]:
+    """Соедини зелёные: следующий шаг кратчайшего пути от конца пути игрока (None — тупик)."""
+    if not rnd.path:
+        return rnd.solution[0]
+    goal = rnd.near(rnd.other_green(rnd.start_green))
+    route = rnd.route(rnd.neighbors(rnd.path[-1]), goal, blocked=set(rnd.path))
+    return route[0] if route else None
+
+
+def path_detour(rnd: path.PathRound) -> Optional[List[Cell]]:
+    """Путь от первого зелёного ко второму длиннее кратчайшего (перебор простых путей)."""
+    a, b = rnd.greens
+    goal, free = rnd.near(b), lambda x: x not in rnd.reds and x not in rnd.greens
+
+    def walk(route: List[Cell]) -> Optional[List[Cell]]:
+        if route[-1] in goal:
+            return route if len(route) > rnd.shortest else None
+        for x in rnd.neighbors(route[-1]):
+            if free(x) and x not in route:
+                found = walk(route + [x])
+                if found:
+                    return found
+        return None
+
+    for start in sorted(rnd.near(a) - {a}):
+        found = walk([start])
+        if found:
+            return found
+    return None
+
+
+def path_wrong(rnd: path.PathRound, kind: str) -> Cell:
+    """Ошибочное нажатие нужного вида: красная, начало вдали от зелёных, не соседняя, пройденная."""
+    cells = [(r, c) for r in range(rnd.rows) for c in range(rnd.cols)]
+    free = [x for x in cells if x not in rnd.reds and x not in rnd.greens]
+    if kind == path.RED:
+        return min(rnd.reds)
+    if kind == path.FAR_START:
+        assert not rnd.path, "путь уже начат"
+        found = [x for x in free if all(x not in rnd.near(g) for g in rnd.greens)]
+    elif kind == path.NOT_ADJACENT:
+        assert rnd.path, "путь ещё не начат"
+        found = [x for x in free if x not in rnd.path and x not in rnd.neighbors(rnd.path[-1])]
+    else:
+        assert rnd.path, "путь ещё не начат"
+        found = [rnd.path[0]]
+    assert found, f"на поле нет клетки для ошибки {kind}"
+    return found[0]
+
+
 def wrong_move(s: TimedSession) -> Cell:
-    """Ошибочное нажатие: в матрице — пустая клетка, в башне — не то число (пустые неактивны)."""
+    """Ошибочное нажатие: в матрице — пустая клетка, в башне — не то число (пустые неактивны),
+    в «Соедини зелёные» — красная."""
     if s.game == "matrix":
         return next((r, c) for r in range(s.round.rows) for c in range(s.round.cols)
                     if (r, c) not in s.round.targets)
+    if s.game == "path":
+        return path_wrong(s.round, path.RED)
     right = right_move(s)
     cell = next((cell for cell in s.round.cells if cell != right and not s.round.is_opened(cell)), None)
     assert cell is not None, "осталось одно число — ошибиться нельзя"
@@ -266,6 +323,8 @@ class World:
         self.messenger = Messenger()
         self.platform = platform
         self.chats: Dict[int, "Chat"] = {}       # chat_id → чат: туда приходят сообщения send()
+        self.inbox: Dict[int, List[Screen]] = {}  # chat_id → сообщения, которые бот прислал сам
+        self.sent_at: List[Tuple[int, float, Screen]] = []   # те же сообщения со временем отправки
         self.errors: List[BaseException] = []   # исключения в таймерах, иначе они пропадут молча
         self.rng = random.Random(seed)
         self._options = dict(preview_seconds=preview_seconds, countdown_seconds=countdown_seconds,
@@ -274,9 +333,10 @@ class World:
         self.mgr = self._manager()
 
     def _manager(self) -> Manager:
+        host = "https://t.me/test_bot" if self.platform == "tg" else "https://max.ru/test_bot"
         mgr = Manager(self.storage, self.platform, self.messenger.push, clock=self.time,
                       rng=self.rng, sleep=self.time.sleep, send=self.send,
-                      invite_link=lambda code: f"https://max.ru/test_bot?start=mp_{code}",
+                      start_link=lambda param: f"{host}?start={param}",
                       **self._options)
         spawn = mgr._spawn
 
@@ -285,11 +345,19 @@ class World:
             task.add_done_callback(self._collect)
             return task
         mgr._spawn = spawn_watched
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass        # World вне цикла событий (синхронный тест): без уведомлений по времени
+        else:
+            mgr.start_background()
         return mgr
 
     async def send(self, chat_id: int, screen: Screen) -> str:
         """Бот сам пишет в чат (уведомление): новое сообщение становится последним в чате."""
         ref = self.messenger.new_message(screen)
+        self.inbox.setdefault(chat_id, []).append(screen)
+        self.sent_at.append((chat_id, self.time.now, screen))
         chat = self.chats.get(chat_id)
         if chat is not None:
             chat.ref = ref
@@ -314,9 +382,10 @@ class World:
         return chat
 
     def invite_link(self) -> Optional[str]:
-        """Параметр start последней ссылки-приглашения, которую бот присылал (её могли и переслать)."""
+        """Параметр start последней ссылки-приглашения (в бой или в друзья), которую бот присылал
+        (её могли и переслать)."""
         for screen in reversed(self.messenger.history):
-            m = re.search(r"\?start=(mp_[A-Z0-9]+)", screen.text)
+            m = re.search(r"\?start=((?:mp|fr)_[A-Z0-9]+)", screen.text)
             if m:
                 return m[1]
         return None
@@ -352,8 +421,10 @@ async def win_round(world: "World", chat: Chat) -> Optional[str]:
 # --- инварианты: что должно быть верно на любом экране ---
 
 MP_CODE = f"[{mp.CODE_ALPHABET}]{{{mp.CODE_LEN}}}"
+FRIEND_CODE = f"[{mp.CODE_ALPHABET}]{{{friends.CODE_LEN}}}"
 KNOWN_PAYLOAD = re.compile(
     r"^(menu|sea|sea_rec|rec|noop|dbg(:\w+)*|mp|mpb"
+    rf"|fr(:\d+)?|fri|frs:\d+|frj:{FRIEND_CODE}|set(:fn|:rm(:(off|\d+))?)?"
     r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?"
     rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+"
     rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"

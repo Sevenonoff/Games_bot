@@ -4,6 +4,7 @@ TITLES = {
     "memo": "🃏 Мемо",
     "matrix": "🟦 Матрица памяти",
     "tower": "🔢 Башня чисел",
+    "path": "🟩 Соедини зелёные",
     "sea_full": "🚢 Морской бой",
     "sea_reduced": "⛵ Морской бой (малый)",
     "mp_full": "⚔️ С другом (полный)",
@@ -34,6 +35,15 @@ RU = {
     "round_of": "Раунд {n} из {total}",
     "tower_height": "🏰 Башня: {floors} {word}",
     "phase_matrix": "👆 Нажмите клетки, которые были синими",
+    "phase_path": "👆 Проложите путь от 🟩 к 🟩 по соседним клеткам, не наступая на 🟥.\n"
+                  "Начать и закончить можно рядом с зелёным.",
+    "phase_review_path": "❌ Ошибка: {reason}. 🟦 — ваш путь, 🟨 — кратчайший путь",
+    "path_miss_red": "красная клетка",
+    "path_miss_far_start": "начните с зелёного или рядом с ним",
+    "path_miss_not_adjacent": "шагайте в соседнюю клетку",
+    "path_miss_revisit": "по этой клетке вы уже прошли",
+    "note_path_shortest": "🎯 Кратчайший путь! +{bonus}",
+    "result_path_shortest": "🎯 Кратчайших путей: {n} из {total}",
     "phase_tower": "👆 Нажимайте числа по возрастанию.\nПосле нажатия дождитесь, пока кнопка откроется.",
     "memo_status": "Пары: {found}/{pairs} · Очки: <b>{score}</b> · серия {mult}",
     "memo_moves": "Ходы: {moves} · уложитесь в {limit}, чтобы пройти уровень",
@@ -64,6 +74,53 @@ RU = {
     "result_memo_quit": "Найдено пар: {found} из {pairs}",
     "result_sea_won": "🎉 Все корабли потоплены!",
     "result_sea_quit": "Бой прерван, результат не записан.",
+    # друзья
+    "btn_friends": "👥 Мои друзья",
+    "btn_invite_friend": "📨 Пригласить друга",
+    "btn_back_friends": "◀️ Мои друзья",
+    "btn_prev": "◀️",
+    "btn_next": "▶️",
+    "friends_title": "👥 <b>Мои друзья</b>",
+    "friends_empty": "Пока нет друзей — пригласите кого-нибудь: перешлите другу ссылку.",
+    "friends_page": "Страница {page} из {pages}",
+    "friend_active": "🟢 {name} — сегодня {count} {word}",
+    "friend_idle": "⚪ {name} — сегодня без тренировок",
+    "friend_invite": ("📨 <b>Пригласить друга</b>\n\nПерешлите другу ссылку — перейдя по ней, "
+                      "вы станете друзьями:\n{link}\n\nИли пусть пришлёт боту код <code>{code}</code>.\n\n"
+                      "Ссылка постоянная: её можно отправить сразу нескольким друзьям."),
+    "friend_new": "🤝 Новый друг: <b>{name}</b>",
+    "friend_already": "🤝 Вы уже друзья: <b>{name}</b>",
+    "friend_own_link": "⚠️ Это ваша ссылка — перешлите её другу.",
+    "friend_bad_link": "❌ Ссылка-приглашение не найдена.",
+    "friend_not_found": "Этого игрока нет среди ваших друзей.",
+    "friend_card": "👤 <b>{name}</b>",
+    "friend_today": "📅 Сегодня: {count} {word}",
+    "friend_today_none": "📅 Сегодня: без тренировок",
+    "friend_today_game": "{title} — {count} {word}, лучший результат {best}",
+    "friend_records": "🏆 <b>Рекорды</b>",
+    "friend_record": "{title} — {score} (уровень {level})",
+    "friend_record_sea": "{title} — {score}",
+    "friend_rating": "{title} — рейтинг {rating} ({won}/{lost})",
+    "friend_records_none": "Рекордов пока нет.",
+    # настройки и уведомления
+    "btn_settings": "⚙️ Настройки",
+    "btn_back_settings": "◀️ Настройки",
+    "settings": ("⚙️ <b>Настройки</b>\n\n🔔 Уведомления от друзей: <b>{notify}</b>\n"
+                 "Раз в день, после 12:00, если кто-то из друзей уже потренировался, а вы ещё нет.\n\n"
+                 "⏰ Напоминание о тренировке: <b>{reminder}</b>\n"
+                 "Каждый день в это время, если вы ещё не играли.\n\nВремя — московское."),
+    "on": "вкл",
+    "off": "выкл",
+    "btn_friend_notify": "🔔 Уведомления от друзей: {state}",
+    "btn_reminder": "⏰ Напоминание: {state}",
+    "reminder_choose": ("⏰ <b>Ежедневное напоминание</b>\n\nВо сколько напоминать о тренировке "
+                        "(время московское)? Если в этот день вы уже играли, напоминания не будет."),
+    "btn_reminder_off": "Выкл",
+    "hour": "{hour}:00",
+    "notify_friends": "💪 Сегодня уже тренировались: {names}. Ваша очередь!",
+    "notify_friends_more": "{names} и ещё {more}",
+    "btn_train": "▶️ Тренироваться",
+    "notify_reminder": "⏰ <b>Время тренировки!</b>\n\nПара минут для памяти и внимания — выберите игру:",
     "dbg_off": "Отладочные команды недоступны.\nВаш id: <code>{user_id}</code>",
     # морской бой с другом
     "btn_mp": "⚔️ Играть с другом",
@@ -137,6 +194,19 @@ RU = {
     "mp_cancelled_them": "❌ Противник отменил партию.",
     "records_rating": "⚔️ <b>{title}</b> · рейтинг Elo",
 }
+
+
+def plural(n: int, one: str, few: str, many: str) -> str:
+    """Форма слова для числа: 1 партия, 2 партии, 5 партий."""
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
+
+
+def games_word(n: int) -> str:
+    return plural(n, "партия", "партии", "партий")
 
 
 def t(key: str, **kwargs) -> str:

@@ -15,11 +15,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from games_core import days, path
 from games_core.manager import text_payload
 from games_core.sessions import TimedSession
 from games_core import seafight_mp as mp
-from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, mp_targets, right_move,
-                           wait_preview, win_round, wrong_moves)
+from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, mp_targets, path_detour,
+                           path_wrong, right_move, settle, wait_preview, win_round, wrong_moves)
 
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
 DEFAULT_PLAYER = "Тестер"
@@ -87,6 +88,15 @@ STEP_PATTERNS = [
     (r"есть кнопка (.+)", "has_button"),
     (r"кнопки: (.+)", "buttons"),
     (r"открыто клеток:? (\d+)", "open_cells"),
+    (r"иду кратчайшим путём( от зелёного)?", "path_shortest"),
+    (r"иду в обход", "path_detour"),
+    (r"наступаю на красную", "path_red"),
+    (r"начинаю далеко от зелёного", "path_far"),
+    (r"шагаю не в соседнюю клетку", "path_jump"),
+    (r"шагаю на пройденную клетку", "path_back"),
+    (r"наступает (\d{1,2}):(\d{2})", "clock"),
+    (r"приходит сообщение (.+)", "incoming"),
+    (r"сообщений не приходило", "no_incoming"),
 ]
 
 
@@ -338,6 +348,81 @@ async def do_restart(world: World, chat: Chat) -> None:
     await world.restart()
 
 
+# --- Соедини зелёные ---
+
+async def _path_round(world: World, chat: Chat) -> path.PathRound:
+    await wait_preview(world, chat)
+    s = live(chat)
+    assert s is not None and s.game == "path", "сейчас не идёт «Соедини зелёные»"
+    return s.round
+
+
+async def _walk(chat: Chat, cells) -> None:
+    for cell in cells:
+        await chat.tap(*cell)
+
+
+async def do_path_shortest(world: World, chat: Chat, from_green: str = "") -> None:
+    rnd = await _path_round(world, chat)
+    assert not rnd.path, "путь уже начат"
+    await _walk(chat, ([rnd.greens[0]] if from_green else []) + rnd.solution)
+
+
+async def do_path_detour(world: World, chat: Chat) -> None:
+    rnd = await _path_round(world, chat)
+    assert not rnd.path, "путь уже начат"
+    route = path_detour(rnd)
+    assert route is not None, "на этом поле нет пути длиннее кратчайшего"
+    await _walk(chat, route)
+
+
+async def _path_wrong(world: World, chat: Chat, kind: str) -> None:
+    await chat.tap(*path_wrong(await _path_round(world, chat), kind))
+
+
+async def do_path_red(world: World, chat: Chat) -> None:
+    await _path_wrong(world, chat, path.RED)
+
+
+async def do_path_far(world: World, chat: Chat) -> None:
+    await _path_wrong(world, chat, path.FAR_START)
+
+
+async def do_path_jump(world: World, chat: Chat) -> None:
+    await _path_wrong(world, chat, path.NOT_ADJACENT)
+
+
+async def do_path_back(world: World, chat: Chat) -> None:
+    await _path_wrong(world, chat, path.REVISIT)
+
+
+# --- время суток и сообщения от бота ---
+
+async def do_clock(world: World, chat: Chat, hh: str, mm: str) -> None:
+    """Промотать время до ближайших hh:mm по Москве."""
+    await world.time.advance(days.next_time(world.time.now, int(hh), int(mm)) - world.time.now)
+
+
+def _new_messages(world: World, chat: Chat):
+    inbox = world.inbox.get(chat.player.chat_id, [])
+    new, chat.seen_sent = inbox[chat.seen_sent:], len(inbox)
+    return new
+
+
+async def do_incoming(world: World, chat: Chat, text: str) -> None:
+    await settle()
+    new = _new_messages(world, chat)
+    text = unquote(text)
+    assert any(text in plain(screen.text) for screen in new), \
+        f"ждали сообщение от бота «{text}», пришло: {[plain(s.text) for s in new]}"
+
+
+async def do_no_incoming(world: World, chat: Chat) -> None:
+    await settle()
+    new = _new_messages(world, chat)
+    assert not new, f"ждали тишину, а бот прислал: {[plain(s.text) for s in new]}"
+
+
 ACTIONS: Dict[str, Callable] = {
     "send_code": do_send_code, "follow_invite": do_follow_invite, "mp_miss": do_mp_miss,
     "mp_hit": do_mp_hit, "mp_endgame": do_mp_endgame, "mp_place": do_mp_place, "restart": do_restart,
@@ -346,6 +431,9 @@ ACTIONS: Dict[str, Callable] = {
     "wait": do_wait, "see": do_see, "not_see": do_not_see, "note": do_note, "no_note": do_no_note,
     "has_button": do_has_button, "no_button": do_no_button, "buttons": do_buttons,
     "open_cells": do_open_cells,
+    "path_shortest": do_path_shortest, "path_detour": do_path_detour, "path_red": do_path_red,
+    "path_far": do_path_far, "path_jump": do_path_jump, "path_back": do_path_back,
+    "clock": do_clock, "incoming": do_incoming, "no_incoming": do_no_incoming,
 }
 
 
@@ -389,7 +477,9 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
                 if c.ref is not None:
                     check_screen(c)
             if step.action in ("send", "click", "tap", "right", "right_until", "wrong", "win_round", "wait",
-                               "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place"):
+                               "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place",
+                               "path_shortest", "path_detour", "path_red", "path_far", "path_jump", "path_back",
+                               "clock", "incoming"):
                 log.append(f"{step.line:>3}  [{step.player}] {step.source}\n"
                            f"{indent(describe(chat, with_field=verbose))}")
     except AssertionError as e:

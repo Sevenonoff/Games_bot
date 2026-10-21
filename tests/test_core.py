@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from games_core import matrix, memo, progression as pr, scoring, seafight_solo as sea, tower
+from games_core import days, matrix, memo, path, progression as pr, scoring, seafight_solo as sea, tower
 from games_core.ui import MAX_COLS, MAX_ROWS
 
 
@@ -117,6 +117,79 @@ def test_tower_order():
     # клетка без числа неактивна: нажатие не ошибка
     empty = next((r, c) for r in range(rnd.rows) for c in range(rnd.cols) if (r, c) not in rnd.cells)
     assert rnd.tap(*empty) == tower.IGNORED
+
+
+# --- соедини зелёные ---
+
+@pytest.mark.parametrize("level", range(1, 30))
+def test_path_solvable_and_fits(level):
+    for seed in range(40):
+        rnd = path.PathRound.generate(level, random.Random(seed * 100 + level))
+        a, b = rnd.greens
+        assert path.distance(a, b) >= path.MIN_GREEN_DISTANCE
+        assert rnd.reds and not rnd.reds & set(rnd.greens)
+        assert rnd.solution and rnd.shortest >= 2
+        assert rnd.cols <= MAX_COLS and rnd.rows <= MAX_ROWS - 1
+        # кратчайший путь проходится нажатиями и даёт CLEARED ровно на последней клетке
+        results = [rnd.tap(*cell) for cell in rnd.solution]
+        assert results[-1] == path.CLEARED and set(results[:-1]) <= {path.HIT}
+        assert rnd.is_shortest()
+
+
+def test_path_bigger_and_redder_with_level():
+    small = path.path_params(1)
+    big = path.path_params(20)
+    assert small[0] * small[1] < big[0] * big[1] and small[2] < big[2] and small[3] < big[3]
+
+
+def straight_round() -> path.PathRound:
+    """Поле 5×5: зелёные (0,0) и (0,4), красная (1,2). Кратчайший путь — (0,1),(0,2),(0,3)."""
+    return path.PathRound(5, 5, ((0, 0), (0, 4)), {(1, 2)})
+
+
+def test_path_start_on_green_or_next_to_it():
+    rnd = straight_round()
+    assert rnd.shortest == 3
+    for start in ((0, 0), (0, 1), (1, 0)):
+        rnd = straight_round()
+        assert rnd.tap(*start) == path.HIT
+    # начать можно и от второго зелёного
+    rnd = straight_round()
+    assert [rnd.tap(*x) for x in ((0, 3), (0, 2), (0, 1))] == [path.HIT, path.HIT, path.CLEARED]
+
+
+def test_path_ends_on_green_or_next_to_it():
+    rnd = straight_round()
+    assert [rnd.tap(*x) for x in ((0, 0), (0, 1), (0, 2), (0, 3))] == [path.HIT] * 3 + [path.CLEARED]
+    assert rnd.length() == 3 and rnd.is_shortest()      # сам зелёный в длину не входит
+    rnd = straight_round()
+    route = [(1, 0), (2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (1, 4)]    # в обход красной, рядом с (0,4)
+    assert [rnd.tap(*x) for x in route] == [path.HIT] * 6 + [path.CLEARED]
+    assert rnd.length() == 7 and not rnd.is_shortest()
+
+
+@pytest.mark.parametrize("taps, reason", [
+    ([(1, 2)], path.RED),
+    ([(3, 3)], path.FAR_START),
+    ([(0, 1), (2, 1)], path.NOT_ADJACENT),
+    ([(0, 1), (1, 1), (0, 1)], path.REVISIT),
+    ([(0, 1), (0, 1)], path.REVISIT),
+    ([(0, 1), (1, 1), (1, 2)], path.RED),
+])
+def test_path_any_wrong_tap_is_error(taps, reason):
+    rnd = straight_round()
+    results = [rnd.tap(*x) for x in taps]
+    assert results[-1] == path.MISS and rnd.miss_reason == reason
+    assert set(results[:-1]) <= {path.HIT}
+
+
+def test_moscow_days():
+    ts = 1_000_000.0                                   # 1970-01-12 16:46:40 по Москве
+    assert days.day_key(ts) == "1970-01-12" and days.hour(ts) == 16
+    assert days.local(days.day_start(ts)).hour == 0
+    noon = days.next_time(ts, 12, 0)
+    assert days.day_key(noon) == "1970-01-13" and days.hour(noon) == 12
+    assert days.next_time(ts, 19, 0) - ts < 3 * 3600
 
 
 # --- мемо ---

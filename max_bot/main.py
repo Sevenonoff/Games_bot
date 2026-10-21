@@ -16,8 +16,7 @@ from maxapi.types import BotStarted, CallbackButton, MessageCallback, MessageCre
 from maxapi.utils.deep_linking import create_start_link
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
-from games_core.manager import Manager, text_payload
-from games_core.multiplayer import start_payload
+from games_core.manager import Manager, start_payload, text_payload
 from games_core.sessions import Player
 from games_core.storage import Storage
 from games_core.ui import Reply, Screen
@@ -119,10 +118,10 @@ def build(bot: Bot, storage: Storage, bot_username: str = "") -> tuple[Dispatche
                                       attachments=render(screen), format=ParseMode.HTML)
         return message_id(sent.message) if sent else None
 
-    def invite_link(code: str) -> str:
-        return create_start_link(bot_username, f"mp_{code}")
+    def start_link(param: str) -> str:
+        return create_start_link(bot_username, param)
 
-    manager = Manager(storage, config.PLATFORM, push, send=send, invite_link=invite_link,
+    manager = Manager(storage, config.PLATFORM, push, send=send, start_link=start_link,
                       mp_blink_seconds=config.MP_BLINK_SECONDS,
                       preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
                       countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
@@ -137,7 +136,7 @@ def build(bot: Bot, storage: Storage, bot_username: str = "") -> tuple[Dispatche
 
     @dp.bot_started()
     async def on_bot_started(event: BotStarted):
-        # ссылка-приглашение https://max.ru/<бот>?start=mp_<код> приходит сюда в payload
+        # ссылки-приглашения https://max.ru/<бот>?start=mp_<код> (бой) и fr_<код> (друзья) приходят сюда в payload
         logger.info("bot_started user=%s payload=%r", event.user.user_id, event.payload)
         await safe_handle(player_from(event.user, event.chat_id), start_payload(event.payload),
                           main_screen_sender(bot, event.chat_id))
@@ -182,6 +181,7 @@ async def main() -> None:
     me = await bot.get_me()
     dp, manager = build(bot, storage, me.username)
     restored = manager.restore()
+    manager.start_background()
     logger.info("started as @%s (id %s), db=%s, restored mp games: %d",
                 me.username, me.user_id, config.DB_PATH, restored)
     try:

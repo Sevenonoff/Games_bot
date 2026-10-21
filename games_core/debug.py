@@ -6,6 +6,7 @@
 """
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
+from . import notify
 from .progression import WINS_TO_LEVEL_UP
 from .sessions import Player, Session
 from .texts import TITLES, t
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from .manager import Manager
 
 DAY = 24 * 3600
-LEVEL_GAMES = ("memo", "matrix", "tower")
+LEVEL_GAMES = ("memo", "matrix", "tower", "path")
 SEA_SETS = {"full": "sea_full", "reduced": "sea_reduced"}
 
 HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — уровень и серия побед ({games})
@@ -23,6 +24,7 @@ HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — у
 /dbg round &lt;сек&gt; — длина партии матрицы для вас (0 — как у всех)
 /dbg sea_end [full|reduced] — морской бой за выстрел до победы
 /dbg memo_end — мемо, осталась одна пара
+/dbg notify — прислать себе уведомление от друзей и напоминание прямо сейчас
 /dbg reset — стереть ваши уровни и рекорды"""
 
 Result = Tuple[Reply, Optional[Session]]
@@ -127,6 +129,11 @@ def memo_end(mgr: "Manager", player: Player, args: List[str]) -> Result:
     return Reply(s.screen()), s
 
 
+def send_notices(mgr: "Manager", player: Player, args: List[str]) -> Result:
+    notify.debug_preview(mgr, player)
+    return Reply(menu(mgr, player, "✅ Уведомление от друзей и напоминание — в следующих сообщениях")), None
+
+
 def reset(mgr: "Manager", player: Player, args: List[str]) -> Result:
     mgr.storage.reset_user(mgr.platform, player.user_id)
     mgr.round_overrides.pop(player.user_id, None)
@@ -139,5 +146,6 @@ COMMANDS: Dict[str, Callable[["Manager", Player, List[str]], Result]] = {
     "round": set_round,
     "sea_end": sea_end,
     "memo_end": memo_end,
+    "notify": send_notices,
     "reset": reset,
 }

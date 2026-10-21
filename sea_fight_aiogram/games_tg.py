@@ -12,8 +12,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from games_core.manager import Manager, text_payload
-from games_core.multiplayer import start_payload
+from games_core.manager import Manager, start_payload, text_payload
 from games_core.sessions import Player
 from games_core.storage import Storage
 from games_core.texts import t
@@ -107,10 +106,10 @@ def build_manager(bot: Bot, storage: Storage, bot_username: str = "") -> Manager
         """Бот сам пишет игроку (бой с другом: соперник подключился, сдался…)."""
         return await send_screen(bot, chat_id, screen)
 
-    def invite_link(code: str) -> str:
-        return f"https://t.me/{bot_username}?start=mp_{code}"
+    def start_link(param: str) -> str:
+        return f"https://t.me/{bot_username}?start={param}"
 
-    return Manager(storage, PLATFORM, push, send=send, invite_link=invite_link,
+    return Manager(storage, PLATFORM, push, send=send, start_link=start_link,
                    preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
                    countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
                    memo_close_seconds=config.MEMO_CLOSE_SECONDS, review_seconds=config.REVIEW_SECONDS,
@@ -152,7 +151,7 @@ def register(dp: Dispatcher, bot: Bot, manager: Manager) -> None:
 
     @dp.message(CommandStart())
     async def on_start(message: types.Message, command: CommandObject):
-        # ссылка-приглашение https://t.me/<бот>?start=mp_<код> приходит как «/start mp_<код>»
+        # ссылки https://t.me/<бот>?start=mp_<код> (бой) и fr_<код> (друзья) приходят как «/start <param>»
         await safe_handle(manager, player_from(message.from_user, message.chat.id),
                           start_payload(command.args), new_message_sender(bot, message.chat.id))
 

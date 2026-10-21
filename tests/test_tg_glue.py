@@ -3,6 +3,8 @@
 Нужен aiogram — его нет в .venv (несовместим с maxapi), поэтому прогон из venv бота:
     sea_fight_aiogram/.venv/bin/python -m pytest tests/test_tg_glue.py
 """
+import asyncio
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -124,7 +126,8 @@ async def test_start_sends_menu_as_new_message():
     await games_tg.safe_handle(mgr, player, "menu", games_tg.new_message_sender(bot, CHAT))
     chat_id, text, markup = bot.sent[0]
     data = [b.callback_data for row in markup.inline_keyboard for b in row]
-    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "g:sea", "g:rec"]
+    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "g:new:path", "g:sea", "g:rec",
+                    "g:fr", "g:fri", "g:set"]
 
 
 async def test_invite_link_and_opponent_message():
@@ -140,4 +143,21 @@ async def test_invite_link_and_opponent_message():
     await mgr.handle(guest, games_tg.start_payload(f"mp_{code}"), games_tg.new_message_sender(bot, 600))
     assert bot.sent[-2][0] == 600 and "Вы против" in bot.sent[-2][1]      # гостю — партия
     assert bot.sent[-1][0] == CHAT and "Ваш ход" in bot.sent[-1][1]       # хозяину — новое сообщение
+    await mgr.shutdown()
+
+
+async def test_friend_link_and_message_to_inviter():
+    """Друзья: ссылка t.me ?start=fr_<код>; по ней друг подключается, пригласившему — новое сообщение."""
+    bot = FakeBot()
+    mgr = games_tg.build_manager(bot, Storage(":memory:"), "games_bot")
+    host = games_tg.make_player(7, "anya", "Аня", CHAT)
+    guest = games_tg.make_player(8, "bob", "Боб", 600)
+    await mgr.handle(host, "fri", games_tg.new_message_sender(bot, CHAT))
+    m = re.search(r"https://t\.me/games_bot\?start=(fr_[A-Z0-9]+)", bot.sent[-1][1])
+    assert m, bot.sent[-1][1]
+    await mgr.handle(guest, games_tg.start_payload(m[1]), games_tg.new_message_sender(bot, 600))
+    for _ in range(5):
+        await asyncio.sleep(0)      # сообщение пригласившему уходит отдельной задачей
+    assert bot.sent[-2][0] == 600 and "Новый друг: <b>anya</b>" in bot.sent[-2][1]
+    assert bot.sent[-1][0] == CHAT and "Новый друг: <b>bob</b>" in bot.sent[-1][1]
     await mgr.shutdown()

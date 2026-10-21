@@ -21,6 +21,10 @@ def test_text_payload():
     assert text_payload("/DBG") == "dbg"
     assert text_payload("привет") == "menu"
     assert text_payload(None) == "menu"
+    assert text_payload("/start fr_ab2cdefg") == "frj:AB2CDEFG"
+    assert text_payload("ab2cdefg") == "frj:AB2CDEFG"        # код друга — 8 знаков
+    assert text_payload("ab2cde") == "mpj:AB2CDE"            # код боя — 6
+    assert text_payload("abcdefgh") == "menu"                # без цифры — просто слово
 
 
 async def test_closed_for_others_but_shows_id(world):

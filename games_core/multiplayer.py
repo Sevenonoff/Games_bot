@@ -43,13 +43,6 @@ BLINKS = 3                 # мигание потопленного кораб�
 PLACEMENT_TICK = 30        # как часто обновлять таймер расстановки
 
 
-def start_payload(payload: Optional[str]) -> str:
-    """Параметр ссылки ?start=… → payload: mp_<код> — подключиться к партии."""
-    if payload and payload.startswith("mp_"):
-        return data("mpj", payload[3:].upper())
-    return "menu"
-
-
 def looks_like_code(word: str) -> bool:
     w = word.upper()
     return len(w) == mp.CODE_LEN and all(ch in mp.CODE_ALPHABET for ch in w) and any(ch.isdigit() for ch in w)
@@ -539,7 +532,7 @@ class Multiplayer:
         return self._board_screen(game, side, highlight)
 
     def _invite_screen(self, game: mp.MpGame) -> Screen:
-        text = t("mp_invite", link=self.mgr.invite_link(game.code), code=game.code,
+        text = t("mp_invite", link=self.mgr.start_link(f"mp_{game.code}"), code=game.code,
                  time=t(f"mp_time_{game.time_limit}"), set=t(f"mp_set_{game.ship_set}"),
                  mode=t(f"mp_mode_{game.mode}"))
         return Screen(text, [[Button(t("btn_mp_cancel_invite"), data("mpx", game.code))], menu_row()])

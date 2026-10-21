@@ -46,6 +46,7 @@ async def main() -> None:
     dp = Dispatcher()
     games_tg.register(dp, bot, manager)
     restored = manager.restore()
+    manager.start_background()
     logger.info("started as @%s (id %s), db=%s, restored mp games: %d",
                 me.username, me.id, config.GAMES_DB_PATH, restored)
     try:
