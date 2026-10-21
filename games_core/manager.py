@@ -258,17 +258,16 @@ class Manager:
             self._schedule(uid, s)
 
     async def _run_round(self, uid: int, s: TimedSession, round_id: int) -> None:
-        """Отсчёт «3, 2, 1» → показ (если он есть у игры) → ввод с ходом таймера до конца раунда или партии."""
+        """Отсчёт «3, 2, 1» → показ → ввод с ходом таймера до конца раунда или партии."""
         step = self.countdown_seconds / COUNTDOWN_FROM
         for n in range(COUNTDOWN_FROM - 1, 0, -1):
             await self.sleep(step)
             if not await self._step(uid, s, round_id, lambda n=n: setattr(s, "countdown", n)):
                 return
         await self.sleep(step)
-        if s.has_preview:
-            if not await self._step(uid, s, round_id, lambda: setattr(s, "phase", PREVIEW)):
-                return
-            await self.sleep(self.preview_seconds)
+        if not await self._step(uid, s, round_id, lambda: setattr(s, "phase", PREVIEW)):
+            return
+        await self.sleep(self.preview_seconds)
         if not await self._step(uid, s, round_id, s.begin_input):
             return
         if not s.clock_limited:

@@ -127,7 +127,6 @@ class TimedSession(Session):
     """
     timed = True
     clock_limited = True
-    has_preview = True        # False — после отсчёта сразу ввод (поле открыто всё время)
     rounds_limit: Optional[int] = None
     round_cls: Any = None
     phase_key = ""
@@ -323,7 +322,6 @@ class PathSession(TimedSession):
     round_cls = path.PathRound
     phase_key = "phase_path"
     clock_limited = False
-    has_preview = False
     rounds_limit = PATH_ROUNDS
 
     def __init__(self, *args, **kwargs):
@@ -343,17 +341,18 @@ class PathSession(TimedSession):
         return shortest if note == t("note_round_ok") else f"{shortest} {note}"
 
     def cell_symbol(self, r: int, c: int) -> str:
+        """Поле видно 1 с (показ) и на разборе; в остальное время — только свой путь, путь вслепую."""
         cell, rnd = (r, c), self.round
-        if self.phase == COUNTDOWN:
-            return PATH_EMPTY
         if cell == self.wrong_cell:
             return WRONG_CELL
+        if cell in rnd.path:
+            return PATH_STEP
+        if self.phase not in (PREVIEW, REVIEW):
+            return PATH_EMPTY
         if cell in rnd.greens:
             return PATH_GREEN
         if cell in rnd.reds:
             return PATH_RED
-        if cell in rnd.path:
-            return PATH_STEP
         if self.phase == REVIEW and cell in rnd.solution:
             return PATH_ANSWER
         return PATH_EMPTY
