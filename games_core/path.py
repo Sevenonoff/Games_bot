@@ -2,8 +2,9 @@
 
 Игрок кладёт дорогу по клеткам в любом порядке, не наступая на препятствия; раунд пройден,
 как только клетки дороги соединили человека с домом по соседним (по сторонам) клеткам.
-Нажатие на препятствие — ошибка; на человека, дом или уже положенную клетку — ничего.
-Длина дороги — число её клеток.
+Нажатие на препятствие — ошибка; на уже положенную клетку — ничего. Нажатие на человека или
+дом выглядит как обычная клетка дороги (иначе по «ничего не случилось» их можно найти),
+но в дорогу не входит. Длина дороги — число её клеток.
 """
 import random
 from collections import deque
@@ -18,8 +19,9 @@ MIN_ENDS_DISTANCE = 3     # никакая клетка не соседству�
 GENERATE_TRIES = 500
 
 # без эмодзи с вариационным селектором: они могут рисоваться как текст
-PEOPLE = ("🧑", "👩", "👨", "👧", "👦", "👵", "👴")
-HOUSES = ("🏠", "🏡", "🏫", "🏥", "🏰", "🏪", "⛺")
+# человек во весь рост: силуэт заметнее лица
+PEOPLE = ("🚶", "🏃", "🧍", "💃", "🕺")
+HOUSES = ("🏠", "🏡", "🏫", "🏥", "🏰", "🏪")
 
 # уровень: (рядов, колонок, доля красных, мин. длина кратчайшего пути)
 PATH_LEVELS = {
@@ -56,6 +58,7 @@ class PathRound:
     blocks: Set[Cell]
     icons: Tuple[str, str] = (PEOPLE[0], HOUSES[0])
     road: List[Cell] = field(default_factory=list)       # клетки дороги в порядке нажатий
+    marked: Set[Cell] = field(default_factory=set)       # нажатые человек и дом: вслепую — как дорога
     solution: List[Cell] = field(default_factory=list)   # одна из кратчайших дорог (для разбора)
 
     def __post_init__(self):
@@ -154,9 +157,12 @@ class PathRound:
 
     def tap(self, r: int, c: int) -> str:
         cell = (r, c)
-        if not self.inside(cell) or cell in self.ends or cell in self.road:
+        if not self.inside(cell) or cell in self.road or cell in self.marked:
             return IGNORED
         if cell in self.blocks:
             return MISS
+        if cell in self.ends:
+            self.marked.add(cell)
+            return HIT
         self.road.append(cell)
         return CLEARED if self.connected() else HIT

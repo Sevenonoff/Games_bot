@@ -236,7 +236,8 @@ def path_next(rnd: path.PathRound) -> Optional[Cell]:
 
 
 def path_detour(rnd: path.PathRound) -> Optional[List[Cell]]:
-    """Дорога от человека к дому длиннее кратчайшей (перебор простых путей)."""
+    """Дорога от человека к дому длиннее кратчайшей: обход (перебор простых путей)
+    или, если обхода нет, кратчайшая дорога и лишняя клетка."""
     a, b = rnd.ends
     goal = set(rnd.neighbors(b))
 
@@ -254,7 +255,10 @@ def path_detour(rnd: path.PathRound) -> Optional[List[Cell]]:
         found = walk([start])
         if found:
             return found
-    return None
+    # обхода нет: клетки ставятся в любом порядке, так что лишняя клетка вдали тоже удлиняет дорогу
+    cells = [(r, c) for r in range(rnd.rows) for c in range(rnd.cols)]
+    extra = next((x for x in cells if rnd.free(x) and x not in rnd.solution), None)
+    return [extra] + rnd.solution if extra is not None else None
 
 
 def path_middle_first(rnd: path.PathRound) -> List[Cell]:

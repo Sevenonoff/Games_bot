@@ -18,7 +18,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 from games_core import days, path
 from games_core.ui import BLANK
 from games_core.manager import text_payload
-from games_core.sessions import TimedSession
+from games_core.sessions import PATH_EMPTY, TimedSession
 from games_core import seafight_mp as mp
 from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, mp_targets, path_detour,
                            path_middle_first, right_move, settle, wait_preview, win_round, wrong_moves)
@@ -77,6 +77,8 @@ STEP_PATTERNS = [
     (r"жму клетку (\d+)[ ,]+(\d+)", "tap"),
     (r"жму чёрную клетку", "tap_blank"),
     (r"жму клетку дороги ещё раз", "path_again"),
+    (r"жму на (человека|дом)", "path_end"),
+    (r"на поле видны человек и дом", "path_ends_shown"),
     (r"жму (.+)", "click"),
     (r"хожу верно до (.+)", "right_until"),
     (r"хожу верно(?: (\d+) раза?)?", "right"),
@@ -97,6 +99,7 @@ STEP_PATTERNS = [
     (r"иду в обход", "path_detour"),
     (r"кладу дорогу с середины", "path_middle"),
     (r"наступаю на препятствие", "path_block"),
+    (r"числа поездки с разрывом", "trip_gap"),
     (r"наступает (\d{1,2}):(\d{2})", "clock"),
     (r"приходит сообщение (.+)", "incoming"),
     (r"сообщений не приходило", "no_incoming"),
@@ -273,7 +276,7 @@ async def do_no_note(world: World, chat: Chat) -> None:
     assert chat.note is None, f"ждали нажатие без уведомления, было {chat.note!r}"
 
 
-CLOSED_CELLS = ("⬜", "🟨")   # закрытая карта / клетка без числа
+CLOSED_CELLS = ("⬜", "🟨", PATH_EMPTY)   # закрытая карта / клетка без числа / пустая клетка дороги
 
 
 async def do_open_cells(world: World, chat: Chat, count: str) -> None:
@@ -417,8 +420,29 @@ async def do_path_again(world: World, chat: Chat) -> None:
     await chat.tap(*rnd.road[-1])
 
 
+async def do_path_end(world: World, chat: Chat, which: str) -> None:
+    rnd = await _path_round(world, chat)
+    await chat.tap(*rnd.ends[0 if which == "человека" else 1])
+
+
+async def do_path_ends_shown(world: World, chat: Chat) -> None:
+    s = live(chat)
+    assert s is not None and s.game == "path", "сейчас не идёт «Проложи дорогу»"
+    for end, icon in zip(s.round.ends, s.round.icons):
+        assert chat.cell(*end).text == icon, f"на клетке {end} «{chat.cell(*end).text}», а не {icon}"
+
+
 async def do_path_block(world: World, chat: Chat) -> None:
     await chat.tap(*min((await _path_round(world, chat)).blocks))
+
+
+# --- Поездка на числах ---
+
+async def do_trip_gap(world: World, chat: Chat) -> None:
+    s = live(chat)
+    assert s is not None and s.game == "tower", "сейчас не идёт «Поездка на числах»"
+    numbers = s.round.numbers
+    assert any(b - a > 1 for a, b in zip(numbers, numbers[1:])), f"числа без разрыва: {numbers}"
 
 
 # --- время суток и сообщения от бота ---
@@ -457,7 +481,8 @@ ACTIONS: Dict[str, Callable] = {
     "has_button": do_has_button, "no_button": do_no_button, "buttons": do_buttons,
     "open_cells": do_open_cells, "field_has": do_field_has, "field_lacks": do_field_lacks,
     "path_shortest": do_path_shortest, "path_detour": do_path_detour, "path_middle": do_path_middle,
-    "path_again": do_path_again, "path_block": do_path_block,
+    "path_again": do_path_again, "path_end": do_path_end, "path_ends_shown": do_path_ends_shown, "path_block": do_path_block,
+    "trip_gap": do_trip_gap,
     "clock": do_clock, "incoming": do_incoming, "no_incoming": do_no_incoming,
 }
 
@@ -503,7 +528,7 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
                     check_screen(c)
             if step.action in ("send", "click", "tap", "tap_blank", "right", "right_until", "wrong", "win_round",
                                "wait", "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place",
-                               "path_shortest", "path_detour", "path_middle", "path_again", "path_block",
+                               "path_shortest", "path_detour", "path_middle", "path_again", "path_end", "path_block",
                                "clock", "incoming"):
                 log.append(f"{step.line:>3}  [{step.player}] {step.source}\n"
                            f"{indent(describe(chat, with_field=verbose))}")

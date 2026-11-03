@@ -104,8 +104,19 @@ def test_tower_harder_levels():
     rng = random.Random(5)
     starts = {tower.make_numbers(3, rng)[0] for _ in range(50)}
     assert min(starts) >= 2
-    runs = [tower.make_numbers(5, rng) for _ in range(50)]
-    assert any(b - a > 1 for n in runs for a, b in zip(n, n[1:]))
+
+
+@pytest.mark.parametrize("level", range(1, 40))
+def test_tower_gaps_from_five_numbers(level):
+    """До 5 чисел — подряд; с 5 — куски подряд и gaps_count(n) разрывов между ними: 3, 4, 7, 8, 9."""
+    rng = random.Random(level)
+    for _ in range(20):
+        numbers = tower.make_numbers(level, rng)
+        steps = [b - a for a, b in zip(numbers, numbers[1:])]
+        gaps = sum(1 for d in steps if d > 1)
+        assert gaps == tower.gaps_count(len(numbers))
+        assert (gaps > 0) == (len(numbers) >= tower.GAPS_FROM)
+        assert all(1 <= d <= tower.tower_params(level)[3] for d in steps)
 
 
 def test_tower_order():
@@ -171,11 +182,20 @@ def test_path_detour_and_extra_cells_are_not_shortest():
 
 def test_path_taps_that_do_nothing_and_block():
     rnd = straight_round()
-    assert rnd.tap(0, 0) == path.IGNORED and rnd.tap(0, 4) == path.IGNORED     # человек и дом
     assert rnd.tap(0, 1) == path.HIT and rnd.tap(0, 1) == path.IGNORED         # уже на дороге
     assert rnd.tap(5, 0) == path.IGNORED                                       # вне поля
     assert rnd.tap(1, 2) == path.MISS                                          # препятствие
     assert rnd.road == [(0, 1)]
+
+
+def test_path_ends_tap_like_road_but_do_not_count():
+    """Человек и дом нажимаются как обычная клетка — иначе их можно найти вслепую."""
+    rnd = straight_round()
+    assert rnd.tap(0, 0) == path.HIT and rnd.tap(0, 4) == path.HIT
+    assert rnd.tap(0, 0) == path.IGNORED
+    assert rnd.marked == {(0, 0), (0, 4)} and rnd.road == []
+    assert [rnd.tap(*x) for x in ((0, 1), (0, 2), (0, 3))] == [path.HIT, path.HIT, path.CLEARED]
+    assert rnd.length() == 3 and rnd.is_shortest()
 
 
 def test_moscow_days():
@@ -269,6 +289,13 @@ def test_single_win_level_up():
 
 
 # --- поездка на числах ---
+
+def test_road_weight():
+    """Партия без ошибок: на 1-м уровне — 60% дороги, с 15-го — вся; доля растёт с уровнем."""
+    weights = [trips.road_weight(level) for level in range(1, 30)]
+    assert weights[0] == 0.6 and trips.road_weight(trips.FULL_ROAD_LEVEL) == 1.0 and weights[-1] == 1.0
+    assert weights == sorted(weights)
+
 
 def test_trip_lines():
     assert "не завелась" in trips.trip_lines(0)[0]

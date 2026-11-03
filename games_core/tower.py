@@ -14,18 +14,19 @@ FIELD_ROWS_LIMIT = 14     # 15-й ряд — служебные кнопки
 DENSITY = 0.6             # доля клеток с числами на поле 7 × N
 MAX_NUMBERS = int(FIELD_COLS * FIELD_ROWS_LIMIT * DENSITY)   # 58
 
-# уровень: (сколько чисел, мин. старт, макс. старт, макс. шаг)
+# уровень: (сколько чисел, мин. старт, макс. старт, макс. разрыв)
 TOWER_LEVELS = {
-    1: (3, 1, 1, 1),
-    2: (4, 1, 1, 1),
-    3: (4, 2, 9, 1),
-    4: (5, 2, 9, 1),
-    5: (5, 1, 9, 2),
-    6: (6, 1, 9, 2),
-    7: (6, 1, 20, 3),
+    1: (3, 1, 1, 3),
+    2: (4, 1, 1, 3),
+    3: (4, 2, 9, 3),
+    4: (5, 2, 9, 3),
+    5: (5, 1, 9, 3),
+    6: (6, 1, 9, 4),
+    7: (6, 1, 20, 4),
 }
 LATE_START_MAX = 50
-LATE_STEP_MAX = 3
+LATE_GAP_MAX = 5
+GAPS_FROM = 5             # разрывы в последовательности — от 5 чисел: 3, 4, 7, 8, 9
 
 # (макс. чисел, сторона квадратного поля); дальше поле 7 × N
 FIELD_SIDES = ((6, 3), (10, 4), (15, 5), (21, 6), (29, 7))
@@ -36,7 +37,12 @@ Cell = Tuple[int, int]
 def tower_params(level: int) -> Tuple[int, int, int, int]:
     if level in TOWER_LEVELS:
         return TOWER_LEVELS[level]
-    return min(level - 1, MAX_NUMBERS), 1, LATE_START_MAX, LATE_STEP_MAX
+    return min(level - 1, MAX_NUMBERS), 1, LATE_START_MAX, LATE_GAP_MAX
+
+
+def gaps_count(count: int) -> int:
+    """Сколько разрывов в последовательности из count чисел: 5–6 чисел — 1, 7–8 — 2, …"""
+    return 0 if count < GAPS_FROM else (count - 3) // 2
 
 
 def field_size(count: int) -> Tuple[int, int]:
@@ -49,11 +55,13 @@ def field_size(count: int) -> Tuple[int, int]:
 
 
 def make_numbers(level: int, rng: random.Random) -> List[int]:
-    count, start_min, start_max, step_max = tower_params(level)
+    """Числа подряд, а с GAPS_FROM чисел — куски подряд с разрывами между ними."""
+    count, start_min, start_max, gap_max = tower_params(level)
+    gaps = set(rng.sample(range(1, count), gaps_count(count)))   # перед какими числами разрыв
     value = rng.randint(start_min, start_max)
     numbers = [value]
-    for _ in range(count - 1):
-        value += rng.randint(1, step_max)
+    for i in range(1, count):
+        value += rng.randint(2, gap_max) if i in gaps else 1
         numbers.append(value)
     return numbers
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
 from . import matrix, memo, path, seafight_solo as sea, tower
-from .trips import trip_lines
+from .trips import road_weight, trip_lines
 from .progression import Progress, register_fail, register_win, start_partia
 from .scoring import format_multiplier, memo_penalty, round_bonus, tap_points
 from .storage import Storage
@@ -33,9 +33,9 @@ ROAD = "➖"
 ROAD_CAR = "🚗"
 ROAD_FINISH = "🏁"
 MEMO_HIDDEN = "⬜"
-PATH_EMPTY = "⬜"
+PATH_EMPTY = "\u2800"     # пустая клетка — невидимый символ: на голой кнопке фигурки контрастнее
 PATH_BLOCK = "⛔"
-PATH_STEP = "🔵"         # клетка дороги игрока
+PATH_STEP = "●"          # клетка дороги игрока
 PATH_ANSWER = "🟡"       # на разборе: кратчайшая дорога
 PATH_ROUNDS = 6           # как в башне: партия — 6 раундов без таймера
 SEA_SYMBOLS = {sea.UNKNOWN: "🟦", sea.SHOT_MISS: "💠", sea.SHOT_HIT: "💥", sea.SHOT_SUNK: "💢"}
@@ -356,19 +356,34 @@ class TowerSession(TimedSession):
             return str(n)
         return TOWER_HIDDEN
 
-    def progress_share(self) -> float:
-        """Какая часть партии проехана: пройденные раунды и открытые числа текущего."""
-        done = self.rounds_total
+    def __init__(self, *args, **kwargs):
+        self.road_done = 0.0              # доля дороги, проеханная в законченных раундах
+        super().__init__(*args, **kwargs)
+
+    def tap(self, r: int, c: int) -> Optional[str]:
+        rnd, level, total = self.round, self.progress.level, self.rounds_total
+        note = super().tap(r, c)
+        if self.rounds_total > total:
+            # раунд кончился (пройден или ошибка): машинка проезжает долю верных ответов
+            self.road_done += self.road_step(level, rnd)
+        return note
+
+    def road_step(self, level: int, rnd: tower.TowerRound) -> float:
+        return road_weight(level) * rnd.opened / rnd.size / self.rounds_limit
+
+    def road_share(self) -> float:
+        """Какая часть дороги проехана: законченные раунды и верные ответы текущего."""
+        share = self.road_done
         if self.phase == INPUT:
-            done += self.round.opened / self.round.size
-        return min(1.0, done / self.rounds_limit)
+            share += self.road_step(self.progress.level, self.round)
+        return min(1.0, share)
 
     def extra_lines(self) -> List[str]:
-        return [road_art(self.progress_share()), t("trip_driven", km=self.score)]
+        return [road_art(self.road_share()), t("trip_driven", km=self.score)]
 
     def result_extra(self) -> List[str]:
         # 1 очко — 1 км
-        return [road_art(1.0), *trip_lines(self.score)]
+        return [road_art(self.road_share()), *trip_lines(self.score)]
 
 
 class PathSession(TimedSession):
@@ -398,14 +413,16 @@ class PathSession(TimedSession):
         """Поле видно 1 с (показ), на разборе и на итоге; во время ввода — только своя дорога,
         дорога вслепую."""
         cell, rnd = (r, c), self.round
+        shown = self.phase in (PREVIEW, REVIEW, DONE)
         if cell == self.wrong_cell:
             return WRONG_CELL
-        if cell in rnd.road:
-            return PATH_STEP
-        if self.phase not in (PREVIEW, REVIEW, DONE):
-            return PATH_EMPTY
-        if cell in rnd.ends:
+        if shown and cell in rnd.ends:
+            # нажатый вслепую человек или дом на открытом поле снова фигурка
             return rnd.icons[rnd.ends.index(cell)]
+        if cell in rnd.road or cell in rnd.marked:
+            return PATH_STEP
+        if not shown:
+            return PATH_EMPTY
         if cell in rnd.blocks:
             return PATH_BLOCK
         if self.phase == REVIEW and cell in rnd.solution:
