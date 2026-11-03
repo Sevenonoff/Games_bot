@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
-from . import matrix, memo, path, seafight_solo as sea, tower
+from . import matrix, memo, motivation, path, seafight_solo as sea, tower
 from .trips import road_weight, trip_lines
 from .progression import Progress, register_fail, register_win, start_partia
 from .scoring import format_multiplier, memo_penalty, round_bonus, tap_points
@@ -68,6 +68,7 @@ class Session:
         self.finished = False             # результат сохранён
         self.msg_ref: Any = None          # id сообщения в мессенджере, ставит транспорт
         self.on_saved: Optional[Callable[[], None]] = None   # результат записан — Manager разбудит уведомления
+        self.motivation_lines: List[str] = []   # путь и серия после записанной партии — в итог
         self.rendered_at = 0.0            # когда сообщение партии последний раз обновлялось
         self.last_activity = clock()
 
@@ -119,7 +120,11 @@ class Session:
         now = self.clock()
         p = self.player
         self.storage.upsert_user(p.platform, p.user_id, p.name, p.chat_id, now)
+        before = motivation.replay(self.storage.partias(p.platform, p.user_id)) if score is not None else None
         is_record = self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
+        if before is not None:
+            after = motivation.replay(self.storage.partias(p.platform, p.user_id))
+            self.motivation_lines = motivation.result_lines(motivation.diff(before, after), after)
         if score is not None and self.on_saved is not None:
             self.on_saved()
         return is_record
@@ -130,6 +135,8 @@ class Session:
             text.append(t("result_score", score=self.score))
             text.append(t("result_record_new") if is_record
                         else t("result_record", best=self.progress.best_score))
+        if self.motivation_lines:
+            text += [""] + self.motivation_lines
         return Screen("\n".join(text), [
             [Button(t("btn_again"), data("new", self.game))],
             [Button(t("btn_menu"), "menu")],

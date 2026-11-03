@@ -16,7 +16,7 @@ import time
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
-from . import debug, friends, notify
+from . import days, debug, friends, motivation, notify
 from . import seafight_mp as mp
 from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
@@ -186,7 +186,7 @@ class Manager:
             if game in RECORD_GAMES:
                 return Reply(self.records_screen(player, game)), None
             return Reply(self.records_menu()), None
-        return Reply(self.menu_screen()), None
+        return Reply(self.menu_screen(player)), None
 
     def start_session(self, player: Player, game: str) -> Session:
         self._abandon(player.user_id)
@@ -353,8 +353,10 @@ class Manager:
 
     # --- экраны вне партии ---
 
-    def menu_screen(self) -> Screen:
-        return Screen(t("menu"), [
+    def menu_screen(self, player: Player) -> Screen:
+        journey = motivation.replay(self.storage.partias(self.platform, player.user_id))
+        progress = "\n".join(motivation.menu_lines(journey, days.day_key(self.clock())))
+        return Screen(t("menu_with", progress=progress), [
             [Button(TITLES["memo"], data("new", "memo"))],
             [Button(TITLES["matrix"], data("new", "matrix"))],
             [Button(TITLES["tower"], data("new", "tower"))],

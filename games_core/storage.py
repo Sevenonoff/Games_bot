@@ -8,6 +8,7 @@ import json
 import sqlite3
 from typing import Callable, Dict, List, Optional, Tuple
 
+from .motivation import Partia
 from .progression import Progress
 
 SCHEMA = """
@@ -160,6 +161,21 @@ class Storage:
                     (platform, user_id, game, score, p.level, now),
                 )
         return is_record
+
+    def partias(self, platform: str, user_id: int) -> List[Partia]:
+        """История партий игрока по времени — из неё считаются путь и серия."""
+        rows = self.conn.execute(
+            "SELECT game, level, played_at FROM scores WHERE platform = ? AND user_id = ? ORDER BY played_at, id",
+            (platform, user_id)).fetchall()
+        return [Partia(r["game"], r["level"], r["played_at"]) for r in rows]
+
+    def add_score(self, platform: str, user_id: int, game: str, score: int, level: Optional[int],
+                  at: float) -> None:
+        """Партия в истории задним числом (для отладки), без изменения уровня и рекорда."""
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO scores (platform, user_id, game, score, level, played_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (platform, user_id, game, score, level, at))
 
     def reset_user(self, platform: str, user_id: int) -> None:
         """Стереть уровни и результаты игрока (для отладки)."""

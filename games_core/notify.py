@@ -17,9 +17,9 @@ import html
 import logging
 from typing import TYPE_CHECKING, List, Tuple
 
-from . import days
+from . import days, motivation
 from .sessions import Player
-from .texts import TITLES, t
+from .texts import TITLES, days_word, t
 from .ui import Button, Reply, Screen, data
 
 if TYPE_CHECKING:
@@ -90,9 +90,18 @@ def friends_notice(names: List[str]) -> Screen:
     ])
 
 
-def reminder_notice() -> Screen:
+def reminder_notice(streak: int = 0) -> Screen:
+    """streak — серия, которая пропадёт, если сегодня не сыграть: от 2 дней о ней напоминаем."""
     rows = [[Button(TITLES[g], data("new", g))] for g in TRAINING_GAMES]
-    return Screen(t("notify_reminder"), rows + [[Button(t("btn_menu"), "menu")]])
+    text = t("notify_reminder")
+    if streak >= 2:
+        text += "\n\n" + t("notify_streak", n=streak, word=days_word(streak))
+    return Screen(text, rows + [[Button(t("btn_menu"), "menu")]])
+
+
+def streak_at_risk(mgr: "Manager", uid: int) -> int:
+    journey = motivation.replay(mgr.storage.partias(mgr.platform, uid))
+    return journey.current_streak(days.day_key(mgr.clock()))
 
 
 class Notifier:
@@ -136,7 +145,7 @@ class Notifier:
             if mgr.busy(uid):
                 continue
             storage.update_settings(platform, uid, reminded_day=today)
-            out.append((uid, reminder_notice()))
+            out.append((uid, reminder_notice(streak_at_risk(mgr, uid))))
         if out:
             logger.info("notify: %s", ", ".join(f"{uid}:{screen.text[:20]!r}" for uid, screen in out))
         return out
@@ -146,4 +155,4 @@ def debug_preview(mgr: "Manager", player: Player) -> None:
     """/dbg notify: оба сообщения себе прямо сейчас, без условий."""
     names = mgr.storage.names(mgr.platform, mgr.storage.friends(mgr.platform, player.user_id))
     mgr.send_later(player.user_id, friends_notice(list(names.values()) or ["Друг"]))
-    mgr.send_later(player.user_id, reminder_notice())
+    mgr.send_later(player.user_id, reminder_notice(streak_at_risk(mgr, player.user_id)))

@@ -6,7 +6,7 @@
 """
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
-from . import notify
+from . import days as calendar, motivation, notify
 from .progression import WINS_TO_LEVEL_UP
 from .sessions import Player, Session
 from .texts import TITLES, t
@@ -24,6 +24,7 @@ HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — у
 /dbg round &lt;сек&gt; — длина партии матрицы для вас (0 — как у всех)
 /dbg sea_end [full|reduced] — морской бой за выстрел до победы
 /dbg memo_end — мемо, осталась одна пара
+/dbg days &lt;N&gt; — будто вы играли N дней подряд до сегодня (мемо и поездка в полдень)
 /dbg notify — прислать себе уведомление от друзей и напоминание прямо сейчас
 /dbg reset — стереть ваши уровни и рекорды"""
 
@@ -129,6 +130,21 @@ def memo_end(mgr: "Manager", player: Player, args: List[str]) -> Result:
     return Reply(s.screen()), s
 
 
+def played_days(mgr: "Manager", player: Player, args: List[str]) -> Result:
+    n = int(args[0])
+    if not 1 <= n <= 400:
+        raise ValueError(args)
+    today = calendar.day_start(mgr.clock())
+    for k in range(n, 0, -1):
+        noon = calendar.day_start(today - k * DAY + 12 * 3600) + 12 * 3600
+        for game in ("memo", "tower"):
+            mgr.storage.add_score(mgr.platform, player.user_id, game, 1, 1, noon)
+    j = motivation.replay(mgr.storage.partias(mgr.platform, player.user_id))
+    zone, step, size = motivation.zone_of(j.steps)
+    return Reply(menu(mgr, player, f"✅ {n} дн. подряд до сегодня: {motivation.zone_title(zone)} — "
+                                   f"шаг {step} из {size}, серия {j.streak}")), None
+
+
 def send_notices(mgr: "Manager", player: Player, args: List[str]) -> Result:
     notify.debug_preview(mgr, player)
     return Reply(menu(mgr, player, "✅ Уведомление от друзей и напоминание — в следующих сообщениях")), None
@@ -146,6 +162,7 @@ COMMANDS: Dict[str, Callable[["Manager", Player, List[str]], Result]] = {
     "round": set_round,
     "sea_end": sea_end,
     "memo_end": memo_end,
+    "days": played_days,
     "notify": send_notices,
     "reset": reset,
 }

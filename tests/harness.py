@@ -433,7 +433,7 @@ def check_screen(chat) -> None:
     for b in buttons:
         assert KNOWN_PAYLOAD.match(b.data), f"кнопка {b.text!r} с неизвестным payload {b.data!r}"
     tg.tg_rows(chat.screen)   # тот же экран уходит и в Telegram: его лимиты тоже соблюдены
-    assert chat.text == t("menu") or any(b.data in ("menu", "sea") or b.data.startswith("q:") for b in buttons), \
+    assert chat.text.startswith(t("menu").split("\n")[0]) or any(b.data in ("menu", "sea") or b.data.startswith("q:") for b in buttons), \
         "с экрана не уйти в меню"
     check_mp_screen(chat)
     s = live(chat)

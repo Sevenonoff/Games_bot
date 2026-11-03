@@ -13,6 +13,17 @@ TITLES = {
 
 RU = {
     "menu": "🎮 <b>Игры</b>\n\nВыберите игру:",
+    "menu_with": "🎮 <b>Игры</b>\n\n{progress}\n\nВыберите игру:",
+    # путь и серия дней
+    "journey_menu": "🗺 Путь: <b>{zone}</b> — шаг {step} из {size}, дальше ☁️",
+    "streak_today": "🔥 Серия: <b>{n} {word}</b> подряд",
+    "streak_pending": "🔥 Серия: <b>{n} {word}</b> — сыграйте сегодня, чтобы не потерять",
+    "streak_none": "🔥 Сыграйте сегодня — начнётся серия дней",
+    "journey_steps": "👣 +{n} {word} · {zone}: {step} из {size}",
+    "journey_cap": "👣 Шаги на сегодня набраны — путь продолжится завтра",
+    "journey_zone_open": "☁️ Облака рассеялись — впереди <b>{zone}</b>!",
+    "streak_up": "🔥 Серия: <b>{n} {word}</b> подряд",
+    "streak_reward": "🎁 {n} {word} подряд — +{steps} шагов на пути!",
     "btn_sea": "🚢 Морской бой",
     "btn_records": "🏆 Рекорды",
     "btn_menu": "🏠 Меню",
@@ -124,6 +135,7 @@ RU = {
     "notify_friends": "💪 Сегодня уже тренировались: {names}. Ваша очередь!",
     "notify_friends_more": "{names} и ещё {more}",
     "btn_train": "▶️ Тренироваться",
+    "notify_streak": "🔥 Ваша серия — <b>{n} {word}</b> подряд. Сыграйте сегодня, чтобы её не потерять!",
     "notify_reminder": "⏰ <b>Время тренировки!</b>\n\nПара минут для памяти и внимания — выберите игру:",
     "dbg_off": "Отладочные команды недоступны.\nВаш id: <code>{user_id}</code>",
     # морской бой с другом
@@ -211,6 +223,14 @@ def plural(n: int, one: str, few: str, many: str) -> str:
 
 def games_word(n: int) -> str:
     return plural(n, "партия", "партии", "партий")
+
+
+def steps_word(n: int) -> str:
+    return plural(n, "шаг", "шага", "шагов")
+
+
+def days_word(n: int) -> str:
+    return plural(n, "день", "дня", "дней")
 
 
 def t(key: str, **kwargs) -> str:
