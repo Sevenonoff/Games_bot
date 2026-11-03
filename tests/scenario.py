@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from games_core import days, path
-from games_core.ui import BLANK
+from games_core.ui import BLANK, Screen
 from games_core.manager import text_payload
 from games_core.sessions import PATH_EMPTY, TimedSession
 from games_core import seafight_mp as mp
@@ -85,6 +85,7 @@ STEP_PATTERNS = [
     (r"ошибаюсь", "wrong"),
     (r"выигрываю раунд", "win_round"),
     (r"жду (\d+(?:[.,]\d+)?) ?с(?:ек)?", "wait"),
+    (r"в итоге вижу (.+)", "result_see"),
     (r"не вижу (.+)", "not_see"),
     (r"вижу (.+)", "see"),
     (r"без уведомления", "no_note"),
@@ -101,6 +102,10 @@ STEP_PATTERNS = [
     (r"наступаю на препятствие", "path_block"),
     (r"числа поездки с разрывом", "trip_gap"),
     (r"наступает (\d{1,2}):(\d{2})", "clock"),
+    (r"есть картинка", "has_image"),
+    (r"нет картинки", "no_image"),
+    (r"картинка пути: зона (\d+), шаг (\d+)(?: \((пройдена|облака расходятся)\))?", "journey_image"),
+    (r"картинка — открытка (\d+) дн\S*", "card_image"),
     (r"приходит сообщение (.+)", "incoming"),
     (r"сообщений не приходило", "no_incoming"),
 ]
@@ -228,15 +233,27 @@ async def do_right(world: World, chat: Chat, times: str = "1") -> None:
         await right_once(world, chat)
 
 
+def partia_screen(chat: Chat) -> Screen:
+    """Сообщение последней партии: после итога бот может прислать ещё сообщение (открытку, новую зону)."""
+    s = chat.session
+    if s is not None and s.msg_ref in chat.messenger.screens:
+        return chat.messenger.screens[s.msg_ref]
+    return chat.screen
+
+
+def _shown(chat: Chat, text: str) -> bool:
+    return text in plain(chat.text) or text in plain(partia_screen(chat).text)
+
+
 async def do_right_until(world: World, chat: Chat, text: str) -> None:
     text = unquote(text)
     for _ in range(MAX_MOVES):
-        if text in plain(chat.text):
+        if _shown(chat, text):
             return
         if mp_game(chat) is None:
             # итог раунда или собранного поля проходит сам — текст может появиться и после него
             await wait_preview(world, chat)
-            if text in plain(chat.text):
+            if _shown(chat, text):
                 return
         await right_once(world, chat)
     raise AssertionError(f"за {MAX_MOVES} верных ходов «{text}» так и не появилось")
@@ -261,6 +278,11 @@ async def do_wait(world: World, chat: Chat, seconds: str) -> None:
 
 async def do_see(world: World, chat: Chat, text: str) -> None:
     assert unquote(text) in plain(chat.text), f"на экране нет «{unquote(text)}»"
+
+
+async def do_result_see(world: World, chat: Chat, text: str) -> None:
+    shown = plain(partia_screen(chat).text)
+    assert unquote(text) in shown, f"в итоге партии нет «{unquote(text)}»:\n{shown}"
 
 
 async def do_not_see(world: World, chat: Chat, text: str) -> None:
@@ -452,6 +474,29 @@ async def do_clock(world: World, chat: Chat, hh: str, mm: str) -> None:
     await world.time.advance(days.next_time(world.time.now, int(hh), int(mm)) - world.time.now)
 
 
+# --- картинки пути ---
+
+async def do_has_image(world: World, chat: Chat) -> None:
+    assert chat.screen.image is not None, "у сообщения нет картинки"
+
+
+async def do_no_image(world: World, chat: Chat) -> None:
+    assert chat.screen.image is None, "у сообщения есть картинка, а не должно быть"
+
+
+async def do_journey_image(world: World, chat: Chat, zone: str, step: str, mode: Optional[str] = None) -> None:
+    from games_core import journey_art, motivation
+    z, st = int(zone) - 1, int(step)
+    kind = {None: "current", "пройдена": "done", "облака расходятся": "reveal"}[mode]
+    expected = journey_art.render_zone(z, st, motivation.zone_size(z), kind)
+    assert chat.screen.image == expected, f"на картинке не зона {zone}, шаг {step} ({kind})"
+
+
+async def do_card_image(world: World, chat: Chat, n: str) -> None:
+    from games_core import journey_art
+    assert chat.screen.image == journey_art.render_card(int(n)), f"на картинке не открытка {n} дней"
+
+
 def _new_messages(world: World, chat: Chat):
     inbox = world.inbox.get(chat.player.chat_id, [])
     new, chat.seen_sent = inbox[chat.seen_sent:], len(inbox)
@@ -484,6 +529,7 @@ ACTIONS: Dict[str, Callable] = {
     "path_again": do_path_again, "path_end": do_path_end, "path_ends_shown": do_path_ends_shown, "path_block": do_path_block,
     "trip_gap": do_trip_gap,
     "clock": do_clock, "incoming": do_incoming, "no_incoming": do_no_incoming,
+    "result_see": do_result_see, "has_image": do_has_image, "no_image": do_no_image, "journey_image": do_journey_image, "card_image": do_card_image,
 }
 
 

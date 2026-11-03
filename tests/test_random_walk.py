@@ -176,7 +176,9 @@ async def test_random_walk(seed, platform):
                     finished_games.add(s.game)
                     max_level = max(max_level, s.progress.level)
                     if c.session is s:      # закончилась сама или кнопкой, а не прервана
-                        assert "Партия окончена" in c.text, "партия закончилась, а экран не обновился"
+                        # итог — в сообщении партии; следом может прийти открытка или новая зона пути
+                        shown = c.messenger.screens.get(s.msg_ref, c.screen) if s.msg_ref else c.screen
+                        assert "Партия окончена" in shown.text, "партия закончилась, а экран не обновился"
     except AssertionError as e:
         raise AssertionError(f"seed={seed}, шаг {i}: {e}\nпоследние действия:\n" + "\n".join(log)) from e
     finally:

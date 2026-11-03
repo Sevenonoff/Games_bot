@@ -15,6 +15,8 @@ MAX_TEXT_LEN = 64
 # клетки вне игрового поля — чёрные и ничего не делают
 FIELD_SIDE = 7
 BLANK = "⬛"
+# подпись к картинке: в Telegram — до 1024 символов вместе со служебной строкой ширины
+MAX_CAPTION_LEN = 900
 
 
 @dataclass(frozen=True)
@@ -25,10 +27,14 @@ class Button:
 
 @dataclass
 class Screen:
+    """text — текст сообщения (при картинке — подпись к ней), image — PNG над текстом."""
     text: str
     rows: List[List[Button]] = field(default_factory=list)
+    image: Optional[bytes] = None
 
     def validate(self) -> None:
+        if self.image is not None and len(self.text) > MAX_CAPTION_LEN:
+            raise ValueError(f"подпись к картинке длиннее {MAX_CAPTION_LEN}: {len(self.text)}")
         if len(self.rows) > MAX_ROWS:
             raise ValueError(f"слишком много рядов: {len(self.rows)} > {MAX_ROWS}")
         for row in self.rows:

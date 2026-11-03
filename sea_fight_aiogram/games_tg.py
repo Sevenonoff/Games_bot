@@ -3,14 +3,16 @@
 Manager выдаёт Screen, здесь он превращается в сообщение Telegram. Ссылка на
 сообщение для правок по таймеру — (chat_id, message_id).
 """
+import hashlib
 import logging
 import time
+from collections import OrderedDict
 from typing import Optional
 
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandObject, CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 
 from games_core.manager import Manager, start_payload, text_payload
 from games_core.sessions import Player
@@ -46,10 +48,50 @@ def not_modified(e: TelegramBadRequest) -> bool:
     return "message is not modified" in str(e)
 
 
+class Photos:
+    """file_id отправленных картинок: каждая уходит в Telegram файлом один раз, дальше — по file_id."""
+    LIMIT = 2000
+
+    def __init__(self):
+        self.ids: "OrderedDict[str, str]" = OrderedDict()
+
+    def media(self, png: bytes):
+        file_id = self.ids.get(hashlib.sha1(png).hexdigest())
+        return file_id or BufferedInputFile(png, filename="path.png")
+
+    def remember(self, png: bytes, message) -> None:
+        photo = getattr(message, "photo", None)
+        if photo:
+            self.ids[hashlib.sha1(png).hexdigest()] = photo[-1].file_id
+            while len(self.ids) > self.LIMIT:
+                self.ids.popitem(last=False)
+
+
+PHOTOS = Photos()
+
+
 async def send_screen(bot: Bot, chat_id: int, screen: Screen):
-    sent = await bot.send_message(chat_id=chat_id, text=tg_text(screen),
-                                  reply_markup=render(screen), parse_mode=HTML)
+    if screen.image is not None:
+        # у фото клавиатура шириной с картинку — строка ширины в подписи не нужна
+        sent = await bot.send_photo(chat_id=chat_id, photo=PHOTOS.media(screen.image), caption=screen.text,
+                                    reply_markup=render(screen), parse_mode=HTML)
+        PHOTOS.remember(screen.image, sent)
+    else:
+        sent = await bot.send_message(chat_id=chat_id, text=tg_text(screen),
+                                      reply_markup=render(screen), parse_mode=HTML)
     return sent.chat.id, sent.message_id
+
+
+async def drop_message(bot: Bot, chat_id: int, message_id: int) -> None:
+    """Экран ушёл новым сообщением (фото ↔ текст правкой не поменять): старое — убрать,
+    а если Telegram не даёт удалить (старше 48 ч) — хотя бы снять с него кнопки."""
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except TelegramBadRequest:
+        try:
+            await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=None)
+        except TelegramBadRequest as e:
+            logger.debug("drop failed: %s", e)
 
 
 def new_message_sender(bot: Bot, chat_id: int):
@@ -79,14 +121,28 @@ def callback_responder(bot: Bot, callback: types.CallbackQuery, timing: dict):
 
     async def _show(screen: Screen):
         message = callback.message
-        # фото (старое меню с картинкой) и сообщения старше 48 ч не правятся текстом — шлём новое
-        if isinstance(message, types.Message) and not message.photo:
+        if isinstance(message, types.Message):
+            chat_id, mid = message.chat.id, message.message_id
             try:
-                await message.edit_text(text=tg_text(screen), reply_markup=render(screen), parse_mode=HTML)
+                if screen.image is None and not message.photo:
+                    await message.edit_text(text=tg_text(screen), reply_markup=render(screen), parse_mode=HTML)
+                    return chat_id, mid
+                if screen.image is not None and message.photo:
+                    edited = await bot.edit_message_media(
+                        chat_id=chat_id, message_id=mid, reply_markup=render(screen),
+                        media=InputMediaPhoto(media=PHOTOS.media(screen.image), caption=screen.text,
+                                              parse_mode=HTML))
+                    PHOTOS.remember(screen.image, edited)
+                    return chat_id, mid
             except TelegramBadRequest as e:
-                if not not_modified(e):
-                    raise
-            return message.chat.id, message.message_id
+                if not_modified(e):
+                    return chat_id, mid
+                # сообщения старше 48 ч не правятся — экран уйдёт новым сообщением
+                logger.debug("edit failed, sending new: %s", e)
+            # фото ↔ текст правкой не поменять: новое сообщение, старое — прочь
+            ref = await send_screen(bot, chat_id, screen)
+            await drop_message(bot, chat_id, mid)
+            return ref
         chat_id = message.chat.id if message is not None else callback.from_user.id
         return await send_screen(bot, chat_id, screen)
     return respond

@@ -3,6 +3,7 @@
 Запуск из корня репозитория: python -m max_bot.main
 """
 import asyncio
+import hashlib
 import logging
 import logging.handlers
 import sys
@@ -13,6 +14,7 @@ from urllib.parse import urlparse
 from maxapi import Bot, Dispatcher
 from maxapi.enums.parse_mode import ParseMode
 from maxapi.types import BotStarted, CallbackButton, MessageCallback, MessageCreated
+from maxapi.types.input_media import InputMediaBuffer
 from maxapi.utils.deep_linking import create_start_link
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
@@ -59,6 +61,54 @@ def render(screen: Screen) -> list:
     return [kb.as_markup()]
 
 
+class Images:
+    """Картинки экранов (путь, открытки): каждая загружается в Max один раз, дальше — по токену."""
+    LIMIT = 2000
+
+    def __init__(self):
+        self.uploads: dict = {}
+
+    async def upload(self, bot: Bot, png: bytes):
+        key = hashlib.sha1(png).hexdigest()
+        if key not in self.uploads:
+            if len(self.uploads) >= self.LIMIT:
+                self.uploads.pop(next(iter(self.uploads)))
+            self.uploads[key] = await bot.upload_media(InputMediaBuffer(png, filename="path.png"))
+        return self.uploads[key]
+
+    def forget(self, png: bytes) -> None:
+        self.uploads.pop(hashlib.sha1(png).hexdigest(), None)
+
+
+IMAGES = Images()
+
+
+async def attachments(bot: Bot, screen: Screen) -> list:
+    """Вложения сообщения: картинка (если есть) и клавиатура. Правка с ними заменяет все прежние —
+    так экран без картинки убирает картинку прошлого экрана."""
+    if screen.image is None:
+        return render(screen)
+    return [await IMAGES.upload(bot, screen.image)] + render(screen)
+
+
+async def with_image_retry(bot: Bot, screen: Screen, call):
+    """call(attachments): если токен картинки из кэша устарел — загрузить заново и повторить;
+    не вышло и так — экран уходит без картинки: меню без пути лучше, чем никакого."""
+    try:
+        return await call(await attachments(bot, screen))
+    except Exception:
+        if screen.image is None:
+            raise
+        logger.warning("image attachment failed, uploading again", exc_info=True)
+        IMAGES.forget(screen.image)
+    try:
+        return await call(await attachments(bot, screen))
+    except Exception:
+        logger.exception("image attachment failed twice, sending without image")
+        IMAGES.forget(screen.image)
+        return await call(render(screen))
+
+
 def player_from(user, chat_id) -> Player:
     name = " ".join(x for x in (user.first_name, user.last_name) if x) or user.username or str(user.user_id)
     return Player(config.PLATFORM, user.user_id, name[:64], chat_id)
@@ -75,13 +125,13 @@ def main_screen_sender(bot: Bot, chat_id: int):
     async def respond(reply: Reply):
         if reply.screen is None:
             return None
-        sent = await bot.send_message(chat_id=chat_id, text=reply.screen.text,
-                                      attachments=render(reply.screen), format=ParseMode.HTML)
+        sent = await with_image_retry(bot, reply.screen, lambda atts: bot.send_message(
+            chat_id=chat_id, text=reply.screen.text, attachments=atts, format=ParseMode.HTML))
         return message_id(sent.message) if sent else None
     return respond
 
 
-def callback_responder(event: MessageCallback, timing: dict):
+def callback_responder(bot: Bot, event: MessageCallback, timing: dict):
     """respond для нажатий: ответ на callback и правка сообщения одним запросом."""
     async def respond(reply: Reply):
         timing["dispatched"] = time.monotonic()
@@ -99,8 +149,9 @@ def callback_responder(event: MessageCallback, timing: dict):
                 # пустой ответ (без уведомления) API может отклонить — это не ошибка игры
                 logger.debug("ack failed: %s", e)
             return None
-        await event.edit(text=reply.screen.text, attachments=render(reply.screen),
-                         format=ParseMode.HTML, notification=reply.note, notify=False)
+        await with_image_retry(bot, reply.screen, lambda atts: event.edit(
+            text=reply.screen.text, attachments=atts, format=ParseMode.HTML,
+            notification=reply.note, notify=False))
         return message_id(event.message)
     return respond
 
@@ -109,13 +160,13 @@ def build(bot: Bot, storage: Storage, bot_username: str = "") -> tuple[Dispatche
     dp = Dispatcher(use_create_task=True)
 
     async def push(ref, screen: Screen) -> None:
-        await bot.edit_message(message_id=ref, text=screen.text,
-                               attachments=render(screen), format=ParseMode.HTML)
+        await with_image_retry(bot, screen, lambda atts: bot.edit_message(
+            message_id=ref, text=screen.text, attachments=atts, format=ParseMode.HTML))
 
     async def send(chat_id: int, screen: Screen):
         """Бот сам пишет игроку (бой с другом: соперник подключился, сдался…)."""
-        sent = await bot.send_message(chat_id=chat_id, text=screen.text,
-                                      attachments=render(screen), format=ParseMode.HTML)
+        sent = await with_image_retry(bot, screen, lambda atts: bot.send_message(
+            chat_id=chat_id, text=screen.text, attachments=atts, format=ParseMode.HTML))
         return message_id(sent.message) if sent else None
 
     def start_link(param: str) -> str:
@@ -159,7 +210,7 @@ def build(bot: Bot, storage: Storage, bot_username: str = "") -> tuple[Dispatche
         timing: dict = {}
         payload = event.callback.payload or "menu"
         await safe_handle(player_from(event.callback.user, chat_id), payload,
-                          callback_responder(event, timing))
+                          callback_responder(bot, event, timing))
         done = time.monotonic()
         dispatched = timing.get("dispatched", done)
         # wait — очередь за замком игрока (таймеры, предыдущие нажатия), api — ответ Max

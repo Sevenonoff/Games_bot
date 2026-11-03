@@ -25,15 +25,38 @@ CHAT = 500
 SCREEN = Screen("<b>Мемо</b>", [[Button("🂠", "t:abc123:0:0"), Button("🏠 Меню", "menu")]])
 
 
+PNG = b"\x89PNG fake path"
+PHOTO_SCREEN = Screen("🎮 <b>Игры</b>", [[Button("🃏 Мемо", "new:memo")]], image=PNG)
+
+
 class FakeBot:
     def __init__(self):
-        self.sent, self.edits = [], []
+        self.sent, self.edits, self.photos, self.media_edits, self.deleted = [], [], [], [], []
         self.edit_error = None
+        self.delete_error = None
+        self.unmarked = []
         self._ids = iter(range(100, 1000))
 
     async def send_message(self, chat_id, text, reply_markup=None, parse_mode=None):
         self.sent.append((chat_id, text, reply_markup))
         return SimpleNamespace(chat=SimpleNamespace(id=chat_id), message_id=next(self._ids))
+
+    async def send_photo(self, chat_id, photo, caption=None, reply_markup=None, parse_mode=None):
+        self.photos.append((chat_id, photo, caption, reply_markup))
+        return SimpleNamespace(chat=SimpleNamespace(id=chat_id), message_id=next(self._ids),
+                               photo=[SimpleNamespace(file_id="small"), SimpleNamespace(file_id="FILE-1")])
+
+    async def edit_message_media(self, chat_id, message_id, media, reply_markup=None):
+        self.media_edits.append((chat_id, message_id, media, reply_markup))
+        return SimpleNamespace(photo=[SimpleNamespace(file_id="FILE-1")])
+
+    async def delete_message(self, chat_id, message_id):
+        if self.delete_error:
+            raise self.delete_error
+        self.deleted.append((chat_id, message_id))
+
+    async def edit_message_reply_markup(self, chat_id, message_id, reply_markup=None):
+        self.unmarked.append((chat_id, message_id))
 
     async def edit_message_text(self, text, chat_id, message_id, reply_markup=None, parse_mode=None):
         if self.edit_error:
@@ -97,13 +120,49 @@ async def test_not_modified_is_not_an_error(calls):
     assert ref == (CHAT, 55)
 
 
-async def test_photo_message_gets_new_text_message(calls):
+PHOTO = [types.PhotoSize.model_construct(file_id="f", file_unique_id="u", width=1, height=1)]
+
+
+@pytest.fixture(autouse=True)
+def fresh_photos(monkeypatch):
+    monkeypatch.setattr(games_tg, "PHOTOS", games_tg.Photos())
+
+
+async def test_photo_message_gets_new_text_message_and_old_is_deleted(calls):
     bot = FakeBot()
-    photo = [types.PhotoSize.model_construct(file_id="f", file_unique_id="u", width=1, height=1)]
-    ref = await games_tg.callback_responder(bot, callback(photo), {})(Reply(SCREEN))
+    ref = await games_tg.callback_responder(bot, callback(PHOTO), {})(Reply(SCREEN))
     assert calls["edits"] == []
     assert bot.sent[0][:2] == (CHAT, games_tg.tg_text(SCREEN))
     assert ref == (CHAT, 100)
+    assert bot.deleted == [(CHAT, 55)]
+
+
+async def test_text_message_to_picture_sends_photo_and_deletes_old(calls):
+    bot = FakeBot()
+    ref = await games_tg.callback_responder(bot, callback(), {})(Reply(PHOTO_SCREEN))
+    assert calls["edits"] == []
+    (chat, photo, caption, markup), = bot.photos
+    assert chat == CHAT and caption == PHOTO_SCREEN.text       # подпись — без строки ширины
+    assert photo.data == PNG
+    assert ref == (CHAT, 100) and bot.deleted == [(CHAT, 55)]
+
+
+async def test_picture_to_picture_edits_media_and_reuses_file_id(calls):
+    bot = FakeBot()
+    await games_tg.send_screen(bot, CHAT, PHOTO_SCREEN)          # первый раз — файлом
+    ref = await games_tg.callback_responder(bot, callback(PHOTO), {})(Reply(PHOTO_SCREEN))
+    assert ref == (CHAT, 55) and bot.deleted == []
+    (_, mid, media, _), = bot.media_edits
+    assert mid == 55 and media.media == "FILE-1" and media.caption == PHOTO_SCREEN.text
+    await games_tg.send_screen(bot, CHAT, PHOTO_SCREEN)
+    assert bot.photos[-1][1] == "FILE-1"
+
+
+async def test_undeletable_old_message_loses_buttons(calls):
+    bot = FakeBot()
+    bot.delete_error = bad_request("message can't be deleted")
+    await games_tg.callback_responder(bot, callback(PHOTO), {})(Reply(SCREEN))
+    assert bot.unmarked == [(CHAT, 55)]
 
 
 async def test_push_edits_by_ref_and_ignores_not_modified():
@@ -118,15 +177,17 @@ async def test_push_edits_by_ref_and_ignores_not_modified():
         await mgr.push((CHAT, 55), SCREEN)
 
 
-async def test_start_sends_menu_as_new_message():
+async def test_start_sends_menu_as_new_photo_message():
+    """Главное меню — картинка пути с подписью и кнопками."""
     bot = FakeBot()
     mgr = games_tg.build_manager(bot, Storage(":memory:"), "games_bot")
     player = games_tg.make_player(7, "@anya", "Аня", CHAT)
     assert player.name == "anya" and player.platform == "tg"
     await games_tg.safe_handle(mgr, player, "menu", games_tg.new_message_sender(bot, CHAT))
-    chat_id, text, markup = bot.sent[0]
+    chat_id, photo, caption, markup = bot.photos[0]
+    assert photo.data.startswith(b"\x89PNG") and "Путь" in caption
     data = [b.callback_data for row in markup.inline_keyboard for b in row]
-    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "g:new:path", "g:sea", "g:rec",
+    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "g:new:path", "g:sea", "g:jr", "g:rec",
                     "g:fr", "g:fri", "g:set"]
 
 

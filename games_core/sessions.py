@@ -67,8 +67,10 @@ class Session:
         self.over = False                 # партия закончилась сама (победа в морском бое)
         self.finished = False             # результат сохранён
         self.msg_ref: Any = None          # id сообщения в мессенджере, ставит транспорт
-        self.on_saved: Optional[Callable[[], None]] = None   # результат записан — Manager разбудит уведомления
+        self.on_saved: Optional[Callable[[], None]] = None   # результат записан: уведомления, картинки пути
         self.motivation_lines: List[str] = []   # путь и серия после записанной партии — в итог
+        self.motivation_events: Optional[motivation.Events] = None
+        self.journey_after: Optional[motivation.Journey] = None
         self.rendered_at = 0.0            # когда сообщение партии последний раз обновлялось
         self.last_activity = clock()
 
@@ -124,7 +126,9 @@ class Session:
         is_record = self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
         if before is not None:
             after = motivation.replay(self.storage.partias(p.platform, p.user_id))
-            self.motivation_lines = motivation.result_lines(motivation.diff(before, after), after)
+            self.motivation_events = motivation.diff(before, after)
+            self.journey_after = after
+            self.motivation_lines = motivation.result_lines(self.motivation_events, after)
         if score is not None and self.on_saved is not None:
             self.on_saved()
         return is_record

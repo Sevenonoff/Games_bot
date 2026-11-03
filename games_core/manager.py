@@ -16,13 +16,13 @@ import time
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
-from . import days, debug, friends, motivation, notify
+from . import days, debug, friends, journey_art, motivation, notify
 from . import seafight_mp as mp
 from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
 from .sessions import COUNTDOWN_FROM, DONE, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
 from .storage import Storage
-from .texts import TITLES, t
+from .texts import TITLES, days_word, t
 from .ui import Button, Reply, Screen, data
 
 logger = logging.getLogger(__name__)
@@ -181,6 +181,9 @@ class Manager:
             return debug.dispatch(self, player, parts[1:])
         if action == "sea":
             return Reply(self.sea_screen(player)), None
+        if action == "jr":
+            zone = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
+            return Reply(self.journey_screen(player, zone)), None
         if action == "rec":
             game = parts[1] if len(parts) > 1 else None
             if game in RECORD_GAMES:
@@ -191,11 +194,30 @@ class Manager:
     def start_session(self, player: Player, game: str) -> Session:
         self._abandon(player.user_id)
         s = GAMES[game](secrets.token_hex(3), player, self.storage, self.rng, self.clock)
-        s.on_saved = self.notifier.wake
+        s.on_saved = lambda: self._partia_saved(s)
         if isinstance(s, TimedSession) and s.clock_limited:
             s.round_seconds = self.round_overrides.get(player.user_id, self.round_seconds)
         self.sessions[player.user_id] = s
         return s
+
+    def _partia_saved(self, s: Session) -> None:
+        """Партия записана: уведомления друзьям; новая зона и открытка за серию — отдельными сообщениями."""
+        self.notifier.wake()
+        e, j, uid = s.motivation_events, s.journey_after, s.player.user_id
+        if e is None or j is None:
+            return
+        if e.reward:
+            self.send_later(uid, Screen(
+                t("streak_card", n=j.streak, word=days_word(j.streak), steps=motivation.STREAK_REWARD_STEPS),
+                [[Button(t("btn_journey"), "jr"), Button(t("btn_menu"), "menu")]],
+                image=journey_art.render_card(j.streak)))
+        if e.zones_opened:
+            zone = e.zones_opened[-1]
+            _, step, size = motivation.zone_of(j.steps)
+            self.send_later(uid, Screen(
+                t("journey_reveal", zone=motivation.zone_title(zone), size=size),
+                [[Button(t("btn_journey"), "jr"), Button(t("btn_menu"), "menu")]],
+                image=journey_art.render_zone(zone, step, size, "reveal")))
 
     def _abandon(self, uid: int) -> None:
         s = self.sessions.pop(uid, None)
@@ -356,16 +378,44 @@ class Manager:
     def menu_screen(self, player: Player) -> Screen:
         journey = motivation.replay(self.storage.partias(self.platform, player.user_id))
         progress = "\n".join(motivation.menu_lines(journey, days.day_key(self.clock())))
-        return Screen(t("menu_with", progress=progress), [
+        zone, step, size = motivation.zone_of(journey.steps)
+        return Screen(t("menu_with", progress=progress), image=journey_art.render_zone(zone, step, size), rows=[
             [Button(TITLES["memo"], data("new", "memo"))],
             [Button(TITLES["matrix"], data("new", "matrix"))],
             [Button(TITLES["tower"], data("new", "tower"))],
             [Button(TITLES["path"], data("new", "path"))],
             [Button(t("btn_sea"), "sea")],
-            [Button(t("btn_records"), "rec")],
+            [Button(t("btn_journey"), "jr"), Button(t("btn_records"), "rec")],
             [Button(t("btn_friends"), "fr"), Button(t("btn_invite_friend"), "fri")],
             [Button(t("btn_settings"), "set")],
         ])
+
+    def journey_screen(self, player: Player, zone: Optional[int] = None) -> Screen:
+        """«Мой путь»: текущая зона или пройденная (листается ◀️ ▶️), как альбом."""
+        journey = motivation.replay(self.storage.partias(self.platform, player.user_id))
+        current, step, size = motivation.zone_of(journey.steps)
+        zone = current if zone is None else max(0, min(zone, current))
+        title = motivation.zone_title(zone)
+        if zone == current:
+            line = t("journey_zone_now", zone=title, step=step, size=size)
+            image = journey_art.render_zone(zone, step, size)
+        else:
+            line = t("journey_zone_done", zone=title)
+            done = motivation.zone_size(zone)
+            image = journey_art.render_zone(zone, done, done, "done")
+        best = journey.best_streak
+        text = "\n".join([
+            t("journey_title", n=zone + 1, total=current + 1), "", line, "",
+            t("journey_totals", steps=journey.steps, best=best, word=days_word(best)), "",
+            t("journey_rules", cap=motivation.DAY_STEP_CAP),
+        ])
+        nav = []
+        if zone > 0:
+            nav.append(Button(t("btn_prev"), data("jr", zone - 1)))
+        if zone < current:
+            nav.append(Button(t("btn_next"), data("jr", zone + 1)))
+        rows = ([nav] if nav else []) + [[Button(t("btn_menu"), "menu")]]
+        return Screen(text, rows, image=image)
 
     def sea_screen(self, player: Player) -> Screen:
         mp_button = (Button(t("btn_mp_return"), "mpb") if self.mp.open_game(player.user_id)
