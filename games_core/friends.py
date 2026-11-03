@@ -14,7 +14,7 @@ import html
 import math
 from typing import TYPE_CHECKING, List
 
-from . import days
+from . import days, progress
 from .seafight_mp import CODE_ALPHABET
 from .sessions import Player
 from .texts import TITLES, games_word, t
@@ -105,6 +105,7 @@ def friends_screen(mgr: "Manager", player: Player, page: int = 0) -> Screen:
         name, n = escape(names.get(uid, "?")), counts[uid]
         lines.append(t("friend_active", name=name, count=n, word=games_word(n)) if n
                      else t("friend_idle", name=name))
+    lines += [""] + progress.league_lines(mgr, player, ids)
     rows = [[Button(f"👤 {names.get(uid, '?')[:NAME_LEN]}", data("frs", uid))] for uid in shown]
     if pages > 1:
         lines += ["", t("friends_page", page=page + 1, pages=pages)]
@@ -123,7 +124,7 @@ def friend_screen(mgr: "Manager", player: Player, friend_id: int) -> Screen:
     if not storage.are_friends(platform, player.user_id, friend_id):
         return Screen(t("friend_not_found"), [back, menu_row()])
     name = escape(storage.names(platform, [friend_id]).get(friend_id, "?"))
-    lines = [t("friend_card", name=name), ""]
+    lines = [t("friend_card", name=name), "", progress.friend_journey_line(mgr, friend_id), ""]
 
     today = storage.played_since(platform, [friend_id], days.day_start(mgr.clock())).get(friend_id, {})
     total = sum(n for n, _ in today.values())

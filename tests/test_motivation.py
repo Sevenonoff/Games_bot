@@ -87,3 +87,65 @@ def test_diff_events():
     same_day = replay([Partia("memo", 1, at(d)) for d in range(5)] + [Partia("memo", 1, at(4, 1))])
     e = diff(after, same_day)
     assert e.streak is None and not e.reward and e.steps == 1
+
+
+# --- тренировка дня, значки, итоги периода ---
+
+from games_core.motivation import (BADGES, CATEGORIES, DAILY_SIZE, LEVEL_GAMES, Journey, TRAINING_STEPS,  # noqa: E402
+                                   covers, daily_training, earned_badges, period, week_start)
+
+
+def test_daily_training_is_stable_and_varied():
+    day = days.day_key(at(0))
+    games = daily_training(7, day)
+    assert games == daily_training(7, day) and len(games) == DAILY_SIZE
+    assert len({CATEGORIES[g] for g in games}) == DAILY_SIZE          # разные категории
+    sets = {daily_training(uid, day) for uid in range(30)} | {daily_training(7, days.day_key(at(d))) for d in range(30)}
+    assert len(sets) > 5                                                # у игроков и по дням — разные
+
+
+def test_training_bonus_and_any_sea_counts():
+    assert covers("sea_full", "sea_reduced") and covers("memo", "memo") and not covers("matrix", "memo")
+    uid, day = 7, days.day_key(at(0))
+    games = daily_training(uid, day)
+    played = [Partia("sea_full" if g == "sea_reduced" else g, None, at(0, i)) for i, g in enumerate(games)]
+    without = replay(played)                        # без uid тренировка не считается
+    j = replay(played, uid)
+    assert j.trainings == 1 and j.steps == without.steps + TRAINING_STEPS
+
+
+def test_training_bonus_is_beyond_day_cap():
+    uid, day = 7, days.day_key(at(0))
+    games = daily_training(uid, day)
+    filler = [Partia("sea_full", None, at(0, i / 10)) for i in range(10)]          # лимит набран
+    j = replay(filler + [Partia(g, None, at(0, 2 + i)) for i, g in enumerate(games)], uid)
+    assert j.steps == DAY_STEP_CAP + TRAINING_STEPS
+
+
+def test_badges():
+    assert len({b.key for b in BADGES}) == len(BADGES)
+    assert earned_badges(Journey()) == []
+    j = replay([Partia(g, 10, at(0, i)) for i, g in enumerate(["memo", "tower", "path", "sea_full"])])
+    have = set(earned_badges(j))
+    assert {"first", "allcat", "memo10", "memo5", "tower10", "path10"} <= have
+    assert "memo15" not in have and "matrix5" not in have and "mpwin" not in have
+    assert "mpwin" in earned_badges(j, mp_wins=1)
+    long = replay([Partia("memo", 1, at(d)) for d in range(30)])
+    assert {"streak5", "streak7", "streak30"} <= set(earned_badges(long))
+
+
+def test_period_counts_levels_and_categories():
+    history = [Partia("memo", 3, at(0)), Partia("memo", 5, at(8)), Partia("tower", 2, at(9)),
+               Partia("sea_full", None, at(9, 1))]
+    p = period(history, replay(history), days.day_start(at(7)))
+    assert p.partias == 3 and p.days == 2
+    assert p.by_category == {"memory": 1, "numbers": 1, "logic": 1}
+    assert p.levels["memo"] == (3, 5) and p.levels["tower"] == (None, 2)
+    assert set(p.levels) <= set(LEVEL_GAMES)
+
+
+def test_week_starts_on_moscow_monday():
+    for d in range(14):
+        start = week_start(at(d))
+        assert days.local(start).weekday() == 0 and days.local(start).hour == 0
+        assert 0 <= at(d) - start < 7 * DAY

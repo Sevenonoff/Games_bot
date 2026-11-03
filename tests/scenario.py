@@ -84,7 +84,9 @@ STEP_PATTERNS = [
     (r"хожу верно(?: (\d+) раза?)?", "right"),
     (r"ошибаюсь", "wrong"),
     (r"выигрываю раунд", "win_round"),
+    (r"доигрываю партию", "play_partia"),
     (r"жду (\d+(?:[.,]\d+)?) ?с(?:ек)?", "wait"),
+    (r"в итоге не вижу (.+)", "result_not_see"),
     (r"в итоге вижу (.+)", "result_see"),
     (r"не вижу (.+)", "not_see"),
     (r"вижу (.+)", "see"),
@@ -101,6 +103,7 @@ STEP_PATTERNS = [
     (r"кладу дорогу с середины", "path_middle"),
     (r"наступаю на препятствие", "path_block"),
     (r"числа поездки с разрывом", "trip_gap"),
+    (r"наступает воскресенье (\d{1,2}):(\d{2})", "clock_sunday"),
     (r"наступает (\d{1,2}):(\d{2})", "clock"),
     (r"есть картинка", "has_image"),
     (r"нет картинки", "no_image"),
@@ -267,6 +270,17 @@ async def do_wrong(world: World, chat: Chat) -> None:
         await chat.tap(*cell)
 
 
+async def do_play_partia(world: World, chat: Chat) -> None:
+    """Довести любую партию до записанного итога: матрица (по таймеру) — раунд и «Закончить»,
+    остальные — верными ходами до конца."""
+    s = live(chat)
+    assert s is not None, "партии нет"
+    if s.game == "matrix":
+        await do_win_round(world, chat)
+        await do_click(world, chat, "Закончить")
+    await do_right_until(world, chat, "Партия окончена")
+
+
 async def do_win_round(world: World, chat: Chat) -> None:
     assert isinstance(live(chat), TimedSession), "«выигрываю раунд» — только в играх с раундами"
     await win_round(world, chat)
@@ -283,6 +297,11 @@ async def do_see(world: World, chat: Chat, text: str) -> None:
 async def do_result_see(world: World, chat: Chat, text: str) -> None:
     shown = plain(partia_screen(chat).text)
     assert unquote(text) in shown, f"в итоге партии нет «{unquote(text)}»:\n{shown}"
+
+
+async def do_result_not_see(world: World, chat: Chat, text: str) -> None:
+    shown = plain(partia_screen(chat).text)
+    assert unquote(text) not in shown, f"в итоге партии есть «{unquote(text)}», а не должно быть"
 
 
 async def do_not_see(world: World, chat: Chat, text: str) -> None:
@@ -474,6 +493,14 @@ async def do_clock(world: World, chat: Chat, hh: str, mm: str) -> None:
     await world.time.advance(days.next_time(world.time.now, int(hh), int(mm)) - world.time.now)
 
 
+async def do_clock_sunday(world: World, chat: Chat, hh: str, mm: str) -> None:
+    """Промотать время до ближайшего воскресенья hh:mm по Москве."""
+    at = days.next_time(world.time.now, int(hh), int(mm))
+    while days.local(at).weekday() != 6:
+        at = days.next_time(at, int(hh), int(mm))
+    await world.time.advance(at - world.time.now)
+
+
 # --- картинки пути ---
 
 async def do_has_image(world: World, chat: Chat) -> None:
@@ -521,15 +548,15 @@ ACTIONS: Dict[str, Callable] = {
     "send_code": do_send_code, "follow_invite": do_follow_invite, "mp_miss": do_mp_miss,
     "mp_hit": do_mp_hit, "mp_endgame": do_mp_endgame, "mp_place": do_mp_place, "restart": do_restart,
     "send": do_send, "click": do_click, "tap": do_tap, "tap_blank": do_tap_blank,
-    "right": do_right, "right_until": do_right_until, "wrong": do_wrong, "win_round": do_win_round,
+    "right": do_right, "right_until": do_right_until, "wrong": do_wrong, "win_round": do_win_round, "play_partia": do_play_partia,
     "wait": do_wait, "see": do_see, "not_see": do_not_see, "note": do_note, "no_note": do_no_note,
     "has_button": do_has_button, "no_button": do_no_button, "buttons": do_buttons,
     "open_cells": do_open_cells, "field_has": do_field_has, "field_lacks": do_field_lacks,
     "path_shortest": do_path_shortest, "path_detour": do_path_detour, "path_middle": do_path_middle,
     "path_again": do_path_again, "path_end": do_path_end, "path_ends_shown": do_path_ends_shown, "path_block": do_path_block,
     "trip_gap": do_trip_gap,
-    "clock": do_clock, "incoming": do_incoming, "no_incoming": do_no_incoming,
-    "result_see": do_result_see, "has_image": do_has_image, "no_image": do_no_image, "journey_image": do_journey_image, "card_image": do_card_image,
+    "clock": do_clock, "clock_sunday": do_clock_sunday, "incoming": do_incoming, "no_incoming": do_no_incoming,
+    "result_see": do_result_see, "result_not_see": do_result_not_see, "has_image": do_has_image, "no_image": do_no_image, "journey_image": do_journey_image, "card_image": do_card_image,
 }
 
 
@@ -572,7 +599,7 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
             for c in chats.values():
                 if c.ref is not None:
                     check_screen(c)
-            if step.action in ("send", "click", "tap", "tap_blank", "right", "right_until", "wrong", "win_round",
+            if step.action in ("send", "click", "tap", "tap_blank", "right", "right_until", "wrong", "win_round", "play_partia",
                                "wait", "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place",
                                "path_shortest", "path_detour", "path_middle", "path_again", "path_end", "path_block",
                                "clock", "incoming"):

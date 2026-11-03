@@ -82,12 +82,20 @@ CREATE TABLE IF NOT EXISTS settings (
     reminder_hour       INTEGER,        -- NULL — напоминание выключено
     friend_notified_day TEXT,           -- день (по Москве) последнего уведомления от друзей
     reminded_day        TEXT,           -- день последнего напоминания
+    weekly_report       INTEGER NOT NULL DEFAULT 1,   -- итоги недели по воскресеньям
+    reported_week       TEXT,           -- понедельник недели последнего отчёта
     PRIMARY KEY (platform, user_id)
 );
 CREATE INDEX IF NOT EXISTS scores_user_time ON scores (platform, user_id, played_at);
 """
 
-SETTING_FIELDS = ("friend_notify", "reminder_hour", "friend_notified_day", "reminded_day")
+SETTING_FIELDS = ("friend_notify", "reminder_hour", "friend_notified_day", "reminded_day",
+                  "weekly_report", "reported_week")
+# колонки, добавленные после первого выката: в старой БД их досоздаёт __init__
+MIGRATIONS = (
+    ("settings", "weekly_report", "INTEGER NOT NULL DEFAULT 1"),
+    ("settings", "reported_week", "TEXT"),
+)
 
 
 class Storage:
@@ -97,6 +105,11 @@ class Storage:
         if path != ":memory:":
             self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
+        for table, column, decl in MIGRATIONS:
+            have = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+            if column not in have:
+                with self.conn:
+                    self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
     def close(self) -> None:
         self.conn.close()
@@ -348,7 +361,8 @@ class Storage:
         row = self.conn.execute("SELECT * FROM settings WHERE platform = ? AND user_id = ?",
                                 (platform, user_id)).fetchone()
         if row is None:
-            return {"friend_notify": 1, "reminder_hour": None, "friend_notified_day": None, "reminded_day": None}
+            return {"friend_notify": 1, "reminder_hour": None, "friend_notified_day": None, "reminded_day": None,
+                    "weekly_report": 1, "reported_week": None}
         return {k: row[k] for k in SETTING_FIELDS}
 
     def update_settings(self, platform: str, user_id: int, **fields) -> None:
@@ -360,11 +374,12 @@ class Storage:
         with self.conn:
             self.conn.execute(
                 """INSERT INTO settings (platform, user_id, friend_notify, reminder_hour,
-                                         friend_notified_day, reminded_day)
-                   VALUES (?, ?, ?, ?, ?, ?)
+                                         friend_notified_day, reminded_day, weekly_report, reported_week)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT (platform, user_id) DO UPDATE SET
                        friend_notify = excluded.friend_notify, reminder_hour = excluded.reminder_hour,
-                       friend_notified_day = excluded.friend_notified_day, reminded_day = excluded.reminded_day""",
+                       friend_notified_day = excluded.friend_notified_day, reminded_day = excluded.reminded_day,
+                       weekly_report = excluded.weekly_report, reported_week = excluded.reported_week""",
                 (platform, user_id, *(current[k] for k in SETTING_FIELDS)))
 
     def friend_notify_due(self, platform: str, since: float, today: str) -> Dict[int, List[int]]:
@@ -387,6 +402,17 @@ class Storage:
         for r in rows:
             out.setdefault(r["user_id"], []).append(r["friend_id"])
         return out
+
+    def weekly_due(self, platform: str, since: float, week: str) -> List[int]:
+        """Кому пора итоги недели: играл с понедельника (since), отчёт включён и за эту неделю не приходил."""
+        rows = self.conn.execute(
+            """SELECT DISTINCT s.user_id FROM scores s
+               LEFT JOIN settings st ON st.platform = s.platform AND st.user_id = s.user_id
+               WHERE s.platform = :platform AND s.played_at >= :since
+                 AND COALESCE(st.weekly_report, 1) = 1 AND COALESCE(st.reported_week, '') != :week
+               ORDER BY s.user_id""",
+            {"platform": platform, "since": since, "week": week}).fetchall()
+        return [r["user_id"] for r in rows]
 
     def reminders_due(self, platform: str, hour: int, since: float, today: str) -> List[int]:
         """Кому пора напоминание: час наступил (с запасом в 2 часа), сегодня не было, сам не играл."""

@@ -122,11 +122,11 @@ class Session:
         now = self.clock()
         p = self.player
         self.storage.upsert_user(p.platform, p.user_id, p.name, p.chat_id, now)
-        before = motivation.replay(self.storage.partias(p.platform, p.user_id)) if score is not None else None
+        before = motivation.journey(self.storage, p.platform, p.user_id) if score is not None else None
         is_record = self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
         if before is not None:
-            after = motivation.replay(self.storage.partias(p.platform, p.user_id))
-            self.motivation_events = motivation.diff(before, after)
+            after = motivation.journey(self.storage, p.platform, p.user_id)
+            self.motivation_events = motivation.diff(before, after, self.game)
             self.journey_after = after
             self.motivation_lines = motivation.result_lines(self.motivation_events, after)
         if score is not None and self.on_saved is not None:
@@ -141,10 +141,12 @@ class Session:
                         else t("result_record", best=self.progress.best_score))
         if self.motivation_lines:
             text += [""] + self.motivation_lines
-        return Screen("\n".join(text), [
-            [Button(t("btn_again"), data("new", self.game))],
-            [Button(t("btn_menu"), "menu")],
-        ])
+        rows = [[Button(t("btn_again"), data("new", self.game))]]
+        nxt = self.motivation_events.next_training if self.motivation_events else None
+        if nxt is not None:
+            # тренировка дня не пройдена — следующая её игра одной кнопкой
+            rows.append([Button(t("btn_daily_next", title=TITLES[nxt]), data("new", nxt))])
+        return Screen("\n".join(text), rows + [[Button(t("btn_menu"), "menu")]])
 
 
 class TimedSession(Session):

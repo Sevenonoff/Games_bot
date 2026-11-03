@@ -16,7 +16,7 @@ import time
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
-from . import days, debug, friends, journey_art, motivation, notify
+from . import days, debug, friends, journey_art, motivation, notify, progress
 from . import seafight_mp as mp
 from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
@@ -175,6 +175,8 @@ class Manager:
             return friends.dispatch(self, player, parts), None
         if action in notify.ACTIONS:
             return notify.dispatch(self, player, parts), None
+        if action in progress.ACTIONS:
+            return Reply(progress.dispatch(self, player, parts)), None
         if action == "dbg":
             if uid not in self.debug_users:
                 return Reply(Screen(t("dbg_off", user_id=uid), [[Button(t("btn_menu"), "menu")]])), None
@@ -376,23 +378,25 @@ class Manager:
     # --- экраны вне партии ---
 
     def menu_screen(self, player: Player) -> Screen:
-        journey = motivation.replay(self.storage.partias(self.platform, player.user_id))
-        progress = "\n".join(motivation.menu_lines(journey, days.day_key(self.clock())))
+        journey = motivation.journey(self.storage, self.platform, player.user_id)
+        lines = "\n".join(motivation.menu_lines(journey, days.day_key(self.clock())))
         zone, step, size = motivation.zone_of(journey.steps)
-        return Screen(t("menu_with", progress=progress), image=journey_art.render_zone(zone, step, size), rows=[
+        return Screen(t("menu_with", progress=lines), image=journey_art.render_zone(zone, step, size), rows=[
+            [progress.daily_button(self, player.user_id, journey)],
             [Button(TITLES["memo"], data("new", "memo"))],
             [Button(TITLES["matrix"], data("new", "matrix"))],
             [Button(TITLES["tower"], data("new", "tower"))],
             [Button(TITLES["path"], data("new", "path"))],
             [Button(t("btn_sea"), "sea")],
-            [Button(t("btn_journey"), "jr"), Button(t("btn_records"), "rec")],
+            [Button(t("btn_journey"), "jr"), Button(t("btn_progress"), "prog")],
+            [Button(t("btn_records"), "rec")],
             [Button(t("btn_friends"), "fr"), Button(t("btn_invite_friend"), "fri")],
             [Button(t("btn_settings"), "set")],
         ])
 
     def journey_screen(self, player: Player, zone: Optional[int] = None) -> Screen:
         """«Мой путь»: текущая зона или пройденная (листается ◀️ ▶️), как альбом."""
-        journey = motivation.replay(self.storage.partias(self.platform, player.user_id))
+        journey = motivation.journey(self.storage, self.platform, player.user_id)
         current, step, size = motivation.zone_of(journey.steps)
         zone = current if zone is None else max(0, min(zone, current))
         title = motivation.zone_title(zone)

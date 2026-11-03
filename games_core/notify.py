@@ -12,12 +12,13 @@ Payload'ы настроек:
   set:fn           уведомления от друзей вкл/выкл
   set:rm           выбор часа напоминания
   set:rm:<час|off> поставить час / выключить
+  set:wk           итоги недели вкл/выкл
 """
 import html
 import logging
 from typing import TYPE_CHECKING, List, Tuple
 
-from . import days, motivation
+from . import days, motivation, progress
 from .sessions import Player
 from .texts import TITLES, days_word, t
 from .ui import Button, Reply, Screen, data
@@ -34,6 +35,8 @@ REMINDER_HOURS = (9, 13, 19, 21)
 REMINDER_GRACE = 2                      # бот лежал в нужный час — напомним в ближайшие 2 часа
 MAX_NAMES = 3                           # «Боб, Алиса, Ева и ещё 2»
 TRAINING_GAMES = ("memo", "matrix", "tower", "path")
+WEEKLY_WEEKDAY, WEEKLY_HOUR = 6, 19     # итоги недели: воскресенье, 19:00 по Москве
+WEEKLY_GRACE = 3                        # бот лежал в 19:00 — пришлём до 22:00
 
 
 # --- настройки ---
@@ -44,6 +47,9 @@ def dispatch(mgr: "Manager", player: Player, parts: List[str]) -> Reply:
     if args[:1] == ["fn"]:
         on = storage.settings(platform, uid)["friend_notify"]
         storage.update_settings(platform, uid, friend_notify=0 if on else 1)
+    elif args[:1] == ["wk"]:
+        on = storage.settings(platform, uid)["weekly_report"]
+        storage.update_settings(platform, uid, weekly_report=0 if on else 1)
     elif args[:1] == ["rm"] and len(args) == 1:
         return Reply(reminder_screen(mgr, player))
     elif args[:1] == ["rm"]:
@@ -59,9 +65,11 @@ def settings_screen(mgr: "Manager", player: Player) -> Screen:
     notify = t("on") if st["friend_notify"] else t("off")
     hour = st["reminder_hour"]
     reminder = t("hour", hour=hour) if hour is not None else t("off")
-    return Screen(t("settings", notify=notify, reminder=reminder), [
+    weekly = t("on") if st["weekly_report"] else t("off")
+    return Screen(t("settings", notify=notify, reminder=reminder, weekly=weekly), [
         [Button(t("btn_friend_notify", state=notify), data("set", "fn"))],
         [Button(t("btn_reminder", state=reminder), data("set", "rm"))],
+        [Button(t("btn_weekly", state=weekly), data("set", "wk"))],
         [Button(t("btn_menu"), "menu")],
     ])
 
@@ -100,7 +108,7 @@ def reminder_notice(streak: int = 0) -> Screen:
 
 
 def streak_at_risk(mgr: "Manager", uid: int) -> int:
-    journey = motivation.replay(mgr.storage.partias(mgr.platform, uid))
+    journey = motivation.journey(mgr.storage, mgr.platform, uid)
     return journey.current_streak(days.day_key(mgr.clock()))
 
 
@@ -146,13 +154,21 @@ class Notifier:
                 continue
             storage.update_settings(platform, uid, reminded_day=today)
             out.append((uid, reminder_notice(streak_at_risk(mgr, uid))))
+        if days.local(now).weekday() == WEEKLY_WEEKDAY and WEEKLY_HOUR <= hour < WEEKLY_HOUR + WEEKLY_GRACE:
+            week = motivation.week_key(now)
+            for uid in storage.weekly_due(platform, motivation.week_start(now), week):
+                if mgr.busy(uid):
+                    continue
+                storage.update_settings(platform, uid, reported_week=week)
+                out.append((uid, progress.weekly_notice(mgr, uid)))
         if out:
             logger.info("notify: %s", ", ".join(f"{uid}:{screen.text[:20]!r}" for uid, screen in out))
         return out
 
 
 def debug_preview(mgr: "Manager", player: Player) -> None:
-    """/dbg notify: оба сообщения себе прямо сейчас, без условий."""
+    """/dbg notify: уведомление от друзей, напоминание и итоги недели себе прямо сейчас, без условий."""
     names = mgr.storage.names(mgr.platform, mgr.storage.friends(mgr.platform, player.user_id))
     mgr.send_later(player.user_id, friends_notice(list(names.values()) or ["Друг"]))
     mgr.send_later(player.user_id, reminder_notice(streak_at_risk(mgr, player.user_id)))
+    mgr.send_later(player.user_id, progress.weekly_notice(mgr, player.user_id))

@@ -25,7 +25,7 @@ HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — у
 /dbg sea_end [full|reduced] — морской бой за выстрел до победы
 /dbg memo_end — мемо, осталась одна пара
 /dbg days &lt;N&gt; — будто вы играли N дней подряд до сегодня (мемо и поездка в полдень)
-/dbg notify — прислать себе уведомление от друзей и напоминание прямо сейчас
+/dbg notify — прислать себе уведомление от друзей, напоминание и итоги недели прямо сейчас
 /dbg reset — стереть ваши уровни и рекорды"""
 
 Result = Tuple[Reply, Optional[Session]]
@@ -139,7 +139,7 @@ def played_days(mgr: "Manager", player: Player, args: List[str]) -> Result:
         noon = calendar.day_start(today - k * DAY + 12 * 3600) + 12 * 3600
         for game in ("memo", "tower"):
             mgr.storage.add_score(mgr.platform, player.user_id, game, 1, 1, noon)
-    j = motivation.replay(mgr.storage.partias(mgr.platform, player.user_id))
+    j = motivation.journey(mgr.storage, mgr.platform, player.user_id)
     zone, step, size = motivation.zone_of(j.steps)
     return Reply(menu(mgr, player, f"✅ {n} дн. подряд до сегодня: {motivation.zone_title(zone)} — "
                                    f"шаг {step} из {size}, серия {j.streak}")), None
@@ -147,7 +147,7 @@ def played_days(mgr: "Manager", player: Player, args: List[str]) -> Result:
 
 def send_notices(mgr: "Manager", player: Player, args: List[str]) -> Result:
     notify.debug_preview(mgr, player)
-    return Reply(menu(mgr, player, "✅ Уведомление от друзей и напоминание — в следующих сообщениях")), None
+    return Reply(menu(mgr, player, "✅ Уведомление от друзей, напоминание и итоги недели — в следующих сообщениях")), None
 
 
 def reset(mgr: "Manager", player: Player, args: List[str]) -> Result:

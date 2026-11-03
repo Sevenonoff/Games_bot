@@ -187,8 +187,8 @@ async def test_start_sends_menu_as_new_photo_message():
     chat_id, photo, caption, markup = bot.photos[0]
     assert photo.data.startswith(b"\x89PNG") and "Путь" in caption
     data = [b.callback_data for row in markup.inline_keyboard for b in row]
-    assert data == ["g:new:memo", "g:new:matrix", "g:new:tower", "g:new:path", "g:sea", "g:jr", "g:rec",
-                    "g:fr", "g:fri", "g:set"]
+    assert data == ["g:day", "g:new:memo", "g:new:matrix", "g:new:tower", "g:new:path", "g:sea", "g:jr",
+                    "g:prog", "g:rec", "g:fr", "g:fri", "g:set"]
 
 
 async def test_invite_link_and_opponent_message():
