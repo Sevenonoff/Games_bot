@@ -1,0 +1,17 @@
+Wide 16:9 game level map, one area of a long journey through a cozy valley.
+
+Art style: stylized hand-painted mobile game map art, soft painterly brush texture, warm sunny light from the top left, soft shadows, fresh saturated greens, cozy and friendly mood. Gentle 3/4 top-down camera. The path is warm light sandy beige.
+
+Zoomed-out wide view of a big area with many objects, like a whole level map: the main building takes only about one eighth of the picture width, trees are small, the path is about as wide as one twentieth of the picture height, and there is room for many objects and long runs of the path.
+
+Land: A big grassy hill that rises toward the top of the picture, the land continues beyond every edge; this is not a floating island.
+
+Scene: A big windy grassy hill: several tall windmills on the hilltop, colorful kites flying, an old round stone observatory with a big brass telescope, a sheep shepherd with a flock of fluffy sheep, an ancient circle of standing stones, a picnic blanket with a basket, a kite stuck in a tree, little colorful pinwheels, far away near the top edge the dark green edge of a pine forest.
+
+Continuity: In the bottom-left corner, where the path enters, there is still a bit of the previous river: the riverbank with reeds and a weeping willow.
+
+Route of the path: The path climbs the hill in long switchbacks: from the bottom-left corner four long runs go back and forth across the slope, slightly diagonal, connected by wide hairpin bends, and the last run reaches the top-right corner. The path never touches or crosses itself. The windmills stand on the top of the hill, the observatory and the stone circle between the runs.
+
+The path: one single long, wide, sandy dirt path with the same even width everywhere. It enters at the bottom-left corner of the picture and winds across the whole map in several big smooth bends, so that it covers most of the map, and ends at the top-right corner, where it disappears into soft fluffy white clouds. No forks, no branches, no loops, no second path. Small footpaths to houses, if any, must be narrow and made of grey stepping stones, clearly different from the main path. Nothing stands on the main path and nothing covers it: buildings, trees and props stand beside it, with a strip of grass between them and the path.
+
+Tiny cute animal villagers in the same hand-painted style bring the scene to life; they are small. Hidden somewhere in the scene, small but findable, sits a tiny snail with a tiny backpack. Large readable shapes, medium detail, easy to read on a small phone screen. No text, no letters, no numbers, no signs with writing, no game UI, no coins, no markers on the path.

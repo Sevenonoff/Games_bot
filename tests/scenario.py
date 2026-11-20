@@ -107,7 +107,7 @@ STEP_PATTERNS = [
     (r"наступает (\d{1,2}):(\d{2})", "clock"),
     (r"есть картинка", "has_image"),
     (r"нет картинки", "no_image"),
-    (r"картинка пути: зона (\d+), шаг (\d+)(?: \((пройдена|облака расходятся)\))?", "journey_image"),
+    (r"картинка пути: зона (\d+), шаг (\d+)(?:, герой (\w+))?(?: \((пройдена|облака расходятся)\))?", "journey_image"),
     (r"картинка — открытка (\d+) дн\S*", "card_image"),
     (r"приходит сообщение (.+)", "incoming"),
     (r"сообщений не приходило", "no_incoming"),
@@ -511,12 +511,16 @@ async def do_no_image(world: World, chat: Chat) -> None:
     assert chat.screen.image is None, "у сообщения есть картинка, а не должно быть"
 
 
-async def do_journey_image(world: World, chat: Chat, zone: str, step: str, mode: Optional[str] = None) -> None:
-    from games_core import journey_art, motivation
+async def do_journey_image(world: World, chat: Chat, zone: str, step: str, hero: Optional[str] = None,
+                           mode: Optional[str] = None) -> None:
+    from games_core import heroes, journey_art, motivation
+    if hero in ("пройдена", "облака расходятся"):      # пустые группы шаблона не передаются
+        hero, mode = None, hero
     z, st = int(zone) - 1, int(step)
     kind = {None: "current", "пройдена": "done", "облака расходятся": "reveal"}[mode]
-    expected = journey_art.render_zone(z, st, motivation.zone_size(z), kind)
-    assert chat.screen.image == expected, f"на картинке не зона {zone}, шаг {step} ({kind})"
+    hero = hero or heroes.current(chat.mgr, chat.player.user_id)
+    expected = journey_art.render_zone(z, st, motivation.zone_size(z), kind, hero)
+    assert chat.screen.image == expected, f"на картинке не зона {zone}, шаг {step}, герой {hero} ({kind})"
 
 
 async def do_card_image(world: World, chat: Chat, n: str) -> None:

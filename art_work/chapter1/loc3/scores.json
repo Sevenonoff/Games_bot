@@ -1,0 +1,44 @@
+{
+ "v1.png": {
+  "score": 2.08,
+  "length": 2.08,
+  "junctions": 0,
+  "start": [
+   0.0,
+   0.99
+  ],
+  "end": [
+   0.87,
+   0.18
+  ],
+  "sandy": 0.19
+ },
+ "v2.png": {
+  "score": 0.62,
+  "length": 1.62,
+  "junctions": 10,
+  "start": [
+   0.01,
+   0.98
+  ],
+  "end": [
+   0.85,
+   0.48
+  ],
+  "sandy": 0.14
+ },
+ "v3.png": {
+  "score": 0.25,
+  "length": 1.13,
+  "junctions": 7,
+  "start": [
+   0.02,
+   0.96
+  ],
+  "end": [
+   0.66,
+   0.87
+  ],
+  "sandy": 0.108
+ }
+}

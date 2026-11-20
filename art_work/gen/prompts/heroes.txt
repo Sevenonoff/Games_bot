@@ -1,0 +1,9 @@
+Character sheet in the exact art style of the reference image (stylized hand-painted mobile game map art, soft painterly shading, warm sunny light from the top left).
+
+Eight cute chibi animal travelers for a cozy puzzle game, two rows of four, evenly spaced, each fully visible with empty space around it, all the same height and the same style:
+top row: a red fox, a grey tabby cat, a brown bear cub, a white bunny;
+bottom row: a penguin with a red scarf, a brown owl, a little green dinosaur, a small friendly blue robot.
+
+Each character: full body, standing, facing the viewer at a slight 3/4 angle, seen from slightly above like a figure on a game map, big head, small body, big friendly eyes, a tiny travel backpack. Clean readable silhouettes that read well at small size.
+
+No ground, no shadows under the characters. Perfectly flat solid magenta background (#FF00FF) everywhere around them. No text, no letters, no numbers, no labels.

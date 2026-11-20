@@ -1,0 +1,9 @@
+Game asset sprite sheet. Use the reference image only as a style reference: the same stylized hand-painted look, soft painterly shading, warm light from the top left, and the same flat solid magenta background.
+
+Draw four separate small objects in one row, evenly spaced, each fully visible with plenty of empty magenta space around it:
+1. a shiny gold coin with an embossed star, lying flat, seen from a gentle 3/4 top-down angle (so it looks like an ellipse);
+2. the same gold coin standing upright on its edge, slightly tilted, with a tiny sparkle;
+3. a small neat stack of three gold coins;
+4. a small closed wooden treasure chest with golden trim.
+
+No characters, no map, no ground, no grass, no shadows. Perfectly flat solid magenta background (#FF00FF) everywhere around the objects. No text, no letters, no numbers.

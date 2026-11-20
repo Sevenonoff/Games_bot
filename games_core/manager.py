@@ -16,7 +16,7 @@ import time
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
-from . import days, debug, friends, journey_art, motivation, notify, progress
+from . import days, debug, friends, heroes, journey_art, locations, motivation, notify, progress
 from . import seafight_mp as mp
 from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
@@ -177,6 +177,8 @@ class Manager:
             return notify.dispatch(self, player, parts), None
         if action in progress.ACTIONS:
             return Reply(progress.dispatch(self, player, parts)), None
+        if action in heroes.ACTIONS:
+            return heroes.dispatch(self, player, parts), None
         if action == "dbg":
             if uid not in self.debug_users:
                 return Reply(Screen(t("dbg_off", user_id=uid), [[Button(t("btn_menu"), "menu")]])), None
@@ -217,9 +219,18 @@ class Manager:
             zone = e.zones_opened[-1]
             _, step, size = motivation.zone_of(j.steps)
             self.send_later(uid, Screen(
-                t("journey_reveal", zone=motivation.zone_title(zone), size=size),
+                self.reveal_text(zone, size),
                 [[Button(t("btn_journey"), "jr"), Button(t("btn_menu"), "menu")]],
-                image=journey_art.render_zone(zone, step, size, "reveal")))
+                image=journey_art.render_zone(zone, step, size, "reveal", heroes.current(self, uid))))
+
+    @staticmethod
+    def reveal_text(zone: int, size: int) -> str:
+        """Новая локация: чем кончилась прошлая и что ждёт в этой."""
+        loc, prev = locations.of_zone(zone), locations.of_zone(zone - 1)
+        if loc is None or prev is None:
+            return t("journey_reveal", zone=motivation.zone_title(zone), size=size)
+        return t("journey_reveal_story", finish=prev.finish, zone=loc.title, intro=loc.intro, size=size,
+                 chest=motivation.CHEST_COINS)
 
     def _abandon(self, uid: int) -> None:
         s = self.sessions.pop(uid, None)
@@ -378,10 +389,13 @@ class Manager:
     # --- экраны вне партии ---
 
     def menu_screen(self, player: Player) -> Screen:
-        journey = motivation.journey(self.storage, self.platform, player.user_id)
-        lines = "\n".join(motivation.menu_lines(journey, days.day_key(self.clock())))
+        uid = player.user_id
+        journey = motivation.journey(self.storage, self.platform, uid)
+        lines = "\n".join(motivation.menu_lines(journey, days.day_key(self.clock()),
+                                                 heroes.balance(self, uid, journey)))
         zone, step, size = motivation.zone_of(journey.steps)
-        return Screen(t("menu_with", progress=lines), image=journey_art.render_zone(zone, step, size), rows=[
+        image = journey_art.render_zone(zone, step, size, hero=heroes.current(self, uid))
+        return Screen(t("menu_with", progress=lines), image=image, rows=[
             [progress.daily_button(self, player.user_id, journey)],
             [Button(TITLES["memo"], data("new", "memo"))],
             [Button(TITLES["matrix"], data("new", "matrix"))],
@@ -396,20 +410,25 @@ class Manager:
 
     def journey_screen(self, player: Player, zone: Optional[int] = None) -> Screen:
         """«Мой путь»: текущая зона или пройденная (листается ◀️ ▶️), как альбом."""
-        journey = motivation.journey(self.storage, self.platform, player.user_id)
+        uid = player.user_id
+        journey = motivation.journey(self.storage, self.platform, uid)
         current, step, size = motivation.zone_of(journey.steps)
         zone = current if zone is None else max(0, min(zone, current))
-        title = motivation.zone_title(zone)
+        title, hero, loc = motivation.zone_title(zone), heroes.current(self, uid), locations.of_zone(zone)
         if zone == current:
             line = t("journey_zone_now", zone=title, step=step, size=size)
-            image = journey_art.render_zone(zone, step, size)
+            image = journey_art.render_zone(zone, step, size, hero=hero)
         else:
-            line = t("journey_zone_done", zone=title)
+            line = (t("journey_zone_done_story", zone=title, finish=loc.finish) if loc
+                    else t("journey_zone_done", zone=title))
             done = motivation.zone_size(zone)
-            image = journey_art.render_zone(zone, done, done, "done")
+            image = journey_art.render_zone(zone, done, done, "done", hero)
         best = journey.best_streak
-        text = "\n".join([
-            t("journey_title", n=zone + 1, total=current + 1), "", line, "",
+        head = [t("journey_title", n=zone + 1, total=current + 1)]
+        if loc is not None:
+            head.append(t("journey_chapter", n=loc.chapter, title=loc.chapter_title))
+        text = "\n".join(head + [
+            "", line, "",
             t("journey_totals", steps=journey.steps, best=best, word=days_word(best)), "",
             t("journey_rules", cap=motivation.DAY_STEP_CAP),
         ])
@@ -418,7 +437,7 @@ class Manager:
             nav.append(Button(t("btn_prev"), data("jr", zone - 1)))
         if zone < current:
             nav.append(Button(t("btn_next"), data("jr", zone + 1)))
-        rows = ([nav] if nav else []) + [[Button(t("btn_menu"), "menu")]]
+        rows = ([nav] if nav else []) + [[Button(t("btn_heroes"), "hr"), Button(t("btn_menu"), "menu")]]
         return Screen(text, rows, image=image)
 
     def sea_screen(self, player: Player) -> Screen:

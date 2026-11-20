@@ -185,7 +185,8 @@ async def test_start_sends_menu_as_new_photo_message():
     assert player.name == "anya" and player.platform == "tg"
     await games_tg.safe_handle(mgr, player, "menu", games_tg.new_message_sender(bot, CHAT))
     chat_id, photo, caption, markup = bot.photos[0]
-    assert photo.data.startswith(b"\x89PNG") and "Путь" in caption
+    # картинка пути по локациям — JPEG, и уходит она с именем .jpg
+    assert photo.data[:2] == b"\xff\xd8" and photo.filename == "path.jpg" and "Путь" in caption
     data = [b.callback_data for row in markup.inline_keyboard for b in row]
     assert data == ["g:day", "g:new:memo", "g:new:matrix", "g:new:tower", "g:new:path", "g:sea", "g:jr",
                     "g:prog", "g:rec", "g:fr", "g:fri", "g:set"]

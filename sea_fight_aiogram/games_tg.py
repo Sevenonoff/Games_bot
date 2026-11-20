@@ -18,7 +18,7 @@ from games_core.manager import Manager, start_payload, text_payload
 from games_core.sessions import Player
 from games_core.storage import Storage
 from games_core.texts import t
-from games_core.ui import Reply, Screen
+from games_core.ui import Reply, Screen, image_filename
 
 import config
 from games_menu import PLATFORM, core_payload, format_player_name, tg_rows, tg_text
@@ -57,7 +57,7 @@ class Photos:
 
     def media(self, png: bytes):
         file_id = self.ids.get(hashlib.sha1(png).hexdigest())
-        return file_id or BufferedInputFile(png, filename="path.png")
+        return file_id or BufferedInputFile(png, filename=image_filename(png))
 
     def remember(self, png: bytes, message) -> None:
         photo = getattr(message, "photo", None)

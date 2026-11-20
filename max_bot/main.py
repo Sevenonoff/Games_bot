@@ -21,7 +21,7 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from games_core.manager import Manager, start_payload, text_payload
 from games_core.sessions import Player
 from games_core.storage import Storage
-from games_core.ui import Reply, Screen
+from games_core.ui import Reply, Screen, image_filename
 
 from . import config, webhook
 
@@ -73,7 +73,7 @@ class Images:
         if key not in self.uploads:
             if len(self.uploads) >= self.LIMIT:
                 self.uploads.pop(next(iter(self.uploads)))
-            self.uploads[key] = await bot.upload_media(InputMediaBuffer(png, filename="path.png"))
+            self.uploads[key] = await bot.upload_media(InputMediaBuffer(png, filename=image_filename(png)))
         return self.uploads[key]
 
     def forget(self, png: bytes) -> None:

@@ -1,4 +1,5 @@
-"""Картинки пути: все зоны и режимы рисуются, одинаково при повторе, фигурка двигается."""
+"""Картинки пути, нарисованные кодом (зоны дальше нарисованных нейросетью локаций): все зоны и режимы
+рисуются, одинаково при повторе, фигурка двигается."""
 import io
 
 import pytest
@@ -15,17 +16,17 @@ def size_of(png: bytes):
 @pytest.mark.parametrize("zone", range(len(ZONES) + 1))
 def test_every_zone_renders(zone):
     n = zone_size(zone)
-    png = art.render_zone(zone, n // 2, n)
+    png = art.render_drawn_zone(zone, n // 2, n)
     assert png.startswith(b"\x89PNG") and size_of(png) == (art.W, art.H)
     assert len(png) < 200_000          # уходит в мессенджер при каждом новом шаге
 
 
 def test_modes_and_determinism():
-    current = art.render_zone(1, 5, 35)
-    assert art.render_zone.__wrapped__(1, 5, 35) == current      # без кэша — тот же результат
-    assert art.render_zone(1, 6, 35) != current                  # шаг сдвинул фигурку
-    assert art.render_zone(1, 35, 35, "done") != current
-    assert art.render_zone(1, 0, 35, "reveal") != art.render_zone(1, 0, 35)
+    current = art.render_drawn_zone(1, 5, 35)
+    assert art.render_drawn_zone.__wrapped__(1, 5, 35) == current      # без кэша — тот же результат
+    assert art.render_drawn_zone(1, 6, 35) != current                  # шаг сдвинул фигурку
+    assert art.render_drawn_zone(1, 35, 35, "done") != current
+    assert art.render_drawn_zone(1, 0, 35, "reveal") != art.render_drawn_zone(1, 0, 35)
 
 
 def test_tiles_spread_along_path_and_avoid_clouds():

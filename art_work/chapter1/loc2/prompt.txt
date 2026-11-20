@@ -1,0 +1,17 @@
+Wide 16:9 game level map, one area of a long journey through a cozy valley.
+
+Keep exactly the same art style as the reference images: stylized hand-painted mobile game map art, soft painterly brush texture, warm sunny light from the top left, soft shadows, fresh saturated greens, cozy and friendly mood. Same gentle 3/4 top-down camera, the same scale of objects, the same width and color of the sandy path.
+
+Zoomed-out wide view of a big area with many objects, like a whole level map: the barn takes only about one eighth of the picture width, trees are small, the path is about as wide as one twentieth of the picture height, and there is room for many objects and long runs of the path.
+
+Land: gentle open farmland that continues beyond every edge of the picture, this is not a floating island and there are no cliffs at the edges.
+
+Scene: A cozy farm: a big red barn with a hay loft, a vegetable garden with giant orange pumpkins (one pumpkin is so huge that three little animals are pushing it), a scarecrow with a crow sitting on its hat, a hen leading a line of yellow chicks, a piglet in a mud puddle, a wooden cart loaded with hay.
+
+Continuity: In the bottom-left corner, where the path enters, there are still a few things from the previous area: the same kind of wooden fence and a round leafy tree.
+
+Route of the path: The path enters at the bottom-left corner, runs to the right along the bottom third of the map, turns up in a wide bend near the right edge, runs back to the left across the middle of the map, turns up again in a wide bend near the left edge and runs to the top-right corner: a sideways S with three long runs. The path never touches or crosses itself. The barn stands between the lower and the middle runs; the vegetable garden between the middle and the upper runs.
+
+The path: one single long, wide, sandy dirt path with the same even width everywhere. It enters at the bottom-left corner of the picture and winds across the whole map in several big smooth bends, so that it covers most of the map, and ends at the top-right corner, where it disappears into soft fluffy white clouds. No forks, no branches, no loops, no second path. Small footpaths to houses, if any, must be narrow and made of grey stepping stones, clearly different from the main path. Nothing stands on the main path and nothing covers it: buildings, trees and props stand beside it, with a strip of grass between them and the path.
+
+Tiny cute animal villagers in the same hand-painted style bring the scene to life; they are small. Hidden somewhere in the scene, small but findable, sits a tiny snail with a tiny backpack. Large readable shapes, medium detail, easy to read on a small phone screen. No text, no letters, no numbers, no signs with writing, no game UI, no coins, no markers on the path.

@@ -27,7 +27,7 @@ class Button:
 
 @dataclass
 class Screen:
-    """text — текст сообщения (при картинке — подпись к ней), image — PNG над текстом."""
+    """text — текст сообщения (при картинке — подпись к ней), image — PNG или JPEG над текстом."""
     text: str
     rows: List[List[Button]] = field(default_factory=list)
     image: Optional[bytes] = None
@@ -55,6 +55,11 @@ class Reply:
     """
     screen: Optional[Screen] = None
     note: Optional[str] = None
+
+
+def image_filename(image: bytes) -> str:
+    """Имя файла для загрузки картинки в мессенджер: путь по локациям — JPEG, остальное — PNG."""
+    return "path.jpg" if image[:2] == b"\xff\xd8" else "path.png"
 
 
 def data(*parts) -> str:

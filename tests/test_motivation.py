@@ -63,8 +63,30 @@ def test_zones():
     assert zone_of(24) == (0, 24, 25)
     assert zone_of(25) == (1, 0, 35)
     assert zone_of(25 + 35 * 4) == (5, 0, 40)
-    assert zone_title(0) == "🌿 Луг"
-    assert zone_title(10) == "🌿 Луг 2"
+    # нарисованные нейросетью локации главы 1, дальше — старые зоны с Леса
+    assert zone_title(0) == "🏡 Луг у дома"
+    assert zone_title(1) == "🎃 Ферма тётушки Бурёнки"
+    assert zone_title(7) == "🗼 Опушка и сторожевая башня"
+    assert zone_title(8) == "🌲 Лес"
+    assert zone_title(17) == "🌿 Луг 2"
+
+
+def test_journey_starts_anew_at_epoch():
+    """Решение пользователя: всех игроков вернули на первую локацию. Старые партии — для серии и уровней,
+    но не для шагов."""
+    old = [Partia("memo", 3, at(0)), Partia("tower", 2, at(1))]
+    new = [Partia("memo", 3, at(2))]
+    j = replay(old + new, epoch=at(2) - 60)
+    assert j.steps == 2                  # партия + новая категория; уровень 3 в мемо уже был
+    assert j.streak == 3 and j.partias == 3
+
+
+def test_coins():
+    from games_core.motivation import CHEST_COINS, coins_earned
+    assert coins_earned(0) == 0
+    assert coins_earned(24) == 24
+    assert coins_earned(25) == 25 + CHEST_COINS
+    assert coins_earned(25 + 35) == 60 + 2 * CHEST_COINS
 
 
 def test_zone_is_about_a_week():

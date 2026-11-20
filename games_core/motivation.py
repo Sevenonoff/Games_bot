@@ -13,13 +13,17 @@
 Зона — около недели регулярной игры (решение пользователя): ZONE_SIZES шагов.
 
 Серия — дни подряд по Москве хотя бы с одной партией; пропуск дня обнуляет (без заморозок).
+
+Путь начат заново с JOURNEY_EPOCH (все игроки — на первой локации): более ранние партии считаются для серии,
+уровней и значков, но шагов не дают. Монета — за каждый шаг, сундук в конце локации — ещё CHEST_COINS.
+Зоны — локации, нарисованные нейросетью (locations.py); дальше них — старые зоны ZONES.
 """
 import random
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from . import days
+from . import days, locations
 from .texts import TITLES, days_word, games_word, steps_word, t
 
 CATEGORIES = {
@@ -49,6 +53,9 @@ DAILY_GAMES = {"memory": ("memo", "matrix"), "numbers": ("tower",), "space": ("p
 DAILY_SIZE = 3
 TRAINING_STEPS = 1
 DAY = 24 * 3600
+# новый путь по локациям: с этого момента все начинают с первой (решение пользователя, 2026-11-20)
+JOURNEY_EPOCH = datetime(2026, 11, 20, tzinfo=timezone(timedelta(hours=3))).timestamp()
+CHEST_COINS = 10
 
 
 @dataclass(frozen=True)
@@ -114,9 +121,19 @@ def zone_size(zone: int) -> int:
 
 
 def zone_title(zone: int) -> str:
-    title = ZONES[zone % len(ZONES)]
-    lap = zone // len(ZONES)
+    loc = locations.of_zone(zone)
+    if loc is not None:
+        return loc.title
+    # дальше нарисованных локаций — старые зоны, начиная с Леса (Луг уже был)
+    z = zone - len(locations.all_locations()) + 1 if locations.all_locations() else zone
+    title = ZONES[z % len(ZONES)]
+    lap = z // len(ZONES)
     return f"{title} {lap + 1}" if lap else title
+
+
+def coins_earned(steps: int) -> int:
+    """Монеты за путь: по одной за шаг и сундук за каждую пройденную локацию."""
+    return steps + CHEST_COINS * zone_of(steps)[0]
 
 
 def zone_of(steps: int) -> Tuple[int, int, int]:
@@ -128,8 +145,9 @@ def zone_of(steps: int) -> Tuple[int, int, int]:
     return zone, steps, zone_size(zone)
 
 
-def _add(j: Journey, p: Partia) -> None:
+def _add(j: Journey, p: Partia, epoch: float = 0.0) -> None:
     day = days.day_key(p.played_at)
+    counts = p.played_at >= epoch       # до начала нового пути партии шагов не дают
     if day != j.last_day:
         consecutive = (j.last_day is not None
                        and (date.fromisoformat(day) - date.fromisoformat(j.last_day)).days == 1)
@@ -143,8 +161,9 @@ def _add(j: Journey, p: Partia) -> None:
         j.day_training_done = False
         if j.streak % STREAK_REWARD_EVERY == 0:
             j.rewards += 1
-            j.steps += STREAK_REWARD_STEPS
-            j.steps_by_day[day] = j.steps_by_day.get(day, 0) + STREAK_REWARD_STEPS
+            if counts:
+                j.steps += STREAK_REWARD_STEPS
+                j.steps_by_day[day] = j.steps_by_day.get(day, 0) + STREAK_REWARD_STEPS
 
     j.partias += 1
     earned = 1
@@ -167,15 +186,17 @@ def _add(j: Journey, p: Partia) -> None:
         j.day_training_done = True
         j.trainings += 1
         earned += TRAINING_STEPS          # сверх лимита, как награда за серию
-    j.steps += earned
-    j.steps_by_day[day] = j.steps_by_day.get(day, 0) + earned
+    if counts:
+        j.steps += earned
+        j.steps_by_day[day] = j.steps_by_day.get(day, 0) + earned
 
 
-def replay(partias: Iterable[Partia], uid: Optional[int] = None) -> Journey:
-    """uid нужен для тренировки дня; без него она не считается."""
+def replay(partias: Iterable[Partia], uid: Optional[int] = None, epoch: Optional[float] = None) -> Journey:
+    """uid нужен для тренировки дня; без него она не считается. epoch — начало пути (по умолчанию JOURNEY_EPOCH)."""
     j = Journey(uid=uid)
+    epoch = JOURNEY_EPOCH if epoch is None else epoch
     for p in partias:
-        _add(j, p)
+        _add(j, p, epoch)
     return j
 
 
@@ -356,9 +377,10 @@ def weakest_category(p: Period) -> Optional[str]:
 
 # --- тексты ---
 
-def menu_lines(j: Journey, today: str) -> List[str]:
+def menu_lines(j: Journey, today: str, coins: Optional[int] = None) -> List[str]:
     zone, step, size = zone_of(j.steps)
-    lines = [t("journey_menu", zone=zone_title(zone), step=step, size=size)]
+    lines = [t("journey_menu", zone=zone_title(zone), step=step, size=size,
+               coins=coins_earned(j.steps) if coins is None else coins)]
     n = j.current_streak(today)
     if not n:
         lines.append(t("streak_none"))
@@ -382,6 +404,7 @@ def result_lines(e: Events, after: Journey) -> List[str]:
         lines.append(t("daily_result", done=e.training[0], total=e.training[1]))
     for z in e.zones_opened:
         lines.append(t("journey_zone_open", zone=zone_title(z)))
+        lines.append(t("journey_chest", n=CHEST_COINS))
     # награды за серию и тренировку дня — своими строками
     earned = e.steps - (STREAK_REWARD_STEPS if e.reward else 0) - (TRAINING_STEPS if e.training_done else 0)
     if earned:

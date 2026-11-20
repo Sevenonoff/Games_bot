@@ -60,3 +60,18 @@ max_bot/data/
 
 # Telegram bot: SQLite игр ядра
 sea_fight_aiogram/data/
+
+# Ключ CometAPI и референсы (чужие картинки) — не коммитить
+.cometapi_key
+refs/
+
+# Рабочая папка генерации картинок: оригиналы 2K, варианты, страницы-пробы — тяжёлые, в репозиторий
+# не кладём; скрипты (art_work/**/*.py, spec, manual_paths.json) — кладём
+art_work/**/*.png
+art_work/**/*.jpg
+art_work/**/*.webp
+art_work/**/*.log
+art_work/rejected/
+art_work/chapter1/test2/
+art_work/page_*/
+art_work/gen/out/

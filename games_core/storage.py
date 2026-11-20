@@ -84,17 +84,27 @@ CREATE TABLE IF NOT EXISTS settings (
     reminded_day        TEXT,           -- день последнего напоминания
     weekly_report       INTEGER NOT NULL DEFAULT 1,   -- итоги недели по воскресеньям
     reported_week       TEXT,           -- понедельник недели последнего отчёта
+    hero                TEXT,           -- герой на картинке пути; NULL — по умолчанию
     PRIMARY KEY (platform, user_id)
+);
+CREATE TABLE IF NOT EXISTS hero_purchases (
+    platform    TEXT NOT NULL,
+    user_id     INTEGER NOT NULL,
+    hero        TEXT NOT NULL,
+    price       INTEGER NOT NULL,     -- монет потрачено
+    bought_at   REAL NOT NULL,
+    PRIMARY KEY (platform, user_id, hero)
 );
 CREATE INDEX IF NOT EXISTS scores_user_time ON scores (platform, user_id, played_at);
 """
 
 SETTING_FIELDS = ("friend_notify", "reminder_hour", "friend_notified_day", "reminded_day",
-                  "weekly_report", "reported_week")
+                  "weekly_report", "reported_week", "hero")
 # колонки, добавленные после первого выката: в старой БД их досоздаёт __init__
 MIGRATIONS = (
     ("settings", "weekly_report", "INTEGER NOT NULL DEFAULT 1"),
     ("settings", "reported_week", "TEXT"),
+    ("settings", "hero", "TEXT"),
 )
 
 
@@ -193,7 +203,7 @@ class Storage:
     def reset_user(self, platform: str, user_id: int) -> None:
         """Стереть уровни и результаты игрока (для отладки)."""
         with self.conn:
-            for table in ("progress", "scores", "ratings"):
+            for table in ("progress", "scores", "ratings", "hero_purchases"):
                 self.conn.execute(f"DELETE FROM {table} WHERE platform = ? AND user_id = ?",
                                   (platform, user_id))
 
@@ -362,7 +372,7 @@ class Storage:
                                 (platform, user_id)).fetchone()
         if row is None:
             return {"friend_notify": 1, "reminder_hour": None, "friend_notified_day": None, "reminded_day": None,
-                    "weekly_report": 1, "reported_week": None}
+                    "weekly_report": 1, "reported_week": None, "hero": None}
         return {k: row[k] for k in SETTING_FIELDS}
 
     def update_settings(self, platform: str, user_id: int, **fields) -> None:
@@ -374,13 +384,28 @@ class Storage:
         with self.conn:
             self.conn.execute(
                 """INSERT INTO settings (platform, user_id, friend_notify, reminder_hour,
-                                         friend_notified_day, reminded_day, weekly_report, reported_week)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                         friend_notified_day, reminded_day, weekly_report, reported_week, hero)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT (platform, user_id) DO UPDATE SET
                        friend_notify = excluded.friend_notify, reminder_hour = excluded.reminder_hour,
                        friend_notified_day = excluded.friend_notified_day, reminded_day = excluded.reminded_day,
-                       weekly_report = excluded.weekly_report, reported_week = excluded.reported_week""",
+                       weekly_report = excluded.weekly_report, reported_week = excluded.reported_week,
+                       hero = excluded.hero""",
                 (platform, user_id, *(current[k] for k in SETTING_FIELDS)))
+
+    # --- герои ---
+
+    def hero_purchases(self, platform: str, user_id: int) -> Dict[str, int]:
+        """Купленные герои: {герой: цена}."""
+        rows = self.conn.execute("SELECT hero, price FROM hero_purchases WHERE platform = ? AND user_id = ?",
+                                 (platform, user_id)).fetchall()
+        return {r["hero"]: r["price"] for r in rows}
+
+    def buy_hero(self, platform: str, user_id: int, hero: str, price: int, at: float) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT OR IGNORE INTO hero_purchases (platform, user_id, hero, price, bought_at) VALUES (?, ?, ?, ?, ?)",
+                (platform, user_id, hero, price, at))
 
     def friend_notify_due(self, platform: str, since: float, today: str) -> Dict[int, List[int]]:
         """Кому пора уведомление от друзей: {user_id: [друзья в порядке первой партии с since]}.

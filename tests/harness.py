@@ -15,6 +15,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from games_core import friends
+from games_core import motivation
 from games_core import path
 from games_core import seafight_mp as mp
 from games_core import seafight_solo as sea
@@ -24,6 +25,9 @@ from games_core.storage import Storage
 from games_core.texts import t
 from games_core.ui import FIELD_SIDE, Button, Screen
 from sea_fight_aiogram import games_menu as tg
+
+# виртуальное время тестов — 1970 год: новый путь считаем с самого начала
+motivation.JOURNEY_EPOCH = 0.0
 
 Cell = Tuple[int, int]
 
@@ -414,7 +418,7 @@ async def win_round(world: "World", chat: Chat) -> Optional[str]:
 MP_CODE = f"[{mp.CODE_ALPHABET}]{{{mp.CODE_LEN}}}"
 FRIEND_CODE = f"[{mp.CODE_ALPHABET}]{{{friends.CODE_LEN}}}"
 KNOWN_PAYLOAD = re.compile(
-    r"^(menu|sea|sea_rec|rec|noop|jr(:\d+)?|day|prog|bdg|dbg(:\w+)*|mp|mpb"
+    r"^(menu|sea|sea_rec|rec|noop|jr(:\d+)?|day|prog|bdg|dbg(:\w+)*|mp|mpb|hr(:[a-z]+)?|hrb:[a-z]+"
     rf"|fr(:\d+)?|fri|frs:\d+|frj:{FRIEND_CODE}|set(:fn|:wk|:rm(:(off|\d+))?)?"
     r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?"
     rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+"

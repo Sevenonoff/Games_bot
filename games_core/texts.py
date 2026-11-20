@@ -15,22 +15,39 @@ RU = {
     "menu": "🎮 <b>Игры</b>\n\nВыберите игру:",
     "menu_with": "🎮 <b>Игры</b>\n\n{progress}\n\nВыберите игру:",
     # путь и серия дней
-    "journey_menu": "🗺 Путь: <b>{zone}</b> — шаг {step} из {size}, дальше ☁️",
+    "journey_menu": "🗺 Путь: <b>{zone}</b> — шаг {step} из {size} · 🪙 {coins}",
     "streak_today": "🔥 Серия: <b>{n} {word}</b> подряд",
     "streak_pending": "🔥 Серия: <b>{n} {word}</b> — сыграйте сегодня, чтобы не потерять",
     "streak_none": "🔥 Сыграйте сегодня — начнётся серия дней",
     "journey_steps": "👣 +{n} {word} · {zone}: {step} из {size}",
     "journey_cap": "👣 Шаги на сегодня набраны — путь продолжится завтра",
     "journey_zone_open": "☁️ Облака рассеялись — впереди <b>{zone}</b>!",
+    "journey_chest": "🧰 Сундук: +{n} монет",
     "streak_up": "🔥 Серия: <b>{n} {word}</b> подряд",
     "btn_journey": "🗺 Мой путь",
-    "journey_title": "🗺 <b>Мой путь</b> · зона {n} из {total}",
+    "journey_title": "🗺 <b>Мой путь</b> · локация {n} из {total}",
+    "journey_chapter": "📖 Глава {n} · {title}",
     "journey_zone_now": "{zone}: шаг {step} из {size}. Дальше — ☁️ за облаками",
     "journey_zone_done": "{zone} — пройдена ✅",
+    "journey_zone_done_story": "{zone} — пройдена ✅\n<i>{finish}</i>",
     "journey_totals": "👣 Всего шагов: {steps} · 🔥 лучшая серия: {best} {word}",
     "journey_rules": ("Шаги дают партии: +1 за партию, +1 за первую сегодня игру в новой категории, "
-                      "+1 за новый уровень. До {cap} шагов в день."),
+                      "+1 за новый уровень. До {cap} шагов в день. За каждый шаг — монета, "
+                      "в конце локации — сундук."),
     "journey_reveal": "☁️ <b>Облака рассеялись!</b>\n\nВпереди — {zone}: {size} шагов до следующей зоны.",
+    "journey_reveal_story": ("☁️ <b>Облака рассеялись!</b>\n\n<i>{finish}</i>\n\nВпереди — <b>{zone}</b>. {intro}\n\n"
+                             "👣 {size} шагов до конца локации · 🧰 сундук +{chest} монет"),
+    # герои
+    "btn_heroes": "🦸 Герои",
+    "heroes_text": ("🦸 <b>Герои</b>\n\n🪙 Монет: <b>{coins}</b>\n\nВыберите, кто пойдёт по пути. Новых героев "
+                    "открывают монеты: монета — за каждый шаг, в конце локации — сундук с {chest} монетами."),
+    "hero_selected": "Теперь по пути идёт {name}",
+    "hero_already": "{name} уже в пути",
+    "hero_short": "Не хватает {n} {word}",
+    "hero_buy_ask": "Купить героя «{title}» за {price} монет?\n\nОстанется 🪙 {left}.",
+    "btn_hero_buy": "🪙 Купить",
+    "hero_bought": "{name} теперь с вами",
+    "btn_back": "Назад",
     "streak_card": "🎁 <b>{n} {word} подряд!</b>\n\nОткрытка в коллекцию и +{steps} шагов на пути. Так держать!",
     # тренировка дня
     "btn_daily": "🎯 Тренировка дня ({done}/{total})",

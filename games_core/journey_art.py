@@ -513,9 +513,18 @@ def _finish(c: Canvas) -> None:
     c.ellipse(x, y + 14, 14, 5, (0, 0, 0, 60))
 
 
+def render_zone(zone: int, step: int, size: int, mode: str = "current", hero: str = "fox") -> bytes:
+    """Картинка пути: локация, нарисованная нейросетью (JPEG, с героем), а дальше нарисованных —
+    зона, нарисованная кодом (PNG, с пешкой)."""
+    from . import journey_scene
+    if journey_scene.has_location(zone):
+        return journey_scene.render(zone, step, size, mode, hero)
+    return render_drawn_zone(zone, step, size, mode)
+
+
 @lru_cache(maxsize=64)       # ~40 КБ на картинку: на сервере мало памяти
-def render_zone(zone: int, step: int, size: int, mode: str = "current") -> bytes:
-    """PNG пути.
+def render_drawn_zone(zone: int, step: int, size: int, mode: str = "current") -> bytes:
+    """PNG пути, нарисованный кодом.
 
     mode: current — фигурка на плите step, следующая зона за облаками;
           done    — пройденная зона: все плиты пройдены, фигурка у флага в конце;
