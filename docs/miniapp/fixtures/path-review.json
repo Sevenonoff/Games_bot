@@ -1,0 +1,305 @@
+{
+ "text": "<b>🏡 Проложи дорогу</b> · уровень 1\nРаунд 2 из 6\nОчки: <b>80</b> · серия ×1\n\n❌ Препятствие! ● — ваша дорога, 🟡 — кратчайшая",
+ "rows": [
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "❌",
+    "data": "t:a1b2c3:0:0"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:0:1"
+   },
+   {
+    "text": "🚶",
+    "data": "t:a1b2c3:0:2"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:0:3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:1:0"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:1:1"
+   },
+   {
+    "text": "🟡",
+    "data": "t:a1b2c3:1:2"
+   },
+   {
+    "text": "🟡",
+    "data": "t:a1b2c3:1:3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:2:0"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:2:1"
+   },
+   {
+    "text": "⛔",
+    "data": "t:a1b2c3:2:2"
+   },
+   {
+    "text": "🟡",
+    "data": "t:a1b2c3:2:3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:3:0"
+   },
+   {
+    "text": "⛔",
+    "data": "t:a1b2c3:3:1"
+   },
+   {
+    "text": "⠀",
+    "data": "t:a1b2c3:3:2"
+   },
+   {
+    "text": "🏪",
+    "data": "t:a1b2c3:3:3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "🏁 Закончить",
+    "data": "q:a1b2c3"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "path",
+  "title": "🏡 Проложи дорогу",
+  "level": 1,
+  "score": 80,
+  "combo": "×1",
+  "actions": {
+   "tap": "t:a1b2c3:{r}:{c}",
+   "quit": "q:a1b2c3",
+   "skip": "t:a1b2c3:0:0"
+  },
+  "phase": "review",
+  "countdown": 1,
+  "hint": "❌ Препятствие! ● — ваша дорога, 🟡 — кратчайшая",
+  "grid": {
+   "rows": 4,
+   "cols": 4,
+   "cells": [
+    [
+     {
+      "k": "wrong"
+     },
+     {
+      "k": "empty"
+     },
+     {
+      "k": "person",
+      "v": "🚶"
+     },
+     {
+      "k": "empty"
+     }
+    ],
+    [
+     {
+      "k": "empty"
+     },
+     {
+      "k": "empty"
+     },
+     {
+      "k": "answer"
+     },
+     {
+      "k": "answer"
+     }
+    ],
+    [
+     {
+      "k": "empty"
+     },
+     {
+      "k": "empty"
+     },
+     {
+      "k": "block"
+     },
+     {
+      "k": "answer"
+     }
+    ],
+    [
+     {
+      "k": "empty"
+     },
+     {
+      "k": "block"
+     },
+     {
+      "k": "empty"
+     },
+     {
+      "k": "house",
+      "v": "🏪"
+     }
+    ]
+   ]
+  },
+  "rounds": {
+   "current": 2,
+   "total": 6
+  }
+ }
+}

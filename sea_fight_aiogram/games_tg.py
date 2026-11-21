@@ -21,6 +21,7 @@ from games_core.texts import t
 from games_core.ui import Reply, Screen, image_filename
 
 import config
+import webapp as webapp_mod
 from games_menu import PLATFORM, core_payload, format_player_name, tg_rows, tg_text
 
 logger = logging.getLogger("games_tg")
@@ -38,6 +39,11 @@ def render(screen: Screen) -> Optional[InlineKeyboardMarkup]:
 
 def make_player(user_id: int, username: Optional[str], first_name: Optional[str], chat_id: int) -> Player:
     return Player(PLATFORM, user_id, format_player_name(username, first_name, user_id)[:64], chat_id)
+
+
+def player_from_webapp(user: dict) -> Player:
+    """Игрок Mini App — тот же, что в чате с ботом: одни уровни, рекорды и партии."""
+    return make_player(user["id"], user.get("username"), user.get("first_name"), user["id"])
 
 
 def player_from(user: types.User, chat_id: Optional[int] = None) -> Player:
@@ -148,8 +154,13 @@ def callback_responder(bot: Bot, callback: types.CallbackQuery, timing: dict):
     return respond
 
 
-def build_manager(bot: Bot, storage: Storage, bot_username: str = "") -> Manager:
+def build_manager(bot: Bot, storage: Storage, bot_username: str = "", webapp=None) -> Manager:
+    """webapp — сервер Mini App (webapp.WebApp): его экраны правятся через него же, а сообщения,
+    которые бот пишет сам, дублируются карточкой в открытый Mini App."""
     async def push(ref, screen: Screen) -> None:
+        if webapp is not None and webapp_mod.is_ref(ref):
+            await webapp.push(ref, screen)
+            return
         chat_id, message_id = ref
         try:
             await bot.edit_message_text(text=tg_text(screen), chat_id=chat_id, message_id=message_id,
@@ -160,6 +171,8 @@ def build_manager(bot: Bot, storage: Storage, bot_username: str = "") -> Manager
 
     async def send(chat_id: int, screen: Screen):
         """Бот сам пишет игроку (бой с другом: соперник подключился, сдался…)."""
+        if webapp is not None:
+            await webapp.notice(chat_id, screen)        # личный чат: chat_id == user_id
         return await send_screen(bot, chat_id, screen)
 
     def start_link(param: str) -> str:
@@ -169,7 +182,8 @@ def build_manager(bot: Bot, storage: Storage, bot_username: str = "") -> Manager
                    preview_seconds=config.PREVIEW_SECONDS, round_seconds=config.ROUND_SECONDS,
                    countdown_seconds=config.COUNTDOWN_SECONDS, tick_seconds=config.TIMER_TICK_SECONDS,
                    memo_close_seconds=config.MEMO_CLOSE_SECONDS, review_seconds=config.REVIEW_SECONDS,
-                   mp_blink_seconds=config.MP_BLINK_SECONDS, debug_users=config.DEBUG_USER_IDS)
+                   mp_blink_seconds=config.MP_BLINK_SECONDS, debug_users=config.DEBUG_USER_IDS,
+                   live_ref=webapp_mod.is_ref)
 
 
 async def safe_handle(manager: Manager, player: Player, payload: str, respond) -> None:

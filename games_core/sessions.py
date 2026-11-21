@@ -118,6 +118,18 @@ class Session:
     def _quit_row(self) -> List[Button]:
         return [Button(t("btn_quit"), data("q", self.sid))]
 
+    # --- view для Mini App (docs/miniapp/tz-m1-core.md §3) ---
+
+    def _view_base(self) -> dict:
+        return {"kind": self.game, "title": TITLES[self.game], "level": self.progress.level,
+                "score": self.score, "combo": format_multiplier(self.combo),
+                "actions": {"tap": data("t", self.sid, "{r}", "{c}"), "quit": data("q", self.sid),
+                            "skip": data("t", self.sid, 0, 0)}}
+
+    @staticmethod
+    def _grid(rows: int, cols: int, cell: Callable[[int, int], dict]) -> dict:
+        return {"rows": rows, "cols": cols, "cells": [[cell(r, c) for c in range(cols)] for r in range(rows)]}
+
     def _save(self, score: Optional[int]) -> bool:
         now = self.clock()
         p = self.player
@@ -312,10 +324,37 @@ class TimedSession(Session):
 
     def screen(self) -> Screen:
         rows = self._field(self.round.rows, self.round.cols, self.cell_symbol)
-        return Screen(self.header(), rows + [self._quit_row()])
+        return Screen(self.header(), rows + [self._quit_row()], view=self.view())
 
     def cell_symbol(self, r: int, c: int) -> str:
         raise NotImplementedError
+
+    def cell_kind(self, r: int, c: int) -> dict:
+        """Клетка для Mini App: {"k": вид, "v": текст} — виды по играм в tz-m1-core.md §3.1."""
+        raise NotImplementedError
+
+    def phase_hint(self) -> str:
+        if self.phase == COUNTDOWN:
+            return t("phase_countdown", n=self.countdown)
+        if self.phase == PREVIEW:
+            return t("phase_preview")
+        if self.phase == REVIEW:
+            return self.review_line()
+        if self.phase == DONE:
+            return self.done_line()
+        return self.input_line()
+
+    def view(self) -> dict:
+        v = self._view_base()
+        v.update(phase=self.phase, countdown=self.countdown, hint=self.phase_hint(),
+                 grid=self._grid(self.round.rows, self.round.cols, self.cell_kind))
+        if self.clock_limited:
+            left = self.time_left()
+            v["timer"] = {"left": max(0, left), "total": self.round_seconds, "overtime": left <= 0}
+        else:
+            current = self.rounds_total if self.phase in (REVIEW, DONE) else self.rounds_total + 1
+            v["rounds"] = {"current": min(current, self.rounds_limit), "total": self.rounds_limit}
+        return v
 
     def finish(self) -> Screen:
         self.finished = True
@@ -349,6 +388,10 @@ class MatrixSession(TimedSession):
             return MATRIX_HIDDEN
         return MATRIX_SHOWN if cell in self.round.found else MATRIX_HIDDEN
 
+    def cell_kind(self, r: int, c: int) -> dict:
+        symbol = self.cell_symbol(r, c)
+        return {"k": {WRONG_CELL: "wrong", MATRIX_ANSWER: "answer", MATRIX_SHOWN: "shown"}.get(symbol, "hidden")}
+
 
 class TowerSession(TimedSession):
     game = "tower"
@@ -368,6 +411,22 @@ class TowerSession(TimedSession):
         if self.phase in (PREVIEW, REVIEW) or self.round.is_opened((r, c)):
             return str(n)
         return TOWER_HIDDEN
+
+    def cell_kind(self, r: int, c: int) -> dict:
+        n = self.round.cells.get((r, c))
+        if (r, c) == self.wrong_cell:
+            return {"k": "wrong", "v": None if n is None else str(n)}
+        symbol = self.cell_symbol(r, c)
+        if symbol == TOWER_INACTIVE:
+            return {"k": "inactive"}
+        if symbol == TOWER_HIDDEN:
+            return {"k": "hidden"}
+        return {"k": "number", "v": symbol}
+
+    def view(self) -> dict:
+        v = super().view()
+        v["extra"] = {"road": round(self.road_share(), 4), "km": self.score}
+        return v
 
     def __init__(self, *args, **kwargs):
         self.road_done = 0.0              # доля дороги, проеханная в законченных раундах
@@ -441,6 +500,13 @@ class PathSession(TimedSession):
         if self.phase == REVIEW and cell in rnd.solution:
             return PATH_ANSWER
         return PATH_EMPTY
+
+    def cell_kind(self, r: int, c: int) -> dict:
+        symbol, rnd = self.cell_symbol(r, c), self.round
+        if symbol in rnd.icons and (r, c) in rnd.ends:
+            return {"k": "person" if rnd.ends.index((r, c)) == 0 else "house", "v": symbol}
+        return {"k": {WRONG_CELL: "wrong", PATH_STEP: "step", PATH_BLOCK: "block",
+                      PATH_ANSWER: "answer"}.get(symbol, "empty")}
 
     def input_line(self) -> str:
         person, house = self.round.icons
@@ -517,7 +583,24 @@ class MemoSession(Session):
             t("memo_done") if self.done else t("memo_hint"),
         ])
         rows = self._field(self.board.rows, self.board.cols, self.cell_symbol)
-        return Screen(text, rows + [self._quit_row()])
+        return Screen(text, rows + [self._quit_row()], view=self.view())
+
+    def cell_kind(self, r: int, c: int) -> dict:
+        idx = r * self.board.cols + c
+        if idx in self.board.matched:
+            return {"k": "matched", "v": self.board.cards[idx]}
+        if self.board.is_visible(idx):
+            return {"k": "face", "v": self.board.cards[idx]}
+        return {"k": "back"}
+
+    def view(self) -> dict:
+        v = self._view_base()
+        b = self.board
+        v.update(pairs={"found": b.found_pairs, "total": b.pairs},
+                 moves={"made": self.moves, "limit": b.moves_limit}, done=self.done,
+                 hint=t("memo_done") if self.done else t("memo_hint"),
+                 grid=self._grid(b.rows, b.cols, self.cell_kind))
+        return v
 
     def finish(self) -> Screen:
         self.finished = True

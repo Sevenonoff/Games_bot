@@ -35,11 +35,17 @@
 - Ссылка-приглашение в бой и в друзья для игрока из Mini App ведёт в Mini App: `https://t.me/<бот>/<app>?startapp=mp_<код>`. Имя приложения — `MINIAPP_SHORT_NAME`. Пока он не задан (до M5), ссылка остаётся старой, в чат.
 
 ### 2.6. Dev-режим
+**Сделано.** Dev-сервер — `miniapp/dev-server.sh` (`sea_fight_aiogram/webapp_dev.py`): порт 8448, своя БД `miniapp/dev.db`, Telegram не поллит, вход только `dev_user` с localhost, `/dbg` для id 1. Боевой бот слушает 127.0.0.1:8447 (`MINIAPP_PORT`, пусто — выключить).
 `MINIAPP_DEV=1` разрешает `{"type":"hello","dev_user":{…}}` с `127.0.0.1` и `localhost`. В проде переменная не задаётся.
 В dev-режиме есть ещё `GET /dev/hint?user=<id>` → `{"payload": "t:…"}` — верный ход в текущей партии игрока (как `right_move` харнесса) для e2e-тестов фронтенда, и `/dbg`-команды для dev-пользователя с id из `DEBUG_USER_IDS`. Скрипт `miniapp/dev-server.sh` запускает сервер на тестовой БД **без поллинга Telegram**, чтобы не мешать боевому боту (правило: один поллер на токен).
 
 ### 2.7. Образцы `docs/miniapp/fixtures/`
-Тест `tests/test_miniapp_fixtures.py` проводит партии на виртуальном времени и сохраняет `screen` и `view` в JSON для каждого состояния из §3: `memo-play.json`, `memo-mismatch.json`, `matrix-countdown.json`, `matrix-preview.json`, `matrix-input.json`, `matrix-review.json`, `tower-…`, `path-…`, `sea-placement.json`, `sea-my-turn.json`, `sea-ai-thinking.json`, `sea-blink.json`, `sea-result.json`, `menu.json`, `result-memo.json`. При запуске с `--check` тест сверяет образцы с кодом: схема поменялась — образцы обновляются тем же коммитом.
+Тест `tests/test_miniapp_fixtures.py` проводит партии на виртуальном времени и сохраняет кадр `screen` (с `view`) для каждого состояния из §3:
+- игры: `memo-play`, `memo-mismatch`, `memo-done`, `matrix-countdown`, `matrix-preview`, `matrix-input`, `matrix-done`, `matrix-review`, `tower-input`, `tower-review`, `path-preview`, `path-input`, `path-done`, `path-review`;
+- морской бой: `sea-placement`, `sea-placement-current`, `sea-my-turn`, `sea-ai-thinking`, `sea-their-shot`, `sea-blink`, `sea-result`, `sea-invite`;
+- экраны без `view`: `menu`, `sea-menu`, `ai-level`, `result-memo`.
+
+Обычный прогон сверяет образцы с кодом. Если схема поменялась, образцы обновляются тем же коммитом: `UPDATE_FIXTURES=1 .venv/bin/python -m pytest tests/test_miniapp_fixtures.py`. Номер партии в образцах заменён на `a1b2c3`, картинки — на `/img/example.jpg`.
 
 ## 3. Схемы `view`
 
@@ -89,7 +95,7 @@
 ```json
 {"kind": "sea", "title": "⚔️ Морской бой", "code": "ABC234",
  "opponent": {"name": "🤖 Компьютер (продвинутый)", "ai": true},
- "set": "reduced", "status": "placing" | "waiting_ready" | "active" | "finished" | "cancelled" | "waiting",
+ "set": "reduced", "status": "placing" | "waiting_ready" | "active" | "finished" | "waiting",
  "turn": "me" | "them" | null, "thinking": false,
  "timer": {"left": 27, "total": 30} | null, "timeouts": {"me": 0, "them": 1, "max": 3},
  "last": [{"by": "me", "result": "miss"}, {"by": "them", "result": "sunk"}],

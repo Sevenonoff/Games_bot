@@ -1,0 +1,281 @@
+{
+ "text": "<b>🟦 Матрица памяти</b> · уровень 1\n⏱ 60 с ▓▓▓▓▓▓▓▓▓▓\nОчки: <b>45</b> · серия ×1\n\n✅ Раунд пройден! Нажмите любую клетку, чтобы продолжить",
+ "rows": [
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "🟦",
+    "data": "t:a1b2c3:0:0"
+   },
+   {
+    "text": "⬜",
+    "data": "t:a1b2c3:0:1"
+   },
+   {
+    "text": "🟦",
+    "data": "t:a1b2c3:0:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬜",
+    "data": "t:a1b2c3:1:0"
+   },
+   {
+    "text": "⬜",
+    "data": "t:a1b2c3:1:1"
+   },
+   {
+    "text": "⬜",
+    "data": "t:a1b2c3:1:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬜",
+    "data": "t:a1b2c3:2:0"
+   },
+   {
+    "text": "🟦",
+    "data": "t:a1b2c3:2:1"
+   },
+   {
+    "text": "⬜",
+    "data": "t:a1b2c3:2:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "🏁 Закончить",
+    "data": "q:a1b2c3"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "matrix",
+  "title": "🟦 Матрица памяти",
+  "level": 1,
+  "score": 45,
+  "combo": "×1",
+  "actions": {
+   "tap": "t:a1b2c3:{r}:{c}",
+   "quit": "q:a1b2c3",
+   "skip": "t:a1b2c3:0:0"
+  },
+  "phase": "done",
+  "countdown": 1,
+  "hint": "✅ Раунд пройден! Нажмите любую клетку, чтобы продолжить",
+  "grid": {
+   "rows": 3,
+   "cols": 3,
+   "cells": [
+    [
+     {
+      "k": "shown"
+     },
+     {
+      "k": "hidden"
+     },
+     {
+      "k": "shown"
+     }
+    ],
+    [
+     {
+      "k": "hidden"
+     },
+     {
+      "k": "hidden"
+     },
+     {
+      "k": "hidden"
+     }
+    ],
+    [
+     {
+      "k": "hidden"
+     },
+     {
+      "k": "shown"
+     },
+     {
+      "k": "hidden"
+     }
+    ]
+   ]
+  },
+  "timer": {
+   "left": 60,
+   "total": 60,
+   "overtime": false
+  }
+ }
+}

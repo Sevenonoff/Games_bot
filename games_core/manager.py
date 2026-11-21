@@ -86,7 +86,8 @@ class Manager:
                  start_link: Callable[[str], str] = lambda param: param,
                  mp_blink_seconds: float = MP_BLINK_SECONDS,
                  ai_think_seconds: float = AI_THINK_SECONDS,
-                 run_cpu: Optional[Callable[..., Awaitable[Any]]] = None):
+                 run_cpu: Optional[Callable[..., Awaitable[Any]]] = None,
+                 live_ref: Callable[[Any], bool] = lambda ref: False):
         self.storage = storage
         self.platform = platform
         self.push = push
@@ -96,6 +97,9 @@ class Manager:
         self.ai_think_seconds = ai_think_seconds
         # тяжёлый расчёт (ход компьютера) — в потоке, чтобы бот не замирал; тесты считают на месте
         self.run_cpu = run_cpu or asyncio.to_thread
+        # место показа, которое игрок видит постоянно (экран Mini App): событию партии там не нужно
+        # новое сообщение-уведомление — экран обновляется на месте
+        self.live_ref = live_ref
         self.clock = clock
         self.rng = rng or random.Random()
         self.sleep = sleep

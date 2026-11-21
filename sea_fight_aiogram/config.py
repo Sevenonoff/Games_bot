@@ -18,5 +18,10 @@ TIMER_TICK_SECONDS = float(os.getenv("TIMER_TICK_SECONDS", "5.0"))
 MEMO_CLOSE_SECONDS = float(os.getenv("MEMO_CLOSE_SECONDS", "3.0"))
 REVIEW_SECONDS = float(os.getenv("REVIEW_SECONDS", "2.0"))
 MP_BLINK_SECONDS = float(os.getenv("MP_BLINK_SECONDS", "0.4"))   # мигание потопленного корабля в бою с другом
+# Mini App: сервер на 127.0.0.1:MINIAPP_PORT (пусто — выключен), наружу — через прокси (docs/miniapp/tz-m5-infra.md);
+# MINIAPP_DEV=1 — вход без Telegram с localhost и подсказки ходов для e2e (только на машине разработчика)
+MINIAPP_PORT = os.getenv("MINIAPP_PORT", "8447")
+MINIAPP_DEV = os.getenv("MINIAPP_DEV", "") == "1"
+MINIAPP_STATIC = os.getenv("MINIAPP_STATIC", str(BASE_DIR.parent / "miniapp" / "dist"))
 # кому доступны /dbg-команды: user_id через запятую; свой id бот покажет в ответ на /dbg
 DEBUG_USER_IDS = frozenset(int(x) for x in os.getenv("DEBUG_USER_IDS", "").replace(",", " ").split())

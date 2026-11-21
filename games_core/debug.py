@@ -6,9 +6,11 @@
 """
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
-from . import days as calendar, motivation, notify
+from . import days as calendar, motivation, notify, path
+from . import seafight_mp as mp
+from . import seafight_solo as sea
 from .progression import WINS_TO_LEVEL_UP
-from .sessions import Player, Session
+from .sessions import INPUT, Player, Session, TimedSession
 from .texts import TITLES, t
 from .ui import Button, Reply, Screen, data
 
@@ -153,6 +155,62 @@ def reset(mgr: "Manager", player: Player, args: List[str]) -> Result:
     mgr.storage.reset_user(mgr.platform, player.user_id)
     mgr.round_overrides.pop(player.user_id, None)
     return Reply(menu(mgr, player, "✅ Уровни и рекорды стёрты")), None
+
+
+# --- верный ход: тесты и подсказка dev-сервера Mini App ---
+
+Cell = Tuple[int, int]
+
+
+def path_next(rnd: path.PathRound) -> Optional[Cell]:
+    """Проложи дорогу: следующая клетка кратчайшей дороги, которой ещё нет на поле."""
+    return next((x for x in rnd.solution if x not in rnd.road), None)
+
+
+def right_cell(s: Optional[Session]) -> Optional[Cell]:
+    """Верное нажатие в текущей партии; None — сейчас нажимать нечего (показ, итог, конец)."""
+    if s is None or s.finished or s.over or s.in_done():
+        return None
+    if isinstance(s, TimedSession):
+        if s.phase != INPUT:
+            return None
+        if s.game == "matrix":
+            return min(s.round.targets - s.round.found)
+        if s.game == "path":
+            return path_next(s.round)
+        by_number = {n: cell for cell, n in s.round.cells.items()}
+        return by_number[s.round.numbers[s.round.opened]]
+    if s.game == "memo":
+        b = s.board
+        face_up = b.face_up if len(b.face_up) == 1 else []
+        if face_up:
+            first = face_up[0]
+            idx = next(i for i, icon in enumerate(b.cards)
+                       if icon == b.cards[first] and i != first)
+        else:
+            idx = next(i for i in range(len(b.cards)) if i not in b.matched)
+        return divmod(idx, b.cols)
+    return None
+
+
+def hint_payload(mgr: "Manager", uid: int) -> Optional[str]:
+    """Payload верного хода игрока сейчас: выстрел по кораблю в бою, клетка в партии,
+    «дальше» на итоге раунда; None — ходить нечего (чужой ход, показ, нет партии)."""
+    game = mgr.mp.open_game(uid)
+    if game is not None:
+        if game.status != mp.ACTIVE or game.turn != uid:
+            return None
+        side, enemy = game.side(uid), {cell for ship in game.opponent(uid).ships for cell in ship}
+        cell = next(((r, c) for r in range(sea.ROWS) for c in range(sea.COLS)
+                     if side.shots[r][c] == sea.UNKNOWN and (r, c) in enemy), None)
+        return data("mpf", game.code, *cell) if cell else None
+    s = mgr.sessions.get(uid)
+    if s is None or s.finished:
+        return None
+    if s.in_done():
+        return data("t", s.sid, 0, 0)
+    cell = right_cell(s)
+    return data("t", s.sid, *cell) if cell else None
 
 
 COMMANDS: Dict[str, Callable[["Manager", Player, List[str]], Result]] = {

@@ -1,0 +1,432 @@
+{
+ "text": "📨 <b>Приглашение готово</b>\n\nПерешлите другу ссылку — по ней он сразу попадёт в партию:\nhttps://t.me/test_bot?start=mp_JVQTRW\n\nИли пусть пришлёт боту код <code>JVQTRW</code>.\n\n📋 Время на ход: 1 мин · Набор: полный · Расстановка: автоматическая",
+ "rows": [
+  [
+   {
+    "text": "❌ Отменить приглашение",
+    "data": "mpx:JVQTRW"
+   }
+  ],
+  [
+   {
+    "text": "🏠 Меню",
+    "data": "menu"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "sea",
+  "code": "JVQTRW",
+  "set": "full",
+  "status": "waiting",
+  "title": "⚔️ С другом (полный)",
+  "score": 0,
+  "opponent": null,
+  "turn": null,
+  "thinking": false,
+  "timer": null,
+  "timeouts": {
+   "me": 0,
+   "them": 0,
+   "max": 3
+  },
+  "last": [],
+  "own": {
+   "rows": 8,
+   "cols": 7,
+   "cells": [
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ]
+   ]
+  },
+  "enemy": {
+   "rows": 8,
+   "cols": 7,
+   "cells": [
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ]
+   ]
+  },
+  "blink": null,
+  "result": null,
+  "placement": null,
+  "invite": {
+   "link": "https://t.me/test_bot?start=mp_JVQTRW",
+   "code": "JVQTRW"
+  },
+  "actions": {
+   "fire": "mpf:JVQTRW:{r}:{c}",
+   "surrender": "mpg:JVQTRW",
+   "place": "mpp:JVQTRW:{r}:{c}:{o}",
+   "fix": "mpk:JVQTRW",
+   "reset": "mpz:JVQTRW",
+   "ready": "mpy:JVQTRW",
+   "cancel_invite": "mpx:JVQTRW"
+  }
+ }
+}

@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
+from aiohttp import web
 
 # Ядро — из корня репозитория. append, а не insert: корень не должен перекрывать config бота
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -18,6 +19,7 @@ from games_core.storage import Storage  # noqa: E402
 
 import config  # noqa: E402
 import games_tg  # noqa: E402
+import webapp  # noqa: E402
 
 logger = logging.getLogger("main")
 
@@ -42,7 +44,17 @@ async def main() -> None:
     storage = Storage(config.GAMES_DB_PATH)
     bot = Bot(token=config.BOT_TOKEN)
     me = await bot.get_me()
-    manager = games_tg.build_manager(bot, storage, me.username)
+    app = webapp.WebApp(bot_token=config.BOT_TOKEN, make_player=games_tg.player_from_webapp,
+                        static_dir=Path(config.MINIAPP_STATIC), dev=config.MINIAPP_DEV)
+    manager = games_tg.build_manager(bot, storage, me.username, webapp=app)
+    app.manager = manager
+    runner = None
+    if config.MINIAPP_PORT:
+        runner = web.AppRunner(app.app(), access_log=None)
+        await runner.setup()
+        await web.TCPSite(runner, "127.0.0.1", int(config.MINIAPP_PORT)).start()
+        logger.info("mini app on 127.0.0.1:%s, static=%s, dev=%s", config.MINIAPP_PORT,
+                    config.MINIAPP_STATIC, config.MINIAPP_DEV)
     dp = Dispatcher()
     games_tg.register(dp, bot, manager)
     restored = manager.restore()
@@ -52,6 +64,8 @@ async def main() -> None:
     try:
         await dp.start_polling(bot)
     finally:
+        if runner is not None:
+            await runner.cleanup()
         await manager.shutdown()
         storage.close()
         await bot.session.close()

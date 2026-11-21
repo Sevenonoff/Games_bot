@@ -1,0 +1,278 @@
+{
+ "text": "<b>🃏 Мемо</b> · уровень 1\nПары: 3/3 · Очки: <b>30</b> · серия ×1\nХоды: 4 · уложитесь в 6, чтобы пройти уровень\n\n🎉 Поле собрано! Нажмите любую клетку, чтобы увидеть результат",
+ "rows": [
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "🌴",
+    "data": "t:a1b2c3:0:0"
+   },
+   {
+    "text": "🐞",
+    "data": "t:a1b2c3:0:1"
+   },
+   {
+    "text": "🌷",
+    "data": "t:a1b2c3:0:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "🐞",
+    "data": "t:a1b2c3:1:0"
+   },
+   {
+    "text": "🌴",
+    "data": "t:a1b2c3:1:1"
+   },
+   {
+    "text": "🌷",
+    "data": "t:a1b2c3:1:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "🏁 Закончить",
+    "data": "q:a1b2c3"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "memo",
+  "title": "🃏 Мемо",
+  "level": 1,
+  "score": 30,
+  "combo": "×1",
+  "actions": {
+   "tap": "t:a1b2c3:{r}:{c}",
+   "quit": "q:a1b2c3",
+   "skip": "t:a1b2c3:0:0"
+  },
+  "pairs": {
+   "found": 3,
+   "total": 3
+  },
+  "moves": {
+   "made": 4,
+   "limit": 6
+  },
+  "done": true,
+  "hint": "🎉 Поле собрано! Нажмите любую клетку, чтобы увидеть результат",
+  "grid": {
+   "rows": 2,
+   "cols": 3,
+   "cells": [
+    [
+     {
+      "k": "matched",
+      "v": "🌴"
+     },
+     {
+      "k": "matched",
+      "v": "🐞"
+     },
+     {
+      "k": "matched",
+      "v": "🌷"
+     }
+    ],
+    [
+     {
+      "k": "matched",
+      "v": "🐞"
+     },
+     {
+      "k": "matched",
+      "v": "🌴"
+     },
+     {
+      "k": "matched",
+      "v": "🌷"
+     }
+    ]
+   ]
+  }
+ }
+}

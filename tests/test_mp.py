@@ -111,3 +111,13 @@ def test_roundtrip_through_json():
 def test_code_detection(word, ok):
     from games_core.multiplayer import looks_like_code
     assert looks_like_code(word) == ok
+
+
+def test_placement_with_orientation():
+    """Mini App ставит корабль сразу вертикально — даже там, где горизонтально он не встаёт."""
+    p = mp.Placement([3, 1])
+    assert p.place(3, 6, vertical=False) == mp.OUT_OF_BOUNDS and p.center is None
+    assert p.place(3, 6, vertical=True) is None
+    assert p.current_cells() == [(2, 6), (3, 6), (4, 6)]
+    assert p.fix()
+    assert p.place(3, 5, vertical=False) == mp.TOO_CLOSE

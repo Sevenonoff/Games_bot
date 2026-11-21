@@ -14,6 +14,7 @@ Payload'ы (сообщение у игрока одно на партию: св�
   mpx:<код>                отменить приглашение
   mpf:<код>:<r>:<c>        выстрел
   mpp:<код>:<r>:<c>, mpk:<код>, mpz:<код>, mpy:<код>  расстановка: клетка, зафиксировать, сначала, готов
+  mpp:<код>:<r>:<c>:<h|v>  поставить корабль центром в клетку сразу с ориентацией (Mini App)
   mpg:<код>                сдаться (до начала боя — отменить партию)
   mpb                      вернуться к своей партии
   ai                       бой с компьютером: выбор сложности
@@ -167,6 +168,11 @@ class Multiplayer:
             except (IndexError, ValueError):
                 await respond(Reply(note=t("note_stale")))
                 return
+            if action == "mpp" and len(args) > 2:
+                if args[2] not in ("h", "v"):
+                    await respond(Reply(note=t("note_stale")))
+                    return
+                cell = (*cell, args[2] == "v")
         if action == "mpf":
             await self._fire(game, me, *cell, respond)
         elif action == "mpx":
@@ -354,7 +360,7 @@ class Multiplayer:
         p = me.placement
         note = None
         if action == "mpp":
-            error = p.tap(*cell)
+            error = p.tap(*cell) if len(cell) == 2 else p.place(*cell)
             note = t(error) if error else None
         elif action == "mpk":
             p.fix()
@@ -649,7 +655,11 @@ class Multiplayer:
 
     async def _move_to_new_message(self, game: mp.MpGame, side: mp.Side, intro: str) -> None:
         """Событие соперника (подключился, расставил корабли): старое сообщение — короткой
-        строкой, партия — новым сообщением, чтобы игроку пришло уведомление."""
+        строкой, партия — новым сообщением, чтобы игроку пришло уведомление.
+        В Mini App экран всегда перед глазами — партия просто обновляется на нём."""
+        if side.msg_ref is not None and self.mgr.live_ref(side.msg_ref):
+            await self._push(game, side)
+            return
         await self._push_screen(game, side, Screen(intro, [menu_row()]))
         ref = await self._send(side, self.screen(game, side))
         if ref is not None:
@@ -659,17 +669,102 @@ class Multiplayer:
     # --- экраны ---
 
     def screen(self, game: mp.MpGame, side: mp.Side, highlight=None) -> Screen:
-        if game.status == mp.WAITING:
-            return self._invite_screen(game)
-        if game.status == mp.PLACING:
-            return self._placement_screen(game, side)
         if game.status == mp.CANCELLED:
-            if game.end_reason == mp.END_PLACEMENT_TIMEOUT:
-                key = "mp_placement_timeout"
-            else:
-                key = "mp_cancelled_you" if game.vs_ai else "mp_invite_cancelled"
-            return self._info_screen(t(key), vs_ai=game.vs_ai)
-        return self._board_screen(game, side, highlight)
+            return self._cancelled_screen(game)
+        if game.status == mp.WAITING:
+            screen = self._invite_screen(game)
+        elif game.status == mp.PLACING:
+            screen = self._placement_screen(game, side)
+        else:
+            screen = self._board_screen(game, side, highlight)
+        screen.view = self.view(game, side, highlight)
+        return screen
+
+    def view(self, game: mp.MpGame, side: mp.Side, highlight=None) -> dict:
+        """Состояние партии для Mini App (docs/miniapp/tz-m1-core.md §3.3)."""
+        other = game.opponent(side.user_id)
+        code = game.code
+        result_shown = game.status == mp.FINISHED and code not in self.animating
+        active = game.status == mp.ACTIVE
+        status = "waiting_ready" if game.status == mp.PLACING and side.ready else game.status
+        thinking = active and game.is_ai(game.turn)
+        left = game.seconds_left(self.mgr.clock()) if active and not thinking else None
+        v = {
+            "kind": "sea", "code": code, "set": game.ship_set, "status": status,
+            "title": TITLES[f"ai_{game.ship_set}" if game.vs_ai else f"mp_{game.ship_set}"],
+            "score": side.score,
+            "opponent": {"name": other.name, "ai": game.vs_ai} if other else None,
+            "turn": ("me" if game.turn == side.user_id else "them") if active else None,
+            "thinking": thinking,
+            "timer": {"left": int(left + 0.999), "total": game.time_limit} if left is not None else None,
+            "timeouts": {"me": side.timeouts, "them": other.timeouts if other else 0, "max": mp.MAX_TIMEOUTS},
+            "last": [{"by": "me" if m["by"] == side.user_id else "them",
+                      "result": sea.SUNK if m["result"] == sea.WON else m["result"]}
+                     for m in game.last_moves()],
+            "own": self._own_grid(game, side, other),
+            "enemy": self._enemy_grid(side, other, result_shown),
+            "blink": None, "result": None, "placement": None, "invite": None,
+            "actions": {"fire": data("mpf", code, "{r}", "{c}"), "surrender": data("mpg", code),
+                        "place": data("mpp", code, "{r}", "{c}", "{o}"), "fix": data("mpk", code),
+                        "reset": data("mpz", code), "ready": data("mpy", code),
+                        "cancel_invite": data("mpx", code)},
+        }
+        if highlight is not None:
+            attacker, cells, symbol = highlight
+            v["blink"] = {"board": "enemy" if attacker == side.user_id else "own",
+                          "cells": sorted([r, c] for r, c in cells),
+                          "frame": "hit" if symbol == SEA_SYMBOLS[sea.SHOT_HIT] else "sunk"}
+        if result_shown:
+            v["result"] = {"won": game.winner == side.user_id, "reason": game.end_reason, "score": side.score,
+                           "rating": side.rating, "delta": side.rating_delta, "journey": list(side.journey_lines)}
+        if game.status == mp.PLACING and not side.ready:
+            p = side.placement
+            v["placement"] = {"sizes": list(p.sizes), "fixed": [[list(x) for x in ship] for ship in p.fixed],
+                              "current": [list(x) for x in p.current_cells()], "vertical": p.vertical,
+                              "forbidden": sorted(list(x) for x in p.forbidden()),
+                              "left": max(0, int(side.placement_deadline - self.mgr.clock() + 0.999))}
+        if game.status == mp.WAITING:
+            v["invite"] = {"link": self.mgr.start_link(f"mp_{code}"), "code": code}
+        return v
+
+    @staticmethod
+    def _shot_kind(state: str) -> str:
+        return {sea.SHOT_MISS: "miss", sea.SHOT_HIT: "hit", sea.SHOT_SUNK: "sunk"}.get(state, "sea")
+
+    def _own_grid(self, game: mp.MpGame, side: mp.Side, other: Optional[mp.Side]) -> dict:
+        """Своё поле: свои корабли (на расстановке — уже поставленные) и выстрелы соперника."""
+        if side.placement is not None:
+            ships = {tuple(x) for ship in side.placement.fixed for x in ship}
+        else:
+            ships = {tuple(x) for ship in side.ships for x in ship}
+        shots = other.shots if other is not None and other.shots else None
+
+        def cell(r, c):
+            state = shots[r][c] if shots else sea.UNKNOWN
+            if state != sea.UNKNOWN:
+                return {"k": self._shot_kind(state)}
+            return {"k": "ship" if (r, c) in ships else "sea"}
+        return {"rows": sea.ROWS, "cols": sea.COLS,
+                "cells": [[cell(r, c) for c in range(sea.COLS)] for r in range(sea.ROWS)]}
+
+    def _enemy_grid(self, side: mp.Side, other: Optional[mp.Side], result_shown: bool) -> dict:
+        """Поле соперника: мои выстрелы; после итога — его непотопленные корабли."""
+        ships = {tuple(x) for ship in other.ships for x in ship} if other is not None else set()
+
+        def cell(r, c):
+            state = side.shots[r][c] if side.shots else sea.UNKNOWN
+            if state == sea.UNKNOWN and result_shown and (r, c) in ships:
+                return {"k": "ship"}
+            return {"k": self._shot_kind(state)}
+        return {"rows": sea.ROWS, "cols": sea.COLS,
+                "cells": [[cell(r, c) for c in range(sea.COLS)] for r in range(sea.ROWS)]}
+
+    def _cancelled_screen(self, game: mp.MpGame) -> Screen:
+        if game.end_reason == mp.END_PLACEMENT_TIMEOUT:
+            key = "mp_placement_timeout"
+        else:
+            key = "mp_cancelled_you" if game.vs_ai else "mp_invite_cancelled"
+        return self._info_screen(t(key), vs_ai=game.vs_ai)
 
     def _invite_screen(self, game: mp.MpGame) -> Screen:
         text = t("mp_invite", link=self.mgr.start_link(f"mp_{game.code}"), code=game.code,

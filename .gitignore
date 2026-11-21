@@ -75,3 +75,9 @@ art_work/rejected/
 art_work/chapter1/test2/
 art_work/page_*/
 art_work/gen/out/
+
+# Mini App: dev-база и зависимости фронтенда
+miniapp/dev.db*
+miniapp/node_modules/
+miniapp/test-results/
+miniapp/playwright-report/

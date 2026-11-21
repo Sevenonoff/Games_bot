@@ -10,10 +10,12 @@ right_move() подсказывает верный ход, чтобы сцена
 import asyncio
 import heapq
 import itertools
+import json
 import random
 import re
 from typing import Dict, List, Optional, Tuple
 
+from games_core import debug
 from games_core import friends
 from games_core import motivation
 from games_core import path
@@ -226,35 +228,9 @@ def mp_right_move(chat) -> Optional[Cell]:
     return targets[0] if targets else None
 
 
-def right_move(s: Optional[Session]) -> Optional[Cell]:
-    """Верное нажатие в текущей партии; None — сейчас нажимать нечего (показ, конец)."""
-    if s is None or s.finished or s.over or s.in_done():
-        return None
-    if isinstance(s, TimedSession):
-        if s.phase != INPUT:
-            return None
-        if s.game == "matrix":
-            return min(s.round.targets - s.round.found)
-        if s.game == "path":
-            return path_next(s.round)
-        by_number = {n: cell for cell, n in s.round.cells.items()}
-        return by_number[s.round.numbers[s.round.opened]]
-    if s.game == "memo":
-        b = s.board
-        face_up = b.face_up if len(b.face_up) == 1 else []
-        if face_up:
-            first = face_up[0]
-            idx = next(i for i, icon in enumerate(b.cards)
-                       if icon == b.cards[first] and i != first)
-        else:
-            idx = next(i for i in range(len(b.cards)) if i not in b.matched)
-        return divmod(idx, b.cols)
-    return None
-
-
-def path_next(rnd: path.PathRound) -> Optional[Cell]:
-    """Проложи дорогу: следующая клетка кратчайшей дороги, которой ещё нет на поле."""
-    return next((x for x in rnd.solution if x not in rnd.road), None)
+# верный ход — в ядре (games_core/debug.py): им же dev-сервер Mini App подсказывает ходы e2e-тестам
+right_move = debug.right_cell
+path_next = debug.path_next
 
 
 def path_detour(rnd: path.PathRound) -> Optional[List[Cell]]:
@@ -438,7 +414,7 @@ KNOWN_PAYLOAD = re.compile(
     r"^(menu|sea|sea_rec|rec|noop|jr(:\d+)?|day|prog|bdg|dbg(:\w+)*|mp|mpb|hr(:[a-z]+)?|hrb:[a-z]+"
     rf"|fr(:\d+)?|fri|frs:\d+|frj:{FRIEND_CODE}|set(:fn|:wk|:rm(:(off|\d+))?)?"
     r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?|ai|ain:(normal|advanced)(:\d+(:(full|reduced)(:(auto|manual))?)?)?"
-    rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+"
+    rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+(:[hv])?"
     rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"
     r"|q:[0-9a-f]{6}|b:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")
 
@@ -454,6 +430,7 @@ def check_screen(chat) -> None:
     for b in buttons:
         assert KNOWN_PAYLOAD.match(b.data), f"кнопка {b.text!r} с неизвестным payload {b.data!r}"
     tg.tg_rows(chat.screen)   # тот же экран уходит и в Telegram: его лимиты тоже соблюдены
+    check_view(chat.screen)
     assert chat.text.startswith(t("menu").split("\n")[0]) or any(b.data in ("menu", "sea") or b.data.startswith("q:") for b in buttons), \
         "с экрана не уйти в меню"
     check_mp_screen(chat)
@@ -473,6 +450,25 @@ def check_screen(chat) -> None:
         assert s.progress.level >= 1
         assert screen.rows == s.screen().rows, "сообщение отстало от состояния партии"
         check_field(screen)
+
+
+VIEW_ACTION = re.compile(r"^(t|q|mp[fgkpxyz]):[0-9a-zA-Z]+(:(\d+|\{r\}|\{c\}|\{o\}))*$")
+
+
+def check_view(screen: Screen) -> None:
+    """view для Mini App: сериализуется в JSON, шаблоны действий — известные payload'ы,
+    размер сетки совпадает с объявленным."""
+    v = screen.view
+    if v is None:
+        return
+    json.dumps(v)
+    assert v["kind"] in ("memo", "matrix", "tower", "path", "sea"), v["kind"]
+    for name, action in v["actions"].items():
+        assert VIEW_ACTION.match(action), f"действие {name}: {action!r}"
+    for key in ("grid", "own", "enemy"):
+        grid = v.get(key)
+        if grid:
+            assert len(grid["cells"]) == grid["rows"] and all(len(row) == grid["cols"] for row in grid["cells"]), key
 
 
 def check_field(screen: Screen) -> None:

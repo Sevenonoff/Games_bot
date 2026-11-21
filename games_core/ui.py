@@ -2,6 +2,7 @@
 
 Транспорт (Max, Telegram) превращает Screen в свою клавиатуру.
 """
+import json
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -27,12 +28,18 @@ class Button:
 
 @dataclass
 class Screen:
-    """text — текст сообщения (при картинке — подпись к ней), image — PNG или JPEG над текстом."""
+    """text — текст сообщения (при картинке — подпись к ней), image — PNG или JPEG над текстом.
+
+    view — структурное состояние партии для Mini App (docs/miniapp/tz-m1-core.md §3):
+    чат-транспорты его не видят, Mini App рисует по нему экран игры."""
     text: str
     rows: List[List[Button]] = field(default_factory=list)
     image: Optional[bytes] = None
+    view: Optional[dict] = None
 
     def validate(self) -> None:
+        if self.view is not None:
+            json.dumps(self.view)       # уходит в Mini App как JSON
         if self.image is not None and len(self.text) > MAX_CAPTION_LEN:
             raise ValueError(f"подпись к картинке длиннее {MAX_CAPTION_LEN}: {len(self.text)}")
         if len(self.rows) > MAX_ROWS:

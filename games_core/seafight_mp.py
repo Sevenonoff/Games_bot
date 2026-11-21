@@ -137,6 +137,18 @@ class Placement:
             self.center = None            # как в TG: неудачная попытка убирает корабль с поля
         return error
 
+    def place(self, r: int, c: int, vertical: bool) -> Optional[str]:
+        """Поставить текущий корабль центром в клетку сразу в нужной ориентации (перетаскивание
+        в Mini App). Ошибки — как у tap; неудачная попытка убирает корабль с поля."""
+        if self.current_size is None:
+            return None
+        error = self._check(self._cells((r, c), vertical))
+        if error is None:
+            self.center, self.vertical = (r, c), vertical
+        else:
+            self.center = None
+        return error
+
     def fix(self) -> bool:
         cells = self.current_cells()
         if not cells or self._check(cells) is not None:

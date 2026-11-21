@@ -1,0 +1,691 @@
+{
+ "text": "⚔️ Вы против <b>🤖 Компьютер (продвинутый)</b> · малый набор\nВы: 💠 мимо\nПротивник: 💠 мимо\n🟢 Ваш ход · ⏱ осталось 0:30\n\n🚢 Ваши корабли:\n💠🟦🔳🟦🟦🟦🟦\n🟦🟦🟦🟦🔳🟦🟦\n🔳🟦🟦🟦🔳🟦🟦\n🔳🟦🟦🟦🔳🟦🟦\n🟦🟦🟦🟦🟦🟦🟦\n🔳🟦🟦🔳🟦🟦🟦\n🔳🟦🟦🟦🟦🟦🟦\n🟦🟦🔳🟦🟦🟦🟦\n\n🎯 Стреляйте по полю противника: 💥 попадание, 💢 потоплен, 💠 мимо.",
+ "rows": [
+  [
+   {
+    "text": "💠",
+    "data": "mpf:GPTUHE:0:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:0:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:0:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:0:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:0:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:0:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:0:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:1:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:2:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:3:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:4:0"
+   },
+   {
+    "text": "💥",
+    "data": "mpf:GPTUHE:4:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:4:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:4:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:4:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:4:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:4:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:5:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:6:6"
+   }
+  ],
+  [
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:0"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:1"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:2"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:3"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:4"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:5"
+   },
+   {
+    "text": "🟦",
+    "data": "mpf:GPTUHE:7:6"
+   }
+  ],
+  [
+   {
+    "text": "🏳 Сдаться",
+    "data": "mpg:GPTUHE"
+   },
+   {
+    "text": "🏠 Меню",
+    "data": "menu"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "sea",
+  "code": "GPTUHE",
+  "set": "reduced",
+  "status": "active",
+  "title": "⛵ Морской бой с компьютером (малый)",
+  "score": 0,
+  "opponent": {
+   "name": "🤖 Компьютер (продвинутый)",
+   "ai": true
+  },
+  "turn": "me",
+  "thinking": false,
+  "timer": {
+   "left": 30,
+   "total": 30
+  },
+  "timeouts": {
+   "me": 0,
+   "them": 0,
+   "max": 3
+  },
+  "last": [
+   {
+    "by": "me",
+    "result": "miss"
+   },
+   {
+    "by": "them",
+    "result": "miss"
+   }
+  ],
+  "own": {
+   "rows": 8,
+   "cols": 7,
+   "cells": [
+    [
+     {
+      "k": "miss"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ]
+   ]
+  },
+  "enemy": {
+   "rows": 8,
+   "cols": 7,
+   "cells": [
+    [
+     {
+      "k": "miss"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ]
+   ]
+  },
+  "blink": {
+   "board": "enemy",
+   "cells": [
+    [
+     4,
+     1
+    ]
+   ],
+   "frame": "hit"
+  },
+  "result": null,
+  "placement": null,
+  "invite": null,
+  "actions": {
+   "fire": "mpf:GPTUHE:{r}:{c}",
+   "surrender": "mpg:GPTUHE",
+   "place": "mpp:GPTUHE:{r}:{c}:{o}",
+   "fix": "mpk:GPTUHE",
+   "reset": "mpz:GPTUHE",
+   "ready": "mpy:GPTUHE",
+   "cancel_invite": "mpx:GPTUHE"
+  }
+ }
+}
