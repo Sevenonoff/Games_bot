@@ -61,7 +61,7 @@ def daily_screen(mgr: "Manager", player: Player) -> Screen:
     if nxt is None:
         text += "\n\n" + t("daily_all_done")
     else:
-        rows.append([Button(t("btn_daily_start", title=TITLES[nxt]), data("new", nxt))])
+        rows.append([Button(t("btn_daily_start", title=TITLES[nxt]), motivation.play_payload(nxt))])
     return Screen(text, rows + [[Button(t("btn_menu"), "menu")]])
 
 

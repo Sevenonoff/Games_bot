@@ -96,6 +96,16 @@ CREATE TABLE IF NOT EXISTS hero_purchases (
     PRIMARY KEY (platform, user_id, hero)
 );
 CREATE INDEX IF NOT EXISTS scores_user_time ON scores (platform, user_id, played_at);
+CREATE TABLE IF NOT EXISTS ai_results (
+    platform    TEXT NOT NULL,
+    user_id     INTEGER NOT NULL,
+    level       TEXT NOT NULL,          -- normal / advanced
+    ship_set    TEXT NOT NULL,          -- full / reduced
+    won         INTEGER NOT NULL,
+    lost        INTEGER NOT NULL,
+    updated_at  REAL NOT NULL,
+    PRIMARY KEY (platform, user_id, level, ship_set)
+);
 """
 
 SETTING_FIELDS = ("friend_notify", "reminder_hour", "friend_notified_day", "reminded_day",
@@ -194,7 +204,7 @@ class Storage:
 
     def add_score(self, platform: str, user_id: int, game: str, score: int, level: Optional[int],
                   at: float) -> None:
-        """Партия в истории задним числом (для отладки), без изменения уровня и рекорда."""
+        """Партия в истории без изменения уровня и рекорда: бой с компьютером, отладка задним числом."""
         with self.conn:
             self.conn.execute(
                 "INSERT INTO scores (platform, user_id, game, score, level, played_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -203,7 +213,7 @@ class Storage:
     def reset_user(self, platform: str, user_id: int) -> None:
         """Стереть уровни и результаты игрока (для отладки)."""
         with self.conn:
-            for table in ("progress", "scores", "ratings", "hero_purchases"):
+            for table in ("progress", "scores", "ratings", "hero_purchases", "ai_results"):
                 self.conn.execute(f"DELETE FROM {table} WHERE platform = ? AND user_id = ?",
                                   (platform, user_id))
 
@@ -278,6 +288,41 @@ class Storage:
             (platform, game_type, limit),
         ).fetchall()
         return [(r["user_id"], r["name"], r["rating"], r["won"], r["lost"]) for r in rows]
+
+    # --- бой с компьютером ---
+
+    def save_ai_result(self, platform: str, user_id: int, level: str, ship_set: str, won: bool,
+                       now: float) -> None:
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO ai_results (platform, user_id, level, ship_set, won, lost, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT (platform, user_id, level, ship_set) DO UPDATE SET
+                       won = ai_results.won + excluded.won, lost = ai_results.lost + excluded.lost,
+                       updated_at = excluded.updated_at""",
+                (platform, user_id, level, ship_set, int(won), int(not won), now))
+
+    def top_ai(self, platform: str, level: str, limit: int = 10) -> List[Tuple[int, str, int, int]]:
+        """[(user_id, name, побед, поражений)] на этом уровне (оба набора), по числу побед."""
+        rows = self.conn.execute(
+            """SELECT a.user_id, COALESCE(u.name, '?') AS name, SUM(a.won) AS won, SUM(a.lost) AS lost,
+                      MIN(a.updated_at) AS first
+               FROM ai_results a
+               LEFT JOIN users u ON u.platform = a.platform AND u.user_id = a.user_id
+               WHERE a.platform = ? AND a.level = ?
+               GROUP BY a.user_id
+               ORDER BY won DESC, lost, first
+               LIMIT ?""",
+            (platform, level, limit)).fetchall()
+        return [(r["user_id"], r["name"], r["won"], r["lost"]) for r in rows]
+
+    def ai_results_of(self, platform: str, user_id: int) -> Dict[str, Tuple[int, int]]:
+        """{уровень: (побед, поражений)} по обоим наборам."""
+        rows = self.conn.execute(
+            """SELECT level, SUM(won) AS won, SUM(lost) AS lost FROM ai_results
+               WHERE platform = ? AND user_id = ? GROUP BY level""",
+            (platform, user_id)).fetchall()
+        return {r["level"]: (r["won"], r["lost"]) for r in rows}
 
     # --- игроки ---
 

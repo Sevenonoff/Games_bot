@@ -1,4 +1,5 @@
-"""Морской бой с другом: нажатия, экраны и таймеры. Правила — seafight_mp.
+"""Морской бой с другом и с компьютером: нажатия, экраны и таймеры. Правила — seafight_mp,
+ходы компьютера — sea_ai (он видит только свою сетку выстрелов).
 
 Manager отдаёт сюда payload'ы mp…, а Multiplayer сам отвечает игроку (respond)
 и правит сообщение соперника (push) или присылает ему новое (send). Все изменения
@@ -15,18 +16,23 @@ Payload'ы (сообщение у игрока одно на партию: св�
   mpp:<код>:<r>:<c>, mpk:<код>, mpz:<код>, mpy:<код>  расстановка: клетка, зафиксировать, сначала, готов
   mpg:<код>                сдаться (до начала боя — отменить партию)
   mpb                      вернуться к своей партии
+  ai                       бой с компьютером: выбор сложности
+  ain:<уровень>[:<сек>[:<набор>[:<расстановка>]]]  шаги выбора; последний сразу начинает партию
 """
 import asyncio
 import contextlib
 import html
 import logging
+import random
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+from . import motivation
+from . import sea_ai
 from . import seafight_mp as mp
 from . import seafight_solo as sea
 from .sessions import SEA_SYMBOLS, Player
-from .texts import t
+from .texts import TITLES, t
 from .ui import Button, Reply, Screen, data
 
 if TYPE_CHECKING:
@@ -34,7 +40,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-ACTIONS = ("mp", "mpn", "mpj", "mpx", "mpf", "mpp", "mpk", "mpz", "mpy", "mpg", "mpb")
+ACTIONS = ("mp", "mpn", "mpj", "mpx", "mpf", "mpp", "mpk", "mpz", "mpy", "mpg", "mpb", "ai", "ain")
 
 OWN_SHIP = "🔳"
 PLACE_CURRENT = "🔲"
@@ -60,6 +66,11 @@ def turn_tick(limit: int) -> int:
 
 def menu_row() -> List[Button]:
     return [Button(t("btn_menu"), "menu")]
+
+
+def again_button(vs_ai: bool) -> Button:
+    """Новая партия того же рода: с компьютером или с другом."""
+    return Button(t("btn_ai_again"), "ai") if vs_ai else Button(t("btn_mp_again"), "mp")
 
 
 class Multiplayer:
@@ -107,7 +118,7 @@ class Multiplayer:
                 self.detach(player.user_id, ref)
             return ref
 
-        if action in ("mp", "mpn", "mpj"):
+        if action in ("mp", "mpn", "mpj", "ai", "ain"):
             async with self.guard(player.user_id):
                 await self._entry(player, action, args, respond_here)
             return
@@ -135,6 +146,10 @@ class Multiplayer:
             await respond(Reply(self._busy_screen(player) or self._time_screen()))
         elif action == "mpn":
             await self._wizard(player, args, respond)
+        elif action == "ai":
+            await respond(Reply(self._busy_screen(player) or self._ai_level_screen()))
+        elif action == "ain":
+            await self._ai_wizard(player, args, respond)
         elif args:
             await self._join(player, args[0].upper(), respond)
         else:
@@ -170,11 +185,32 @@ class Multiplayer:
             return None
         return Screen(t("mp_busy"), [[Button(t("btn_mp_return"), "mpb")], menu_row()])
 
-    def _time_screen(self) -> Screen:
+    def _time_screen(self, title: str = "mp_title", prefix: tuple = ("mpn",)) -> Screen:
         def b(sec):
-            return Button(t(f"mp_time_{sec}"), data("mpn", sec))
-        return Screen(f"{t('mp_title')}\n\n{t('mp_choose_time')}", [
+            return Button(t(f"mp_time_{sec}"), data(*prefix, sec))
+        return Screen(f"{t(title)}\n\n{t('mp_choose_time')}", [
             [b(0)], [b(10), b(30)], [b(60), b(300)], [b(3600)],
+            [Button(t("btn_cancel"), "sea")],
+        ])
+
+    def _set_screen(self, title: str, prefix: tuple) -> Screen:
+        return Screen(f"{t(title)}\n\n{t('mp_choose_set')}", [
+            [Button(t("btn_sea_full"), data(*prefix, "full"))],
+            [Button(t("btn_sea_reduced"), data(*prefix, "reduced"))],
+            [Button(t("btn_cancel"), "sea")],
+        ])
+
+    def _mode_screen(self, title: str, prefix: tuple) -> Screen:
+        return Screen(f"{t(title)}\n\n{t('mp_choose_mode')}", [
+            [Button(t("btn_mp_auto"), data(*prefix, mp.AUTO))],
+            [Button(t("btn_mp_manual"), data(*prefix, mp.MANUAL))],
+            [Button(t("btn_cancel"), "sea")],
+        ])
+
+    def _ai_level_screen(self) -> Screen:
+        return Screen(f"{t('ai_title')}\n\n{t('ai_choose_level')}", [
+            [Button(t("btn_ai_normal"), data("ain", sea_ai.NORMAL))],
+            [Button(t("btn_ai_advanced"), data("ain", sea_ai.ADVANCED))],
             [Button(t("btn_cancel"), "sea")],
         ])
 
@@ -193,20 +229,11 @@ class Multiplayer:
         if busy:
             await respond(Reply(busy))
             return
-        cancel = [Button(t("btn_cancel"), "sea")]
         if ship_set is None:
-            await respond(Reply(Screen(f"{t('mp_title')}\n\n{t('mp_choose_set')}", [
-                [Button(t("btn_sea_full"), data("mpn", limit, "full"))],
-                [Button(t("btn_sea_reduced"), data("mpn", limit, "reduced"))],
-                cancel,
-            ])))
+            await respond(Reply(self._set_screen("mp_title", ("mpn", limit))))
             return
         if mode is None:
-            await respond(Reply(Screen(f"{t('mp_title')}\n\n{t('mp_choose_mode')}", [
-                [Button(t("btn_mp_auto"), data("mpn", limit, ship_set, mp.AUTO))],
-                [Button(t("btn_mp_manual"), data("mpn", limit, ship_set, mp.MANUAL))],
-                cancel,
-            ])))
+            await respond(Reply(self._mode_screen("mp_title", ("mpn", limit, ship_set))))
             return
         code = self._new_code()
         now = self.mgr.clock()
@@ -215,6 +242,59 @@ class Multiplayer:
         async with self.locks[code]:
             self._save(game)
             await self._show(game, game.host, respond)
+
+    async def _ai_wizard(self, player: Player, args: List[str], respond) -> None:
+        """Сложность → время на ход → набор → расстановка; последний шаг сразу начинает партию."""
+        level = args[0] if args else None
+        try:
+            limit = int(args[1]) if len(args) > 1 else None
+        except ValueError:
+            limit = -1
+        ship_set = args[2] if len(args) > 2 else None
+        mode = args[3] if len(args) > 3 else None
+        if level not in sea_ai.LEVELS or (limit is not None and limit not in mp.TIME_LIMITS) \
+                or (ship_set and ship_set not in sea.SHIP_SETS) or (mode and mode not in (mp.AUTO, mp.MANUAL)):
+            await respond(Reply(self._ai_level_screen()))
+            return
+        busy = self._busy_screen(player)
+        if busy:
+            await respond(Reply(busy))
+            return
+        if limit is None:
+            await respond(Reply(self._time_screen("ai_title", ("ain", level))))
+            return
+        if ship_set is None:
+            await respond(Reply(self._set_screen("ai_title", ("ain", level, limit))))
+            return
+        if mode is None:
+            await respond(Reply(self._mode_screen("ai_title", ("ain", level, limit, ship_set))))
+            return
+        code = self._new_code()
+        now = self.mgr.clock()
+        game = mp.MpGame(code, ship_set, mode, limit, self._side(player), created_at=now, ai_level=level)
+        game.join_ai(t("ai_name", level=t(f"ai_level_{level}")), now, self.mgr.rng)
+        self.games[code] = game
+        async with self.locks[code]:
+            self._save(game)
+            await self._show(game, game.host, respond)
+            self._schedule(game)
+
+    def debug_ai_game(self, player: Player, ship_set: str) -> Screen:
+        """/dbg sea_end: бой с компьютером, где игроку остался один выстрел до победы."""
+        busy = self._busy_screen(player)
+        if busy:
+            return busy
+        now = self.mgr.clock()
+        game = mp.MpGame(self._new_code(), ship_set, mp.AUTO, 0, self._side(player), created_at=now,
+                         ai_level=sea_ai.NORMAL)
+        game.join_ai(t("ai_name", level=t("ai_level_normal")), now, self.mgr.rng)
+        board = game.target(player.user_id)
+        cells = [cell for ship in board.ships for cell in ship]
+        for r, c in cells[:-1]:
+            board.fire(r, c)
+        self.games[game.code] = game
+        self._save(game)
+        return self.screen(game, game.host)
 
     def _new_code(self) -> str:
         while True:
@@ -253,8 +333,9 @@ class Multiplayer:
                                             t("mp_joined_host", name=html.escape(player.name, quote=False)))
             self._schedule(game)
 
-    def _info_screen(self, text: str, extra: Optional[List[List[Button]]] = None) -> Screen:
-        return Screen(text, (extra or []) + [[Button(t("btn_mp"), "mp")], menu_row()])
+    def _info_screen(self, text: str, extra: Optional[List[List[Button]]] = None, vs_ai: bool = False) -> Screen:
+        again = Button(t("btn_ai"), "ai") if vs_ai else Button(t("btn_mp"), "mp")
+        return Screen(text, (extra or []) + [[again], menu_row()])
 
     async def _cancel_invite(self, game: mp.MpGame, me: mp.Side, respond) -> None:
         if game.status != mp.WAITING or me is not game.host:
@@ -288,7 +369,8 @@ class Multiplayer:
             await self._show(game, me, respond)
             if started:
                 other = game.opponent(me.user_id)
-                await self._move_to_new_message(game, other, t("mp_both_ready"))
+                if not game.vs_ai:
+                    await self._move_to_new_message(game, other, t("mp_both_ready"))
                 self._schedule(game)
             return
         self._save(game)
@@ -333,7 +415,7 @@ class Multiplayer:
         if game.status == mp.PLACING:
             game.end(None, mp.END_CANCELLED, now)
             self._close(game)
-            await respond(Reply(self._info_screen(t("mp_cancelled_you"))))
+            await respond(Reply(self._info_screen(t("mp_cancelled_you"), vs_ai=game.vs_ai)))
             await self._push_screen(game, other, self._info_screen(t("mp_cancelled_them")))
             return
         if game.status != mp.ACTIVE:
@@ -350,11 +432,13 @@ class Multiplayer:
     # --- таймеры ---
 
     def _schedule(self, game: mp.MpGame) -> None:
-        if game.status == mp.ACTIVE and game.time_limit:
+        """Задача текущего хода: ход компьютера или таймер хода игрока; таймеры расстановки."""
+        if game.status == mp.ACTIVE and (game.time_limit or game.is_ai(game.turn)):
             old = self.turn_tasks.pop(game.code, None)
-            if old is not None and not old.done():
+            if old is not None and not old.done() and old is not asyncio.current_task():
                 old.cancel()
-            self.turn_tasks[game.code] = self.mgr._spawn(self._turn_timer(game, game.turn_no))
+            job = self._ai_move if game.is_ai(game.turn) else self._turn_timer
+            self.turn_tasks[game.code] = self.mgr._spawn(job(game, game.turn_no))
         if game.status == mp.PLACING:
             for side in game.sides:
                 key = (game.code, side.user_id)
@@ -390,6 +474,39 @@ class Multiplayer:
                 for side in game.sides:
                     await self._push(game, side)
 
+    async def _ai_move(self, game: mp.MpGame, turn_no: int) -> None:
+        """Ход компьютера: «думает» ai_think_seconds, стреляет по своей сетке выстрелов."""
+        await self.mgr.sleep(self.mgr.ai_think_seconds)
+        async with self.locks[game.code]:
+            if not self._alive(game) or game.status != mp.ACTIVE or game.turn_no != turn_no:
+                return
+            ai = game.side(mp.AI_USER_ID)
+            # расчёт идёт в другом потоке: ему — копия сетки и свой генератор случайных чисел
+            shots = [list(row) for row in ai.shots]
+            rng = random.Random(self.mgr.rng.random())
+            r, c = await self.mgr.run_cpu(sea_ai.choose_shot, shots, list(game.sizes), game.ai_level, rng)
+            if not self._alive(game) or game.status != mp.ACTIVE or game.turn_no != turn_no:
+                return
+            result = game.fire(ai.user_id, r, c, self.mgr.clock())
+            if result == sea.IGNORED:          # не должно случаться: sea_ai стреляет только в новые клетки
+                logger.error("ai shot ignored: game %s cell %s", game.code, (r, c))
+                game.pass_turn(self.mgr.clock())
+                self._save(game)
+                self.turn_tasks.pop(game.code, None)
+                self._schedule(game)
+                return
+            sunk = game.ship_cells_sunk_by(game.moves[-1]) if result in (sea.SUNK, sea.WON) else []
+            if result == sea.WON:
+                self._settle(game)
+                self.animating.add(game.code)
+            self._save(game)
+            await self._push(game, game.human)
+            if sunk:
+                self.mgr._spawn(self._animate(game, ai.user_id, sunk, len(game.moves)))
+            if result != sea.WON:
+                self.turn_tasks.pop(game.code, None)
+                self._schedule(game)
+
     async def _placement_timer(self, game: mp.MpGame, user_id: int) -> None:
         while True:
             side = game.side(user_id)
@@ -408,7 +525,7 @@ class Multiplayer:
                 game.end(None, mp.END_PLACEMENT_TIMEOUT, now)
                 self._close(game)
                 for s in game.sides:
-                    await self._push_screen(game, s, self._info_screen(t("mp_placement_timeout")))
+                    await self._push_screen(game, s, self._info_screen(t("mp_placement_timeout"), vs_ai=game.vs_ai))
                 return
 
     async def _animate(self, game: mp.MpGame, attacker: int, cells: List[sea.Cell], moves_seen: int) -> None:
@@ -443,6 +560,9 @@ class Multiplayer:
         """Рейтинг Elo по итогу партии: пишется сразу, до анимации — рестарт его не потеряет."""
         if game.winner is None or game.guest is None:
             return
+        if game.vs_ai:
+            self._settle_ai(game)
+            return
         gtype = mp.game_type(game.ship_set)
         winner, loser = game.side(game.winner), game.opponent(game.winner)
         storage, platform, now = self.mgr.storage, self.mgr.platform, self.mgr.clock()
@@ -455,6 +575,23 @@ class Multiplayer:
             storage.upsert_user(platform, s.user_id, s.name, s.chat_id, now)
         storage.save_match(platform, gtype, winner.user_id, loser.user_id,
                            {winner.user_id: winner.rating, loser.user_id: loser.rating}, now)
+
+    def _settle_ai(self, game: mp.MpGame) -> None:
+        """Бой с компьютером: без Elo — победа или поражение в таблицу и партия в историю,
+        чтобы засчитались путь, серия и тренировка дня. Сдача — поражение."""
+        human = game.human
+        storage, platform, now = self.mgr.storage, self.mgr.platform, self.mgr.clock()
+        storage.upsert_user(platform, human.user_id, human.name, human.chat_id, now)
+        before = motivation.journey(storage, platform, human.user_id)
+        storage.save_ai_result(platform, human.user_id, game.ai_level, game.ship_set,
+                               game.winner == human.user_id, now)
+        name = mp.ai_game(game.ship_set)
+        storage.add_score(platform, human.user_id, name, max(0, human.score), None, now)
+        after = motivation.journey(storage, platform, human.user_id)
+        events = motivation.diff(before, after, name)
+        human.journey_lines = motivation.result_lines(events, after)
+        human.next_training = events.next_training
+        self.mgr.partia_saved(human.user_id, events, after)
 
     def _close(self, game: mp.MpGame) -> None:
         """Партия кончилась: в БД — итог, из памяти и таймеров — вон (если не мигает последний корабль)."""
@@ -527,8 +664,11 @@ class Multiplayer:
         if game.status == mp.PLACING:
             return self._placement_screen(game, side)
         if game.status == mp.CANCELLED:
-            key = "mp_placement_timeout" if game.end_reason == mp.END_PLACEMENT_TIMEOUT else "mp_invite_cancelled"
-            return self._info_screen(t(key))
+            if game.end_reason == mp.END_PLACEMENT_TIMEOUT:
+                key = "mp_placement_timeout"
+            else:
+                key = "mp_cancelled_you" if game.vs_ai else "mp_invite_cancelled"
+            return self._info_screen(t(key), vs_ai=game.vs_ai)
         return self._board_screen(game, side, highlight)
 
     def _invite_screen(self, game: mp.MpGame) -> Screen:
@@ -580,11 +720,13 @@ class Multiplayer:
         lines = [t(key[0] if won else key[1], score=side.score, max=mp.MAX_TIMEOUTS)]
         if side.rating is not None:
             lines.append(t("mp_rating", rating=side.rating, delta=f"{side.rating_delta:+d}"))
+        if side.journey_lines:
+            lines += [""] + side.journey_lines
         return lines
 
     def _notice_screen(self, game: mp.MpGame, side: mp.Side) -> Screen:
         return Screen("\n".join(self._result_lines(game, side)),
-                      [[Button(t("btn_mp_again"), "mp")], menu_row()])
+                      [[again_button(game.vs_ai)], menu_row()])
 
     def _board_screen(self, game: mp.MpGame, side: mp.Side, highlight=None) -> Screen:
         other = game.opponent(side.user_id)
@@ -596,6 +738,8 @@ class Multiplayer:
             lines += self._result_lines(game, side)
         elif game.status == mp.FINISHED:
             lines.append(t("mp_game_over"))
+        elif game.is_ai(game.turn):
+            lines.append(t("ai_thinking"))
         else:
             turn = t("mp_your_turn") if game.turn == side.user_id else t("mp_their_turn")
             left = game.seconds_left(now)
@@ -640,7 +784,10 @@ class Multiplayer:
         payload = (lambda r, c: "noop") if result_shown else (lambda r, c: data("mpf", game.code, r, c))
         rows = [[Button(symbol(r, c), payload(r, c)) for c in range(sea.COLS)] for r in range(sea.ROWS)]
         if result_shown:
-            rows.append([Button(t("btn_mp_again"), "mp")])
+            rows.append([again_button(game.vs_ai)])
+            if side.next_training:
+                rows.append([Button(t("btn_daily_next", title=TITLES[side.next_training]),
+                                    motivation.play_payload(side.next_training))])
             rows.append(menu_row())
         elif game.status == mp.ACTIVE:
             rows.append([Button(t("btn_surrender"), data("mpg", game.code))] + menu_row())

@@ -66,7 +66,7 @@ async def test_failure_shows_place_screen_and_transcript():
     msg = str(e.value)
     assert "x.scenario:5 — «Ждём не то»" in msg
     assert "ошибка: на экране нет «Шахматы»" in msg
-    assert "[Полный: 4, 3×2, 2×3, 1×4]" in msg          # экран игрока
+    assert "[🤖 Играть с компьютером]" in msg          # экран игрока
     assert "4  [Тестер] жму Морской бой" in msg           # переписка
 
 

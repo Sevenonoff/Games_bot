@@ -22,7 +22,7 @@ from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
 from .sessions import COUNTDOWN_FROM, DONE, GAMES, INPUT, PREVIEW, REVIEW, MemoSession, Player, Session, TimedSession
 from .storage import Storage
-from .texts import TITLES, days_word, t
+from .texts import TITLES, days_word, t, wins_word
 from .ui import Button, Reply, Screen, data
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,10 @@ REVIEW_SECONDS = 2.0      # разбор ошибки (найденные кле
 ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
 MP_BLINK_SECONDS = 0.4    # мигание потопленного корабля в бою с другом
-RECORD_GAMES = ("memo", "matrix", "tower", "path", "sea_full", "sea_reduced", "mp_full", "mp_reduced")
+AI_THINK_SECONDS = 1.0    # пауза перед ходом компьютера
+RECORD_GAMES = ("memo", "matrix", "tower", "path", "ai_normal", "ai_advanced", "mp_full", "mp_reduced")
 RATING_GAMES = ("mp_full", "mp_reduced")   # бой с другом: таблица — рейтинг Elo, а не рекорды
+AI_GAMES = {"ai_normal": "normal", "ai_advanced": "advanced"}   # бой с компьютером: таблица побед
 
 Respond = Callable[[Reply], Awaitable[Any]]
 Push = Callable[[Any, Screen], Awaitable[None]]
@@ -82,13 +84,18 @@ class Manager:
                  debug_users: Iterable[int] = (),
                  send: Optional[Send] = None,
                  start_link: Callable[[str], str] = lambda param: param,
-                 mp_blink_seconds: float = MP_BLINK_SECONDS):
+                 mp_blink_seconds: float = MP_BLINK_SECONDS,
+                 ai_think_seconds: float = AI_THINK_SECONDS,
+                 run_cpu: Optional[Callable[..., Awaitable[Any]]] = None):
         self.storage = storage
         self.platform = platform
         self.push = push
         self.send = send
         self.start_link = start_link          # ссылка на бота с ?start=<param>: бой с другом, приглашение в друзья
         self.mp_blink_seconds = mp_blink_seconds
+        self.ai_think_seconds = ai_think_seconds
+        # тяжёлый расчёт (ход компьютера) — в потоке, чтобы бот не замирал; тесты считают на месте
+        self.run_cpu = run_cpu or asyncio.to_thread
         self.clock = clock
         self.rng = rng or random.Random()
         self.sleep = sleep
@@ -166,6 +173,10 @@ class Manager:
         if action == "new" and len(parts) > 1 and parts[1] in GAMES:
             s = self.start_session(player, parts[1])
             return Reply(s.screen()), s
+        if action == "new" and len(parts) > 1 and parts[1].startswith("sea_"):
+            # «найди корабли» заменена боем с компьютером: старые кнопки ведут в морской бой
+            self._abandon(uid)
+            return Reply(self.sea_screen(player)), None
         if action == "noop":
             return Reply(), None
         self._abandon(uid)
@@ -198,16 +209,15 @@ class Manager:
     def start_session(self, player: Player, game: str) -> Session:
         self._abandon(player.user_id)
         s = GAMES[game](secrets.token_hex(3), player, self.storage, self.rng, self.clock)
-        s.on_saved = lambda: self._partia_saved(s)
+        s.on_saved = lambda: self.partia_saved(s.player.user_id, s.motivation_events, s.journey_after)
         if isinstance(s, TimedSession) and s.clock_limited:
             s.round_seconds = self.round_overrides.get(player.user_id, self.round_seconds)
         self.sessions[player.user_id] = s
         return s
 
-    def _partia_saved(self, s: Session) -> None:
+    def partia_saved(self, uid: int, e: Optional[motivation.Events], j: Optional[motivation.Journey]) -> None:
         """Партия записана: уведомления друзьям; новая зона и открытка за серию — отдельными сообщениями."""
         self.notifier.wake()
-        e, j, uid = s.motivation_events, s.journey_after, s.player.user_id
         if e is None or j is None:
             return
         if e.reward:
@@ -365,7 +375,10 @@ class Manager:
         if s is not None and not s.finished:
             return True
         game = self.mp.open_game(uid)
-        return game is not None and game.status != mp.WAITING
+        if game is None or game.status == mp.WAITING:
+            return False
+        # брошенный бой с компьютером (без лимита времени он ждёт вечно) уведомлениям не мешает
+        return not (game.vs_ai and self.clock() - game.turn_started_at > IDLE_SECONDS)
 
     async def send_to(self, uid: int, screen: Screen) -> Any:
         """Новое сообщение игроку в его чат с ботом (chat_id — из users)."""
@@ -441,14 +454,11 @@ class Manager:
         return Screen(text, rows, image=image)
 
     def sea_screen(self, player: Player) -> Screen:
-        mp_button = (Button(t("btn_mp_return"), "mpb") if self.mp.open_game(player.user_id)
-                     else Button(t("btn_mp"), "mp"))
-        return Screen(t("sea_choose"), [
-            [Button(t("btn_sea_full"), data("new", "sea_full"))],
-            [Button(t("btn_sea_reduced"), data("new", "sea_reduced"))],
-            [mp_button],
-            [Button(t("btn_menu"), "menu")],
-        ])
+        if self.mp.open_game(player.user_id):
+            rows = [[Button(t("btn_mp_return"), "mpb")]]
+        else:
+            rows = [[Button(t("btn_ai"), "ai")], [Button(t("btn_mp"), "mp")]]
+        return Screen(t("sea_choose"), rows + [[Button(t("btn_menu"), "menu")]])
 
     def records_menu(self) -> Screen:
         rows = [[Button(TITLES[g], data("rec", g))] for g in RECORD_GAMES]
@@ -457,6 +467,8 @@ class Manager:
     def records_screen(self, player: Player, game: str) -> Screen:
         if game in RATING_GAMES:
             return self.rating_screen(player, game)
+        if game in AI_GAMES:
+            return self.ai_records_screen(player, game)
         top = self.storage.top(self.platform, game)
         lines = [f"🏆 <b>{TITLES[game]}</b>", ""]
         medals = {1: "🥇", 2: "🥈", 3: "🥉"}
@@ -470,6 +482,25 @@ class Manager:
             lines += ["", t("records_mine", score=best)]
         return Screen("\n".join(lines), [
             [Button(t("btn_play"), data("new", game))],
+            [Button(t("btn_records"), "rec"), Button(t("btn_menu"), "menu")],
+        ])
+
+    def ai_records_screen(self, player: Player, game: str) -> Screen:
+        level = AI_GAMES[game]
+        top = self.storage.top_ai(self.platform, level)
+        lines = [t("records_ai", title=TITLES[game]), ""]
+        medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+        for i, (user_id, name, won, lost) in enumerate(top, 1):
+            lines.append(t("records_ai_line", place=medals.get(i, f"{i}."), name=html.escape(name, quote=False),
+                           won=won, word=wins_word(won), total=won + lost,
+                           me=" ← вы" if user_id == player.user_id else ""))
+        if not top:
+            lines.append(t("records_empty"))
+        mine = self.storage.ai_results_of(self.platform, player.user_id).get(level)
+        if mine:
+            lines += ["", t("records_ai_mine", won=mine[0], total=sum(mine))]
+        return Screen("\n".join(lines), [
+            [Button(t("btn_ai"), data("ain", level))],
             [Button(t("btn_records"), "rec"), Button(t("btn_menu"), "menu")],
         ])
 

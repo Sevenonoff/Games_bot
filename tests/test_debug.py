@@ -3,7 +3,8 @@ import pytest
 
 from games_core.manager import text_payload
 from games_core.texts import t
-from tests.harness import World, wait_preview
+from games_core import seafight_mp as mp
+from tests.harness import World, mp_game, mp_right_move, wait_preview
 
 ADMIN = 42
 
@@ -48,8 +49,12 @@ async def test_sea_end_one_shot_to_win(world):
     chat = world.chat()
     await chat.send("dbg")
     await chat.click("Выстрел до победы")
-    await chat.play_right()
-    assert "Все корабли потоплены" in chat.text
+    assert "🤖 Компьютер (обычный)" in chat.text and t("mp_your_turn") in chat.text
+    game = mp_game(chat)
+    await chat.tap(*mp_right_move(chat))
+    assert game.status == mp.FINISHED and game.winner == chat.player.user_id
+    await world.time.advance(5)          # мигание последнего корабля, затем итог
+    assert "Победа" in chat.text
 
 
 async def test_memo_end_one_pair_left(world):
@@ -105,9 +110,16 @@ async def test_short_round_only_for_admin(world):
 async def test_reset_clears_records(world):
     chat = world.chat()
     await chat.send("dbg:sea_end")
+    await chat.tap(*mp_right_move(chat))
+    await world.time.advance(5)
+    assert world.storage.top_ai("max", "normal")
+    await chat.send("dbg:memo_end")
     await chat.play_right()
-    assert world.storage.top("max", "sea_reduced")
+    await chat.play_right()
+    await world.time.advance(5)          # собранное поле видно пару секунд, затем итог
+    assert world.storage.top("max", "memo")
     await chat.send("dbg")
     await chat.click("Стереть")
-    assert world.storage.top("max", "sea_reduced") == []
-    assert world.storage.load_progress("max", ADMIN, "sea_reduced").best_score == 0
+    assert world.storage.top_ai("max", "normal") == []
+    assert world.storage.top("max", "memo") == []
+    assert world.storage.load_progress("max", ADMIN, "memo").best_score == 0

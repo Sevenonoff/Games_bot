@@ -7,6 +7,9 @@
 Победный выстрел сразу закрывает партию: ход не переходит, и пока мигает
 последний корабль, проигравший уже не может выстрелить (баг TG-версии до 1.3.1).
 
+Бой с компьютером — та же партия: гость — сторона компьютера (AI_USER_ID, ai_level),
+её корабли расставлены сразу, ходы за неё делает sea_ai по её же сетке выстрелов.
+
 Партия целиком сериализуется в dict (to_dict/from_dict) — так она переживает
 перезапуск бота. Поле 8×7, индексация (r, c), как в seafight_solo.
 """
@@ -32,6 +35,8 @@ ELO_START, ELO_K = 1000, 32
 END_SUNK, END_TIMEOUTS, END_SURRENDER = "sunk", "timeouts", "surrender"
 END_CANCELLED, END_PLACEMENT_TIMEOUT = "cancelled", "placement_timeout"
 
+AI_USER_ID = -1                        # сторона компьютера: настоящих игроков с таким id нет
+
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # без 0/O и 1/I
 CODE_LEN = 6
 
@@ -46,6 +51,11 @@ def new_code(rng: random.Random) -> str:
 def game_type(ship_set: str) -> str:
     """Таблица рейтинга: mp_full / mp_reduced."""
     return f"mp_{ship_set}"
+
+
+def ai_game(ship_set: str) -> str:
+    """Партия с компьютером в истории (scores): ai_full / ai_reduced."""
+    return f"ai_{ship_set}"
 
 
 def elo_delta(winner_rating: int, loser_rating: int, k: int = ELO_K) -> int:
@@ -167,6 +177,8 @@ class Side:
     msg_ref: Any = None                                      # сообщение партии у игрока
     rating: Optional[int] = None                             # рейтинг и изменение после партии
     rating_delta: Optional[int] = None
+    journey_lines: List[str] = field(default_factory=list)   # бой с компьютером: шаги пути и серия в итоге
+    next_training: Optional[str] = None                      # и следующая игра тренировки дня, если не пройдена
 
     def to_dict(self) -> dict:
         d = dict(self.__dict__)
@@ -198,6 +210,7 @@ class MpGame:
     end_reason: Optional[str] = None
     created_at: float = 0.0
     finished_at: Optional[float] = None
+    ai_level: Optional[str] = None        # бой с компьютером: sea_ai.NORMAL / ADVANCED
 
     # --- стороны ---
 
@@ -215,6 +228,19 @@ class MpGame:
     def sizes(self) -> List[int]:
         return sea.SHIP_SETS[self.ship_set]
 
+    @property
+    def vs_ai(self) -> bool:
+        return self.ai_level is not None
+
+    @staticmethod
+    def is_ai(user_id: Optional[int]) -> bool:
+        return user_id == AI_USER_ID
+
+    @property
+    def human(self) -> Side:
+        """Игрок в бою с компьютером (он же host)."""
+        return self.host
+
     # --- подключение и расстановка ---
 
     def join(self, guest: Side, now: float, rng: random.Random) -> None:
@@ -229,6 +255,18 @@ class MpGame:
             for s in self.sides:
                 s.placement = Placement(list(self.sizes))
                 s.placement_deadline = now + PLACEMENT_SECONDS
+
+    def join_ai(self, name: str, now: float, rng: random.Random) -> None:
+        """Соперник — компьютер: его корабли расставлены сразу; ручная расстановка — только у игрока."""
+        self.guest = Side(AI_USER_ID, name, ships=sea.generate_ships(self.sizes, rng), ready=True)
+        if self.mode == AUTO:
+            self.host.ships = sea.generate_ships(self.sizes, rng)
+            self.host.ready = True
+            self.start(now)
+        else:
+            self.status = PLACING
+            self.host.placement = Placement(list(self.sizes))
+            self.host.placement_deadline = now + PLACEMENT_SECONDS
 
     def set_ready(self, user_id: int, now: float) -> bool:
         """Расстановка игрока готова; True — оба готовы и партия началась."""

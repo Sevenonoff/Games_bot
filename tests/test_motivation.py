@@ -128,9 +128,17 @@ def test_daily_training_is_stable_and_varied():
 
 def test_training_bonus_and_any_sea_counts():
     assert covers("sea_full", "sea_reduced") and covers("memo", "memo") and not covers("matrix", "memo")
+    # бой с компьютером заменил «найди корабли»: засчитан любой морской бой, и старые партии тоже
+    assert covers("ai_full", "ai_reduced") and covers("mp_reduced", "ai_reduced") and covers("sea_full", "ai_reduced")
+
+
+def test_daily_sea_starts_computer_game_at_once():
+    from games_core.motivation import play_payload
+    assert play_payload("ai_reduced") == "ain:normal:0:reduced:auto"
+    assert play_payload("memo") == "new:memo"
     uid, day = 7, days.day_key(at(0))
     games = daily_training(uid, day)
-    played = [Partia("sea_full" if g == "sea_reduced" else g, None, at(0, i)) for i, g in enumerate(games)]
+    played = [Partia("ai_full" if g == "ai_reduced" else g, None, at(0, i)) for i, g in enumerate(games)]
     without = replay(played)                        # без uid тренировка не считается
     j = replay(played, uid)
     assert j.trainings == 1 and j.steps == without.steps + TRAINING_STEPS

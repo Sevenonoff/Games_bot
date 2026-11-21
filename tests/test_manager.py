@@ -140,15 +140,12 @@ async def test_memo_quit_is_fail_and_next_partia_keeps_level(env):
     assert storage.load_progress("max", 42, "memo").fail_count == 1
 
 
-async def test_sea_quit_not_recorded(env):
+async def test_ai_wizard_rejects_bad_payloads(env):
     mgr, tr, storage = env
-    await press(mgr, tr, "new:sea_reduced")
-    s = mgr.sessions[PLAYER.user_id]
-    s.screen().validate()
-    await press(mgr, tr, tap_payload(s, 0, 0))
-    reply = await press(mgr, tr, f"q:{s.sid}")
-    assert "не записан" in reply.screen.text
-    assert storage.top("max", "sea_reduced") == []
+    for bad in ("ain", "ain:genius", "ain:normal:7", "ain:normal:0:huge", "ain:normal:0:full:sideways"):
+        reply = await press(mgr, tr, bad)
+        assert "Сложность" in reply.screen.text, bad
+    assert not mgr.mp.games
 
 
 @pytest.mark.parametrize("game", sorted(GAMES))

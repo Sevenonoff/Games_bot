@@ -145,7 +145,12 @@ def friend_screen(mgr: "Manager", player: Player, friend_id: int) -> Screen:
     ratings = sorted(storage.ratings_of(platform, friend_id), key=lambda r: game_order(r[0]))
     for game_type, rating, won, lost in ratings:
         lines.append(t("friend_rating", title=TITLES.get(game_type, game_type), rating=rating, won=won, lost=lost))
-    if not records and not ratings:
+    ai = storage.ai_results_of(platform, friend_id)
+    for level in ("normal", "advanced"):
+        if level in ai:
+            won, lost = ai[level]
+            lines.append(t("friend_ai", title=TITLES[f"ai_{level}"], won=won, total=won + lost))
+    if not records and not ratings and not ai:
         lines.append(t("friend_records_none"))
     return Screen("\n".join(lines), [back, menu_row()])
 

@@ -18,12 +18,17 @@ from tests.harness import World, check_screen, live, mp_game, mp_right_move, rig
 
 STEPS = 2500
 ADMIN = 1
-SEA = ("sea_full", "sea_reduced")
 
 
 def user_scores(world, uid: int) -> int:
     return world.storage.conn.execute(
         "SELECT COUNT(*) FROM scores WHERE user_id = ?", (uid,)).fetchone()[0]
+
+
+def ai_games(world, uid: int) -> int:
+    """Сколько боёв с компьютером у игрока записано (каждый — ещё и строка в scores)."""
+    return world.storage.conn.execute(
+        "SELECT COALESCE(SUM(won + lost), 0) FROM ai_results WHERE user_id = ?", (uid,)).fetchone()[0]
 
 
 async def step(rng, world, chats, log, skill) -> None:
@@ -72,7 +77,8 @@ async def step(rng, world, chats, log, skill) -> None:
 
 # в TG — настройки Manager из sea_fight_aiogram/games_menu.py; кнопки морского боя TG ядру незнакомы
 async def mp_step(rng, chat, log) -> bool:
-    """Бой с другом идёт к развязке: вернуться к партии, расставить корабль, выстрелить в цель."""
+    """Бой с другом или с компьютером идёт к развязке: вернуться к партии, расставить корабль,
+    выстрелить в цель."""
     game = mp_game(chat)
     if game is None or game.status not in (mp.PLACING, mp.ACTIVE) or rng.random() > 0.7:
         return False
@@ -147,11 +153,13 @@ async def test_random_walk(seed, platform):
     chats = [world.chat(ADMIN, "Админ"), world.chat(2, "Игрок")]
     log = deque(maxlen=25)
     finished_games, max_level, skill = set(), 1, {}
+    ai_finished = 0
     mp_moves = {}          # код законченного боя → число ходов в момент окончания
     rating_reset = False   # /dbg reset стирает и рейтинг — сумма рейтингов после него не сходится
     try:
         for i in range(STEPS):
-            before = {c.player.user_id: (live(c), user_scores(world, c.player.user_id)) for c in chats}
+            before = {c.player.user_id: (live(c), user_scores(world, c.player.user_id), ai_games(world, c.player.user_id))
+                      for c in chats}
             await step(rng, world, chats, log, skill)
             assert not world.errors, world.errors
             rating_reset = rating_reset or log[-1].endswith("(dbg:reset)")
@@ -159,18 +167,21 @@ async def test_random_walk(seed, platform):
             check_notices(world)
             for c in chats:
                 uid = c.player.user_id
-                s, scores = before[uid]
+                s, scores, ai_before = before[uid]
                 if c.ref is not None:
                     check_screen(c)
                 if log[-1].endswith("(dbg:reset)") and log[-1].startswith(f"{uid} "):
                     continue
                 if log[-1].startswith("наступает"):
                     continue    # за часы простоя партия убрана без результата — так и задумано
+                ai_delta = ai_games(world, uid) - ai_before
+                assert ai_delta in (0, 1), f"игрок {uid}: записано боёв с компьютером за шаг: {ai_delta}"
+                ai_finished += ai_delta
                 if s is not None and c.session is not s:
                     assert s.finished, "прерванная партия не закрыта"
                 done = s is not None and s.finished
-                recorded = done and (s.game not in SEA or s.board.is_won())
-                assert user_scores(world, uid) - scores == int(recorded), \
+                recorded = done
+                assert user_scores(world, uid) - scores - ai_delta == int(recorded), \
                     f"игрок {uid}: результат {'не ' if recorded else ''}записан ({s and s.game})"
                 if done:
                     finished_games.add(s.game)
@@ -186,3 +197,4 @@ async def test_random_walk(seed, platform):
     # обход не застрял в одном месте
     assert finished_games == set(GAMES), finished_games
     assert max_level > 1
+    assert ai_finished > 0, "ни одного боя с компьютером не доиграно"

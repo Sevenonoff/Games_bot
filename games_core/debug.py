@@ -17,12 +17,12 @@ if TYPE_CHECKING:
 
 DAY = 24 * 3600
 LEVEL_GAMES = ("memo", "matrix", "tower", "path")
-SEA_SETS = {"full": "sea_full", "reduced": "sea_reduced"}
+SEA_SETS = ("full", "reduced")
 
 HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — уровень и серия побед ({games})
 /dbg idle &lt;игра&gt; &lt;дней&gt; — будто последняя игра была N дней назад
 /dbg round &lt;сек&gt; — длина партии матрицы для вас (0 — как у всех)
-/dbg sea_end [full|reduced] — морской бой за выстрел до победы
+/dbg sea_end [full|reduced] — бой с компьютером за выстрел до победы
 /dbg memo_end — мемо, осталась одна пара
 /dbg days &lt;N&gt; — будто вы играли N дней подряд до сегодня (мемо и поездка в полдень)
 /dbg notify — прислать себе уведомление от друзей, напоминание и итоги недели прямо сейчас
@@ -45,7 +45,7 @@ def dispatch(mgr: "Manager", player: Player, args: List[str]) -> Result:
 def menu(mgr: "Manager", player: Player, status: str = "") -> Screen:
     lines = [status, ""] if status else []
     lines.append("🛠 <b>Отладка</b>")
-    for game in LEVEL_GAMES + tuple(SEA_SETS.values()):
+    for game in LEVEL_GAMES:
         p = mgr.storage.load_progress(mgr.platform, player.user_id, game)
         lines.append(f"{TITLES[game]}: ур. {p.level}, серия {p.win_streak}, "
                      f"ошибок {p.fail_count}, рекорд {p.best_score}")
@@ -111,11 +111,10 @@ def set_round(mgr: "Manager", player: Player, args: List[str]) -> Result:
 
 
 def sea_end(mgr: "Manager", player: Player, args: List[str]) -> Result:
-    s = mgr.start_session(player, SEA_SETS[args[0] if args else "reduced"])
-    cells = [cell for ship in s.board.ships for cell in ship]
-    for r, c in cells[:-1]:
-        s.tap(r, c)
-    return Reply(s.screen()), s
+    ship_set = args[0] if args else "reduced"
+    if ship_set not in SEA_SETS:
+        raise ValueError(args)
+    return Reply(mgr.mp.debug_ai_game(player, ship_set)), None
 
 
 def memo_end(mgr: "Manager", player: Player, args: List[str]) -> Result:

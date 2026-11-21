@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple
 from games_core import friends
 from games_core import motivation
 from games_core import path
+from games_core import sea_ai
 from games_core import seafight_mp as mp
 from games_core import seafight_solo as sea
 from games_core.manager import RECORD_GAMES, Manager, start_payload
@@ -28,6 +29,14 @@ from sea_fight_aiogram import games_menu as tg
 
 # виртуальное время тестов — 1970 год: новый путь считаем с самого начала
 motivation.JOURNEY_EPOCH = 0.0
+# компьютер в морском бое: ровно SAMPLE_MIN расстановок на ход, без опоры на настоящие часы —
+# при том же seed он ходит одинаково
+sea_ai.SAMPLE_SECONDS = 0.0
+
+
+async def run_now(fn, *args):
+    """Ход компьютера в тестах считается на месте, а не в потоке: виртуальное время детерминировано."""
+    return fn(*args)
 
 Cell = Tuple[int, int]
 
@@ -195,6 +204,19 @@ def mp_targets(game: mp.MpGame, uid: int, ships: bool) -> List[Cell]:
             if side.shots[r][c] == sea.UNKNOWN and ((r, c) in enemy) == ships]
 
 
+async def wait_ai(world: "World", chat) -> None:
+    """Бой с компьютером: дождаться его хода (и мигания последнего корабля после победы)."""
+    for _ in range(100):
+        game = mp_game(chat)
+        if game is None or not game.vs_ai:
+            return
+        busy = (game.status == mp.ACTIVE and game.is_ai(game.turn)) or game.code in chat.mgr.mp.animating
+        if not busy:
+            return
+        await world.time.advance(0.5)
+    raise AssertionError("компьютер так и не сходил")
+
+
 def mp_right_move(chat) -> Optional[Cell]:
     game = mp_game(chat)
     uid = chat.player.user_id
@@ -227,10 +249,6 @@ def right_move(s: Optional[Session]) -> Optional[Cell]:
         else:
             idx = next(i for i in range(len(b.cards)) if i not in b.matched)
         return divmod(idx, b.cols)
-    for ship in s.board.ships:
-        for r, c in ship:
-            if s.board.shots[r][c] == sea.UNKNOWN:
-                return r, c
     return None
 
 
@@ -286,7 +304,7 @@ def wrong_move(s: TimedSession) -> Cell:
 
 
 def wrong_moves(s: Session) -> List[Cell]:
-    """Нажатия, которые дают ошибку: промах в матрице, башне, морском бое; несовпавшая пара в мемо."""
+    """Нажатия, которые дают ошибку: промах в матрице, башне; несовпавшая пара в мемо."""
     if isinstance(s, TimedSession):
         return [wrong_move(s)]
     if s.game == "memo":
@@ -299,8 +317,7 @@ def wrong_moves(s: Session) -> List[Cell]:
         second = next((i for i in hidden if b.cards[i] != b.cards[first]), None)
         assert second is not None, "осталась одна пара — ошибиться нельзя"
         return [divmod(i, b.cols) for i in taps + [second]]
-    return [next((r, c) for r in range(s.board.rows) for c in range(s.board.cols)
-                 if s.board.shots[r][c] == sea.UNKNOWN and s.board.ship_at((r, c)) is None)]
+    raise AssertionError(f"не знаю, как ошибиться в {s.game}")
 
 
 class World:
@@ -327,7 +344,7 @@ class World:
         host = "https://t.me/test_bot" if self.platform == "tg" else "https://max.ru/test_bot"
         mgr = Manager(self.storage, self.platform, self.messenger.push, clock=self.time,
                       rng=self.rng, sleep=self.time.sleep, send=self.send,
-                      start_link=lambda param: f"{host}?start={param}",
+                      start_link=lambda param: f"{host}?start={param}", run_cpu=run_now,
                       **self._options)
         spawn = mgr._spawn
 
@@ -420,7 +437,7 @@ FRIEND_CODE = f"[{mp.CODE_ALPHABET}]{{{friends.CODE_LEN}}}"
 KNOWN_PAYLOAD = re.compile(
     r"^(menu|sea|sea_rec|rec|noop|jr(:\d+)?|day|prog|bdg|dbg(:\w+)*|mp|mpb|hr(:[a-z]+)?|hrb:[a-z]+"
     rf"|fr(:\d+)?|fri|frs:\d+|frj:{FRIEND_CODE}|set(:fn|:wk|:rm(:(off|\d+))?)?"
-    r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?"
+    r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?|ai|ain:(normal|advanced)(:\d+(:(full|reduced)(:(auto|manual))?)?)?"
     rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+"
     rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"
     r"|q:[0-9a-f]{6}|b:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")

@@ -20,7 +20,7 @@ from games_core.ui import BLANK, Screen
 from games_core.manager import text_payload
 from games_core.sessions import PATH_EMPTY, TimedSession
 from games_core import seafight_mp as mp
-from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, mp_targets, path_detour,
+from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, wait_ai, mp_targets, path_detour,
                            path_middle_first, right_move, settle, wait_preview, win_round, wrong_moves)
 
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
@@ -220,7 +220,13 @@ async def do_tap_blank(world: World, chat: Chat) -> None:
 
 
 async def right_once(world: World, chat: Chat) -> None:
-    if mp_game(chat) is not None:
+    game = mp_game(chat)
+    if game is not None and game.vs_ai:
+        await wait_ai(world, chat)
+        game = mp_game(chat)
+        if game is None or game.status != mp.ACTIVE:
+            return              # партия кончилась, пока ходил компьютер
+    if game is not None:
         cell = mp_right_move(chat)
         assert cell is not None, "в бою с другом сейчас не ваш ход"
         await chat.tap(*cell)
@@ -274,6 +280,10 @@ async def do_play_partia(world: World, chat: Chat) -> None:
     """Довести любую партию до записанного итога: матрица (по таймеру) — раунд и «Закончить»,
     остальные — верными ходами до конца."""
     s = live(chat)
+    game = mp_game(chat)
+    if s is None and game is not None and game.vs_ai:
+        await do_right_until(world, chat, "Победа")
+        return
     assert s is not None, "партии нет"
     if s.game == "matrix":
         await do_win_round(world, chat)

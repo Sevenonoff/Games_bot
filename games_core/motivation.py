@@ -25,12 +25,14 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from . import days, locations
 from .texts import TITLES, days_word, games_word, steps_word, t
+from .ui import data
 
 CATEGORIES = {
     "memo": "memory", "matrix": "memory",
     "tower": "numbers",
     "path": "space",
-    "sea_full": "logic", "sea_reduced": "logic", "mp_full": "logic", "mp_reduced": "logic",
+    "ai_full": "logic", "ai_reduced": "logic", "mp_full": "logic", "mp_reduced": "logic",
+    "sea_full": "logic", "sea_reduced": "logic",     # «найди корабли»: только в истории партий
 }
 CATEGORY_TITLES = {
     "memory": "🧠 Память",
@@ -48,8 +50,9 @@ DAY_STEP_CAP = 8
 STREAK_REWARD_EVERY = 5
 STREAK_REWARD_STEPS = 5
 
-# тренировка дня: по игре из DAILY_SIZE разных категорий; морской бой — малый (полный тоже засчитан)
-DAILY_GAMES = {"memory": ("memo", "matrix"), "numbers": ("tower",), "space": ("path",), "logic": ("sea_reduced",)}
+# тренировка дня: по игре из DAILY_SIZE разных категорий; морской бой — с компьютером, малый
+# (засчитан любой морской бой)
+DAILY_GAMES = {"memory": ("memo", "matrix"), "numbers": ("tower",), "space": ("path",), "logic": ("ai_reduced",)}
 DAILY_SIZE = 3
 TRAINING_STEPS = 1
 DAY = 24 * 3600
@@ -70,6 +73,14 @@ def daily_training(uid: int, day: str) -> Tuple[str, ...]:
     rng = random.Random(f"daily:{uid}:{day}")
     categories = rng.sample(sorted(DAILY_GAMES), DAILY_SIZE)
     return tuple(rng.choice(DAILY_GAMES[c]) for c in categories)
+
+
+def play_payload(game: str) -> str:
+    """Кнопка «играть» в игру из тренировки дня. Бой с компьютером начинается сразу:
+    обычный, без лимита времени, набор из названия игры, автоматическая расстановка."""
+    if game.startswith("ai_"):
+        return data("ain", "normal", 0, game[len("ai_"):], "auto")
+    return data("new", game)
 
 
 def covers(game: str, item: str) -> bool:

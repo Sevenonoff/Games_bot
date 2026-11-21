@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
-from . import matrix, memo, motivation, path, seafight_solo as sea, tower
+from . import matrix, memo, motivation, path, seafight_solo as sea, tower   # sea — символы поля боя
 from .trips import road_weight, trip_lines
 from .progression import Progress, register_fail, register_win, start_partia
 from .scoring import format_multiplier, memo_penalty, round_bonus, tap_points
@@ -64,7 +64,7 @@ class Session:
         self.level = start_partia(self.progress, clock())
         self.score = 0
         self.combo = 0
-        self.over = False                 # партия закончилась сама (победа в морском бое)
+        self.over = False                 # партия закончилась сама
         self.finished = False             # результат сохранён
         self.msg_ref: Any = None          # id сообщения в мессенджере, ставит транспорт
         self.on_saved: Optional[Callable[[], None]] = None   # результат записан: уведомления, картинки пути
@@ -145,7 +145,7 @@ class Session:
         nxt = self.motivation_events.next_training if self.motivation_events else None
         if nxt is not None:
             # тренировка дня не пройдена — следующая её игра одной кнопкой
-            rows.append([Button(t("btn_daily_next", title=TITLES[nxt]), data("new", nxt))])
+            rows.append([Button(t("btn_daily_next", title=TITLES[nxt]), motivation.play_payload(nxt))])
         return Screen("\n".join(text), rows + [[Button(t("btn_menu"), "menu")]])
 
 
@@ -537,56 +537,8 @@ class MemoSession(Session):
         return self._result_screen([line, t("result_level", level=self.progress.level)], is_record)
 
 
-class SeaSession(Session):
-    ship_set = ""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.board = sea.SeaBoard.generate(self.ship_set, self.rng)
-
-    def tap(self, r: int, c: int) -> Optional[str]:
-        result = self.board.fire(r, c)
-        self.score = self.board.score
-        if result == sea.WON:
-            self.over = True
-            return t("note_sunk")
-        return {sea.MISS: t("note_miss"), sea.HIT: t("note_hit"), sea.SUNK: t("note_sunk")}.get(result)
-
-    def ships_left(self) -> int:
-        return sum(1 for ship in self.board.ships
-                   if any(self.board.shots[r][c] != sea.SHOT_SUNK for r, c in ship))
-
-    def screen(self) -> Screen:
-        text = "\n".join([
-            f"<b>{TITLES[self.game]}</b>",
-            t("sea_status", score=self.score, ships=self.ships_left()),
-            "",
-            t("sea_hint"),
-        ])
-        rows = self._field(self.board.rows, self.board.cols,
-                           lambda r, c: SEA_SYMBOLS[self.board.shots[r][c]])
-        return Screen(text, rows + [self._quit_row()])
-
-    def finish(self) -> Screen:
-        self.finished = True
-        if self.board.is_won():
-            is_record = self._save(self.score)
-            return self._result_screen([t("result_sea_won")], is_record)
-        return self._result_screen([t("result_sea_quit")], None)
-
-
-class SeaFullSession(SeaSession):
-    game = "sea_full"
-    ship_set = "full"
-
-
-class SeaReducedSession(SeaSession):
-    game = "sea_reduced"
-    ship_set = "reduced"
-
-
-GAMES = {cls.game: cls for cls in (MemoSession, MatrixSession, TowerSession, PathSession,
-                                   SeaFullSession, SeaReducedSession)}
+# морской бой — в multiplayer.py: с другом и с компьютером
+GAMES = {cls.game: cls for cls in (MemoSession, MatrixSession, TowerSession, PathSession)}
 
 
 def escape(text: str) -> str:
