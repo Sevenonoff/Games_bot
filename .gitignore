@@ -81,3 +81,4 @@ miniapp/dev.db*
 miniapp/node_modules/
 miniapp/test-results/
 miniapp/playwright-report/
+miniapp/tests/e2e/__screenshots__/

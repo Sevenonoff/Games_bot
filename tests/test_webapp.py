@@ -264,3 +264,13 @@ async def test_image_cache_is_bounded(env):
         app.serialize(Screen("x", image=b"\x89PNG" + str(i).encode()))
     assert len(app.images) == webapp.IMAGES_KEPT
     assert (await client.get("/img/0000.png")).status == 404
+
+
+async def test_dbg_notify_comes_as_notice_cards(env):
+    """e2e фронтенда проверяет карточки так: админ шлёт dbg:notify — бот сам пишет игроку."""
+    world, app, client, connect = env
+    world.mgr.debug_users = frozenset({5})
+    web = await connect(dev_user={"id": 5, "name": "Dev"})
+    await web.press("dbg:notify")
+    await web.wait(lambda: len(web.notices) >= 2, "карточки")
+    assert all(n["rows"] for n in web.notices)
