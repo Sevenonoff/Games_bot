@@ -89,9 +89,14 @@ const screen = (over: Partial<Screen> = {}): Screen => ({
   ...over,
 });
 
+// меню — по обеим кнопкам new:memo и sea (tz-m2 §3.5, приёмка M2-1)
 const menuScreen = screen({
   text: "🎮 Игры",
-  rows: [[{ text: "🃏 Мемо", data: "new:memo" }], [{ text: "⚙️ Настройки", data: "set" }]],
+  rows: [
+    [{ text: "🃏 Мемо", data: "new:memo" }],
+    [{ text: "🚢 Морской бой", data: "sea" }],
+    [{ text: "⚙️ Настройки", data: "set" }],
+  ],
 });
 
 const recordsScreen = screen({

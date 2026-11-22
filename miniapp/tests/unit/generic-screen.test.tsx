@@ -1,8 +1,11 @@
 // GenericScreen: ряды кнопок, клетки поля, noop, меню с плитками игр, картинка.
+// Правила меню и основной кнопки — на настоящих кадрах сервера из docs/miniapp/fixtures/.
 import { cleanup, fireEvent, render } from "@testing-library/preact";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GenericScreen, isMenuScreen } from "../../src/app/GenericScreen";
 import type { Screen } from "../../src/protocol";
+import resultMemo from "../../../docs/miniapp/fixtures/result-memo.json";
+import seaResult from "../../../docs/miniapp/fixtures/sea-result.json";
 
 afterEach(cleanup);
 
@@ -51,21 +54,9 @@ describe("ряды кнопок", () => {
     fireEvent.click(button);
     expect(press).not.toHaveBeenCalled();
   });
-
-  it("первая кнопка последнего ряда «Играть»/«Ещё раз»/«Новая партия…» — основная", () => {
-    const screen = make({
-      rows: [
-        [{ text: "🏆 Рекорды", data: "rec" }, { text: "x", data: "y" }],
-        [{ text: "🔁 Ещё раз", data: "new:memo" }, { text: "🏠 Меню", data: "menu" }],
-      ],
-    });
-    const { container } = render(<GenericScreen screen={screen} press={vi.fn()} />);
-    const primary = container.querySelector<HTMLButtonElement>("button.btn.primary");
-    expect(primary?.getAttribute("data-payload")).toBe("new:memo");
-  });
 });
 
-describe("меню", () => {
+describe("меню — по обеим кнопкам new:memo и sea (приёмка M2-1)", () => {
   const menu = make({
     text: "🎮 Игры",
     image: "/img/example.jpg",
@@ -79,8 +70,10 @@ describe("меню", () => {
     ],
   });
 
-  it("меню узнаётся по кнопке new:memo", () => {
+  it("обе кнопки — меню; одной new:memo мало", () => {
     expect(isMenuScreen(menu)).toBe(true);
+    const onlyMemo = make({ rows: [[{ text: "🔁 Ещё раз", data: "new:memo" }]] });
+    expect(isMenuScreen(onlyMemo)).toBe(false);
     expect(isMenuScreen(make({ rows: [[{ text: "🏠 Меню", data: "menu" }]] }))).toBe(false);
   });
 
@@ -104,6 +97,34 @@ describe("меню", () => {
     const { container } = render(<GenericScreen screen={menu} press={vi.fn()} />);
     expect(container.querySelector(".image-box.image-menu")).not.toBeNull();
     expect(container.querySelector(".image-box img")?.getAttribute("src")).toBe("/img/example.jpg");
+  });
+
+  it("кадр result-memo.json: не меню — плиток нет, «Ещё раз» не плитка", () => {
+    const screen = resultMemo as unknown as Screen;
+    expect(isMenuScreen(screen)).toBe(false);
+    const { container } = render(<GenericScreen screen={screen} press={vi.fn()} />);
+    expect(container.querySelector(".tile")).toBeNull();
+    expect(container.querySelector('button.btn[data-payload="new:memo"]')).not.toBeNull();
+  });
+});
+
+describe("основная кнопка — первая подходящая в любом ряду (приёмка M2-1)", () => {
+  it("кадр result-memo.json: «🔁 Ещё раз» — основная, хотя под ней ряд «Меню»", () => {
+    const { container } = render(<GenericScreen screen={resultMemo as unknown as Screen} press={vi.fn()} />);
+    const primary = container.querySelector<HTMLButtonElement>("button.btn.primary");
+    expect(primary?.getAttribute("data-payload")).toBe("new:memo");
+  });
+
+  it("кадр sea-result.json: «🤖 Новая партия с компьютером» — основная", () => {
+    const { container } = render(<GenericScreen screen={seaResult as unknown as Screen} press={vi.fn()} />);
+    const primary = container.querySelector<HTMLButtonElement>("button.btn.primary");
+    expect(primary?.getAttribute("data-payload")).toBe("ai");
+  });
+
+  it("экран без таких кнопок — основной кнопки нет", () => {
+    const screen = make({ rows: [[{ text: "🏠 Меню", data: "menu" }]] });
+    const { container } = render(<GenericScreen screen={screen} press={vi.fn()} />);
+    expect(container.querySelector("button.btn.primary")).toBeNull();
   });
 });
 

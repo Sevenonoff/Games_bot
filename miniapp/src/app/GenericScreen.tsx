@@ -6,15 +6,28 @@ import { useState } from "preact/hooks";
 import type { Button, Screen } from "../protocol";
 import { renderTelegramHtml } from "./html";
 
-/** Меню узнаём по кнопке «Мемо» (tz-m2 §3.5). */
+/** Меню узнаём по обеим кнопкам — «Мемо» и «Морской бой» (tz-m2 §3.5, приёмка M2-1):
+ *  одной new:memo мало: её несут и «Ещё раз» на итоге, и «Играть» в рекордах мемо. */
 export function isMenuScreen(screen: Screen): boolean {
-  return screen.rows.some((row) => row.some((b) => b.data === "new:memo"));
+  const datas = new Set(screen.rows.flat().map((b) => b.data));
+  return datas.has("new:memo") && datas.has("sea");
 }
 
-/** Основная кнопка экрана: первая в последнем ряду, если это «Играть»/«Ещё раз»/«Новая партия…». */
-function isPrimary(text: string): boolean {
-  const label = text.replace(/^\p{Extended_Pictographic}[\uFE0F]?\s*/u, "").trim();
-  return label === "Играть" || label === "Ещё раз" || label.startsWith("Новая партия");
+/** Подпись без эмодзи в начале: «🔁 Ещё раз» → «Ещё раз». */
+function stripEmoji(text: string): string {
+  return text.replace(/^\p{Extended_Pictographic}[\uFE0F]?\s*/u, "").trim();
+}
+
+/** Основная кнопка экрана: первая кнопка с подписью «Играть»/«Ещё раз»/«Новая партия…»
+ *  в любом ряду (под ней на настоящих экранах ещё стоит ряд «Меню», tz-m2 §3.6). */
+function primaryData(rows: Button[][]): string | null {
+  for (const row of rows) {
+    for (const b of row) {
+      const label = stripEmoji(b.text);
+      if (label === "Играть" || label === "Ещё раз" || label.startsWith("Новая партия")) return b.data;
+    }
+  }
+  return null;
 }
 
 /** Кнопка-плитка игры из меню. */
@@ -27,8 +40,9 @@ const PLACEHOLDER_RATIO = 16 / 9;   // до загрузки место под �
 export function GenericScreen(props: { screen: Screen; press: (payload: string) => void }): VNode {
   const { screen } = props;
   const menu = isMenuScreen(screen);
+  const primary = primaryData(screen.rows);
 
-  // В меню кнопки игр идут плиткой по две; остальные ряды — как есть.
+  // В меню кнопки игр идут плитками по две; остальные ряды — как есть.
   const tiles: Button[] = [];
   const rows: Button[][] = [];
   for (const row of screen.rows) {
@@ -45,21 +59,17 @@ export function GenericScreen(props: { screen: Screen; press: (payload: string) 
           {tiles.map((b, i) => <TileButton key={i} button={b} press={props.press} />)}
         </div>
       )}
-      {rows.map((row, i) => {
-        const last = i === rows.length - 1;
-        const primary = last && row.length <= 4 && isPrimary(row[0].text) ? row[0].data : null;
-        return row.length >= 5 ? (
-          <div class="cells" key={i} style={{ gridTemplateColumns: `repeat(${row.length}, 1fr)` }}>
-            {row.map((b, j) => <CellButton key={j} button={b} press={props.press} />)}
-          </div>
-        ) : (
-          <div class="row" key={i}>
-            {row.map((b, j) => (
-              <PressButton key={j} button={b} press={props.press} primary={b.data === primary} />
-            ))}
-          </div>
-        );
-      })}
+      {rows.map((row, i) => row.length >= 5 ? (
+        <div class="cells" key={i} style={{ gridTemplateColumns: `repeat(${row.length}, 1fr)` }}>
+          {row.map((b, j) => <CellButton key={j} button={b} press={props.press} />)}
+        </div>
+      ) : (
+        <div class="row" key={i}>
+          {row.map((b, j) => (
+            <PressButton key={j} button={b} press={props.press} primary={b.data === primary} />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

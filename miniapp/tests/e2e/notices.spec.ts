@@ -1,20 +1,20 @@
-// Карточки notice: админ (dev_user 1) шлёт press("dbg:notify") вторым соединением —
-// бот присылает уведомление друзей, напоминание и итоги недели. Карточки идут очередью,
-// кнопка карточки работает, крестик закрывает.
+// Карточки notice: админ шлёт press("dbg:notify") вторым соединением — бот присылает
+// уведомление друзей, напоминание и итоги недели. Карточки идут очередью, кнопка
+// карточки работает, крестик закрывает. Админ у каждого проекта свой (DEV_ADMINS=1..4).
 import { expect, test } from "@playwright/test";
-import { openApp, shot, themeOf } from "./fake-telegram";
+import { mainScreen, openApp, projectIndex, shot, themeOf } from "./fake-telegram";
 
-const ADMIN = 1;   // DEV_ADMINS: у id 1 есть /dbg
+const ADMIN_BASE = 1;   // DEV_ADMINS="1 2 3 4" — id 1 + номер проекта
 
 /** Второе соединение того же игрока: hello и press("dbg:notify") ровно один раз, ждём три карточки. */
-async function pressDebugNotify(page: import("@playwright/test").Page): Promise<void> {
-  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+async function pressDebugNotify(page: import("@playwright/test").Page, admin: number): Promise<void> {
+  await page.evaluate((id: number) => new Promise<void>((resolve, reject) => {
     const ws = new WebSocket(`ws://${location.host}/ws`);
     let notices = 0;
     let pressed = false;   // ответ на dbg:notify — тоже screen: жмём только по первому кадру
     const fail = setTimeout(() => reject(new Error("нет трёх карточек за 5 с")), 5000);
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "hello", dev_user: { id: 1, name: "Админ" }, client: "e2e" }));
+      ws.send(JSON.stringify({ type: "hello", dev_user: { id, name: "Админ" }, client: "e2e" }));
     };
     ws.onmessage = (ev: MessageEvent) => {
       const msg = JSON.parse(String(ev.data)) as { type: string };
@@ -32,14 +32,15 @@ async function pressDebugNotify(page: import("@playwright/test").Page): Promise<
       }
     };
     ws.onerror = () => reject(new Error("ws error"));
-  }));
+  }), admin);
 }
 
 test("карточки уведомлений идут очередью", async ({ page }, testInfo) => {
-  await openApp(page, ADMIN, "Админ", themeOf(testInfo.project.name));
-  await expect(page.locator(".tile").first()).toBeVisible();
+  const admin = ADMIN_BASE + projectIndex(testInfo.project.name);
+  await openApp(page, admin, "Админ", themeOf(testInfo.project.name));
+  await expect(mainScreen(page).locator(".tile").first()).toBeVisible();
 
-  await pressDebugNotify(page);
+  await pressDebugNotify(page, admin);
 
   // первая карточка: уведомление от друзей
   const sheet = page.locator(".notice-sheet");

@@ -1,6 +1,6 @@
 # Отчёт M2. Каркас фронтенда Mini App
 
-Ветка `miniapp/m2-shell` (от `main` = `289378a`). Коммиты: `9b1a63d` каркас, `d8d5238` vitest, `800860a` Playwright, отчёт.
+Ветка `miniapp/m2-shell` (от `main` = `289378a`; влит main с приёмкой 1). Коммиты: `9b1a63d` каркас, `d8d5238` vitest, `800860a` Playwright, отчёт. Доработка по `reviews/m2-shell-1.md` — раздел в конце.
 
 ## 1. Что сделано по пунктам ТЗ §3
 
@@ -79,3 +79,33 @@ dist/assets/index-DMuhryNK.js   30.68 kB │ gzip: 11.89 kB
 `01-friends`, `02-settings`, `03-settings-toggled`, `04-menu-again` (друзья/настройки);
 `01-notice-friends`, `02-notice-reminder`, `03-notice-weekly`, `04-notice-done` (карточки);
 `01-offline`, `02-reconnected` (связь).
+
+## 8. Доработка 1 (по `docs/miniapp/reviews/m2-shell-1.md`)
+
+Влит `origin/main` с приёмкой (правки ТЗ §3.5–3.6, `placement.vertical` в fixtures). По пунктам:
+
+1. **Определение меню** — сделано. `isMenuScreen`: меню = экран с **обеими** кнопками `new:memo` и `sea`. Юнит-тест на кадре `fixtures/result-memo.json`: не меню, плиток нет, «Ещё раз» — обычная кнопка; в app-тестах меню-фикстура получила кнопку `sea`.
+2. **Основная кнопка** — сделано. `primaryData`: первая кнопка экрана с подписью без эмодзи «Играть»/«Ещё раз»/«Новая партия…» в любом ряду. Тесты на кадрах `result-memo.json` (→ `new:memo`) и `sea-result.json` (→ `ai`); в e2e итога и рекордов основная кнопка проверяется на классе `primary`.
+3. **Изоляция e2e** — сделано.
+   - 3а: `userId(base, project)` = база теста + номер проекта (0…3); тесты используют базы 101/111/121/131; админ `dbg` — `1 + номер проекта`, в `webServer` добавлено `DEV_ADMINS="1 2 3 4"` (`dev-server.sh` не менялся).
+   - 3б: все кнопки основного экрана ищутся внутри `mainScreen(page)` (`.app > .screen, .app > .placeholder`); перед шагами, где сервер мог прислать карточки, вызывается `dismissNotices(page)` (крестик, пока есть). Попутно найден подводный камень Playwright: цепочный `.locator(A).locator(B)` ищет только потомков A — атрибут на самом элементе A не находит, поэтому для плиток используются составные селекторы (`.tile[data-payload=…]`).
+   - Проверка: `npx playwright test --repeat-each=3` — **60 passed** (5 сценариев × 4 проекта × 3 повтора), три прогона подряд зелёные.
+4. **`placement.vertical: boolean`** — добавлен в `SeaView.placement` (`src/protocol.ts`), по `fixtures/sea-placement-current.json`.
+5. **`cleanup.md`** — дописаны пути Linux: кэш Playwright `~/.cache/ms-playwright`, временные БД e2e `/tmp/tmp.*/`.
+
+Хвост `npm test` после доработки:
+```
+ ✓ tests/unit/connection.test.ts (15 tests)
+ ✓ tests/unit/html.test.tsx (14 tests)
+ ✓ tests/unit/app.test.tsx (10 tests)
+ ✓ tests/unit/generic-screen.test.tsx (13 tests)
+ Test Files  4 passed (4)
+      Tests  52 passed (52)
+```
+
+Хвост `npx playwright test --repeat-each=3` (порт 8449 из-за занятого 8448):
+```
+  ✓ [chromium-light-360] › tests/e2e/menu-memo.spec.ts … (×3)
+  … всего 60 строк ✓ …
+  60 passed (24.9s)
+```

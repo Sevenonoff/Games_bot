@@ -1,9 +1,20 @@
 // Подложка Telegram для e2e: скрипт telegram-web-app.js не грузится с telegram.org
 // (route → пустой ответ), вместо него window.Telegram.WebApp с initData: "",
 // themeParams выбранной темы и счётчиками вызовов для проверок (window.__tg.calls).
-import type { Page, TestInfo } from "@playwright/test";
+//
+// Изоляция прогонов (tz-m2 §5.3, приёмка M2-1): проекты идут параллельно, а у игрока
+// одна открытая партия и общие уведомления — поэтому id игрока уникален для пары
+// «тест + проект»: базовый id теста + номер проекта (0…3).
+import type { Locator, Page, TestInfo } from "@playwright/test";
 
 export type Theme = "light" | "dark";
+
+export const PROJECTS = [
+  { name: "chromium-light-360", viewport: { width: 360, height: 640 } },
+  { name: "chromium-light-414", viewport: { width: 414, height: 896 } },
+  { name: "chromium-dark-360", viewport: { width: 360, height: 640 } },
+  { name: "chromium-dark-414", viewport: { width: 414, height: 896 } },
+];
 
 const THEME_PARAMS: Record<Theme, Record<string, string>> = {
   light: {
@@ -29,6 +40,16 @@ const THEME_PARAMS: Record<Theme, Record<string, string>> = {
 /** Тема проекта: по слову dark/light в его имени. */
 export function themeOf(projectName: string): Theme {
   return projectName.includes("dark") ? "dark" : "light";
+}
+
+/** Номер проекта в PROJECTS (0…3). */
+export function projectIndex(projectName: string): number {
+  return PROJECTS.findIndex((p) => p.name === projectName);
+}
+
+/** dev_user теста: базовый id теста + номер проекта — у каждого окна свой игрок. */
+export function userId(base: number, projectName: string): number {
+  return base + projectIndex(projectName);
 }
 
 type TgCalls = {
@@ -76,7 +97,6 @@ declare global {
   }
 }
 
-/** Порт по ТЗ — 8448; E2E_PORT переопределяет его, если занят (см. playwright.config.ts). */
 export const APP_ORIGIN = `http://127.0.0.1:${process.env.E2E_PORT ?? "8448"}`;
 
 /** Открывает приложение с dev-входом: ?dev_user=<id>&dev_name=<имя>. */
@@ -88,6 +108,20 @@ export async function openApp(page: Page, user: number, name: string, theme: The
   url.searchParams.set("dev_user", String(user));
   url.searchParams.set("dev_name", name);
   await page.goto(url.toString());
+}
+
+/** Основной экран (не карточки notice): кнопки ищем внутри него — сервер вправе
+ *  прислать карточку в любой момент, и её кнопки не должны путаться с экраном. */
+export function mainScreen(page: Page): Locator {
+  return page.locator(".app > .screen, .app > .placeholder");
+}
+
+/** Закрыть карточки-уведомления, если сервер их прислал (итоги недели и т.п.). */
+export async function dismissNotices(page: Page): Promise<void> {
+  const close = page.locator(".notice-sheet .notice-close");
+  for (let i = 0; i < 10 && (await close.count()) > 0; i++) {
+    await close.first().click();
+  }
 }
 
 /** Верный ход игрока по подсказке dev-сервера (tz-m1 §2.6). */

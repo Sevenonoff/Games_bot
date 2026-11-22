@@ -6,11 +6,12 @@
 // пока сеть «отключена». setOffline оставлен как в ТЗ — он честно рвёт всё остальное.
 import { expect, test } from "@playwright/test";
 import type { WebSocketRoute } from "@playwright/test";
-import { openApp, shot, themeOf } from "./fake-telegram";
+import { mainScreen, openApp, shot, themeOf, userId } from "./fake-telegram";
 
-const USER = 105;
+const BASE = 131;
 
 test("разрыв связи — полоса, восстановление — меню", async ({ page }, testInfo) => {
+  const user = userId(BASE, testInfo.project.name);
   const sockets: WebSocketRoute[] = [];
   let broken = false;                 // true — сеть «отключена»: новые соединения не проходят
   await page.routeWebSocket(/\/ws$/, (ws) => {
@@ -22,13 +23,14 @@ test("разрыв связи — полоса, восстановление —
     ws.connectToServer();
   });
 
-  await openApp(page, USER, "Гоша", themeOf(testInfo.project.name));
-  const tiles = page.locator(".tile");
+  await openApp(page, user, "Гоша", themeOf(testInfo.project.name));
+  const screenEl = mainScreen(page);
+  const tiles = screenEl.locator(".tile");
   await expect(tiles.first()).toBeVisible();
 
   // уходим с меню, чтобы после восстановления увидеть именно новый экран
-  await page.locator('button[data-payload="rec"]').click();
-  await expect(page.locator('button[data-payload="rec:memo"]')).toBeVisible();
+  await screenEl.locator('button[data-payload="rec"]').click();
+  await expect(screenEl.locator('button[data-payload="rec:memo"]')).toBeVisible();
 
   // разрыв: полоса появляется через ~1 с
   broken = true;
@@ -42,6 +44,6 @@ test("разрыв связи — полоса, восстановление —
   await page.context().setOffline(false);
   broken = false;
   await expect(page.locator(".offline-bar")).toHaveCount(0, { timeout: 10_000 });
-  await expect(tiles.first()).toBeVisible({ timeout: 10_000 });
+  await expect(mainScreen(page).locator(".tile").first()).toBeVisible({ timeout: 10_000 });
   await shot(page, testInfo, "02-reconnected");
 });

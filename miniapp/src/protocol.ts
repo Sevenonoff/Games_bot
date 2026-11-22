@@ -130,6 +130,7 @@ export interface SeaView {
     sizes: number[];
     fixed: [number, number][][];
     current: [number, number][];
+    vertical: boolean;        // ориентация текущего корабля (для перетаскивания в M4)
     forbidden: [number, number][];
     left: number;
   } | null;
