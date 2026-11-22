@@ -1,0 +1,27 @@
+{
+  "name": "miniapp",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Telegram Mini App для игр бота: каркас M2 (универсальный рендер экранов сервера)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "e2e": "npm run build && playwright test",
+    "e2e:report": "playwright show-report"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.3.0",
+    "preact": "^10.26.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@preact/preset-vite": "^2.10.0",
+    "@testing-library/preact": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.0"
+  }
+}

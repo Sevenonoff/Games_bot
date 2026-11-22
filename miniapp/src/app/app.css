@@ -1,0 +1,344 @@
+/* Каркас M2: одна таблица стилей с переменными темы (themeParams → --bg и т.д., app/theme.ts).
+   Значения на :root — светлая тема Telegram по умолчанию. */
+
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --hint: #707579;
+  --link: #2481cc;
+  --button: #2481cc;
+  --button-text: #ffffff;
+  --secondary-bg: #efeff4;
+  --radius: 12px;
+  --danger: #e53935;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  min-height: 100dvh;
+}
+
+/* --- экран --- */
+
+.screen {
+  padding: 12px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.text {
+  overflow-wrap: break-word;
+}
+
+.text a {
+  color: var(--link);
+}
+
+.text code {
+  background: var(--secondary-bg);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.text pre {
+  background: var(--secondary-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  overflow-x: auto;
+}
+
+.text pre code {
+  background: none;
+  padding: 0;
+}
+
+/* картинка во всю ширину над текстом; в меню — без отступов и со скруглением снизу */
+.image-box {
+  width: 100%;
+  margin: 0 0 12px;
+  background: var(--secondary-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.image-menu {
+  margin: -12px -12px 12px;
+  border-radius: 0 0 20px 20px;
+  background: var(--bg);
+}
+
+.image-box img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.image-box img.loaded {
+  opacity: 1;
+}
+
+/* --- кнопки --- */
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.row .btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.btn {
+  min-height: 44px;
+  padding: 10px 14px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  border: none;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn:active {
+  opacity: 0.75;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--button);
+  color: var(--button-text);
+}
+
+.btn:focus-visible,
+.cell:focus-visible,
+.tile:focus-visible,
+.notice-close:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+/* клетки игрового поля в старом виде: ряд из 5–8 кнопок */
+.cells {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.cell {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  background: var(--secondary-bg);
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  font-size: clamp(18px, 8vw, 30px);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cell:active {
+  opacity: 0.75;
+}
+
+.cell:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* плитки игр в меню: 2 в ряд, крупный эмодзи и название */
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.tile {
+  min-height: 88px;
+  padding: 12px 8px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  border: none;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tile:active {
+  opacity: 0.75;
+}
+
+.tile-emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.tile-name {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* --- заглушка игр (M3/M4) --- */
+
+.soon {
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  background: var(--secondary-bg);
+  color: var(--hint);
+  border-radius: 999px;
+  font-size: 13px;
+  display: inline-block;
+}
+
+/* --- toast --- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: 86vw;
+  padding: 10px 16px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 999px;
+  font-size: 15px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 30;
+  animation: toast-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+/* --- индикатор связи --- */
+
+.offline-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 0;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  z-index: 40;
+}
+
+/* --- карточки-уведомления (bottom sheet) --- */
+
+.notice-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+}
+
+.notice-sheet {
+  position: relative;
+  width: 100%;
+  max-height: 82dvh;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 20px 20px 0 0;
+  animation: sheet-up 0.25s ease-out;
+}
+
+.notice-sheet .screen {
+  padding-top: 48px;
+}
+
+.notice-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--secondary-bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(40%);
+    opacity: 0.4;
+  }
+}
+
+/* --- экран ошибки входа --- */
+
+.auth-error {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 18px;
+}
+
+/* --- меньше движения --- */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
