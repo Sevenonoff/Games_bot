@@ -1,10 +1,10 @@
 {
- "text": "📨 <b>Приглашение готово</b>\n\nПерешлите другу ссылку — по ней он сразу попадёт в партию:\nhttps://t.me/test_bot?start=mp_JVQTRW\n\nИли пусть пришлёт боту код <code>JVQTRW</code>.\n\n📋 Время на ход: 1 мин · Набор: полный · Расстановка: автоматическая",
+ "text": "📨 <b>Приглашение готово</b>\n\nПерешлите другу ссылку — по ней он сразу попадёт в партию:\nhttps://t.me/test_bot?start=mp_MTXFYJ\n\nИли пусть пришлёт боту код <code>MTXFYJ</code>.\n\n📋 Время на ход: 1 мин · Набор: полный · Расстановка: автоматическая",
  "rows": [
   [
    {
     "text": "❌ Отменить приглашение",
-    "data": "mpx:JVQTRW"
+    "data": "mpx:MTXFYJ"
    }
   ],
   [
@@ -17,7 +17,7 @@
  "image": null,
  "view": {
   "kind": "sea",
-  "code": "JVQTRW",
+  "code": "MTXFYJ",
   "set": "full",
   "status": "waiting",
   "title": "⚔️ С другом (полный)",
@@ -416,17 +416,17 @@
   "result": null,
   "placement": null,
   "invite": {
-   "link": "https://t.me/test_bot?start=mp_JVQTRW",
-   "code": "JVQTRW"
+   "link": "https://t.me/test_bot?start=mp_MTXFYJ",
+   "code": "MTXFYJ"
   },
   "actions": {
-   "fire": "mpf:JVQTRW:{r}:{c}",
-   "surrender": "mpg:JVQTRW",
-   "place": "mpp:JVQTRW:{r}:{c}:{o}",
-   "fix": "mpk:JVQTRW",
-   "reset": "mpz:JVQTRW",
-   "ready": "mpy:JVQTRW",
-   "cancel_invite": "mpx:JVQTRW"
+   "fire": "mpf:MTXFYJ:{r}:{c}",
+   "surrender": "mpg:MTXFYJ",
+   "place": "mpp:MTXFYJ:{r}:{c}:{o}",
+   "fix": "mpk:MTXFYJ",
+   "reset": "mpz:MTXFYJ",
+   "ready": "mpy:MTXFYJ",
+   "cancel_invite": "mpx:MTXFYJ"
   }
  }
 }

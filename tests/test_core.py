@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 import pytest
 
@@ -38,12 +39,34 @@ def test_start_from_last_success_level():
     assert p.level == 6 and p.win_streak == 0
 
 
-def test_start_minus_three_after_two_days():
-    p = pr.Progress(level=8, last_success_level=8, last_played_at=0.0)
-    assert pr.start_partia(p, now=pr.IDLE_SECONDS + 1) == 5
-    assert p.last_success_level == 5
-    p = pr.Progress(level=2, last_success_level=2, last_played_at=0.0)
-    assert pr.start_partia(p, now=pr.IDLE_SECONDS + 1) == 1
+def msk(day: int, hour: int) -> float:
+    """Время по Москве: 2026-11-<day> <hour>:00."""
+    return datetime(2026, 11, day, hour, tzinfo=days.TZ).timestamp()
+
+
+def test_start_minus_one_on_new_day():
+    # 23:00 и 01:00 — разные сутки по Москве, хотя прошло 2 часа
+    p = pr.Progress(level=8, last_success_level=8, last_played_at=msk(20, 23))
+    assert pr.start_partia(p, now=msk(21, 1)) == 7
+    assert p.last_success_level == 7
+    # следующая партия в тот же день — без штрафа (last_played_at обновляет сохранение партии)
+    p.last_played_at = msk(21, 1)
+    assert pr.start_partia(p, now=msk(21, 22)) == 7
+
+
+def test_start_new_day_penalty_does_not_grow_with_break():
+    p = pr.Progress(level=8, last_success_level=8, last_played_at=msk(1, 12))
+    assert pr.start_partia(p, now=msk(20, 12)) == 7
+
+
+def test_start_same_day_no_penalty():
+    p = pr.Progress(level=8, last_success_level=8, last_played_at=msk(21, 0))
+    assert pr.start_partia(p, now=msk(21, 23)) == 8
+
+
+def test_start_new_day_not_below_first_level():
+    p = pr.Progress(level=1, last_success_level=1, last_played_at=msk(20, 12))
+    assert pr.start_partia(p, now=msk(21, 12)) == 1
 
 
 def test_win_records_success_level():
@@ -148,10 +171,73 @@ def test_path_solvable_and_fits(level):
         assert rnd.is_shortest()
 
 
-def test_path_bigger_and_denser_with_level():
-    small = path.path_params(1)
-    big = path.path_params(20)
-    assert small[0] * small[1] < big[0] * big[1] and small[2] < big[2] and small[3] < big[3]
+@pytest.mark.parametrize("level", range(1, 46))
+def test_path_route_matches_level(level):
+    """Сложность дороги на уровне ровная: повороты и длина — в диапазонах уровня."""
+    spec = path.path_params(level)
+    misses = []
+    for seed in range(50):
+        rnd = path.PathRound.generate(level, random.Random(seed * 1000 + level))
+        assert (rnd.rows, rnd.cols, len(rnd.blocks)) == (spec.rows, spec.cols, spec.blocks)
+        misses.append(path.band_miss(rnd.turns, spec.turns) + path.band_miss(rnd.shortest, spec.length))
+    assert sum(m == 0 for m in misses) >= 45 and max(misses) <= 1, misses
+
+
+def test_path_field_grows_slowly_route_gets_harder():
+    specs = [path.path_params(level) for level in range(1, 60)]
+    for a, b in zip(specs, specs[1:]):
+        assert b.rows >= a.rows and b.cols >= a.cols and b.blocks >= a.blocks
+        if (b.rows, b.cols) == (a.rows, a.cols):
+            # на том же поле дорога не проще
+            assert b.turns[0] >= a.turns[0] and b.length[0] >= a.length[0]
+    sizes = [(s.rows, s.cols) for s in specs]
+    assert sizes.index((7, 7)) + 1 >= 11                   # 7×7 не раньше 11-го уровня
+    assert all(sizes.count(size) >= 3 for size in set(sizes[:-1]))   # на каждом поле не меньше 3 уровней
+    assert max(s.rows for s in specs) <= path.FIELD_ROWS_LIMIT
+
+
+def route_turns(a, route, b) -> int:
+    cells = [a, *route, b]
+    steps = [(y[0] - x[0], y[1] - x[1]) for x, y in zip(cells, cells[1:])]
+    return sum(s != t for s, t in zip(steps, steps[1:]))
+
+
+def all_shortest_routes(rnd: path.PathRound):
+    """Все кратчайшие дороги перебором (для маленьких полей)."""
+    a, b = rnd.ends
+    out = []
+
+    def walk(route):
+        if len(route) > rnd.shortest:
+            return
+        last = route[-1] if route else a
+        for x in rnd.neighbors(last):
+            if x == b and len(route) == rnd.shortest:
+                out.append(list(route))
+            elif rnd.free(x) and x not in route:
+                walk(route + [x])
+    walk([])
+    return out
+
+
+def test_path_solution_is_simplest_shortest():
+    for seed in range(150):
+        rnd = path.PathRound.generate(1 + seed % 6, random.Random(seed))
+        a, b = rnd.ends
+        routes = all_shortest_routes(rnd)
+        assert rnd.solution in routes
+        assert rnd.turns == route_turns(a, rnd.solution, b) == min(route_turns(a, r, b) for r in routes)
+
+
+def test_path_turns_of_straight_and_bent_roads():
+    straight = path.PathRound(5, 5, ((0, 0), (0, 4)), {(4, 4)})
+    assert straight.solution == [(0, 1), (0, 2), (0, 3)] and straight.turns == 0
+    # из угла в угол кратчайших много, самая простая — с одним поворотом
+    corner = path.PathRound(5, 5, ((0, 0), (3, 3)), {(4, 4)})
+    assert corner.shortest == 5 and corner.turns == 1
+    # препятствие на прямой: обход по нижнему ряду — 2 поворота, а не 4 (через (1,1) и (1,3))
+    detour = path.PathRound(3, 5, ((1, 0), (1, 4)), {(1, 2), (0, 2)})
+    assert detour.solution == [(2, 0), (2, 1), (2, 2), (2, 3), (2, 4)] and detour.turns == 2
 
 
 def straight_round() -> path.PathRound:
