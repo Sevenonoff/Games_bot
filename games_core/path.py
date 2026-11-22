@@ -16,34 +16,70 @@ IGNORED, HIT, CLEARED, MISS = "ignored", "hit", "cleared", "miss"
 FIELD_COLS = 7            # больше кнопок в ряду Max не принимает
 FIELD_ROWS_LIMIT = 14     # 15-й ряд — служебные кнопки
 MIN_ENDS_DISTANCE = 3     # никакая клетка не соседствует и с человеком, и с домом
-GENERATE_TRIES = 500
+GENERATE_TRIES = 3000
 
 # без эмодзи с вариационным селектором: они могут рисоваться как текст
 # человек во весь рост: силуэт заметнее лица
 PEOPLE = ("🚶", "🏃", "🧍", "💃", "🕺")
 HOUSES = ("🏠", "🏡", "🏫", "🏥", "🏰", "🏪")
 
-# уровень: (рядов, колонок, доля красных, мин. длина кратчайшего пути)
+
+@dataclass(frozen=True)
+class PathLevel:
+    """Поле и сложность дороги уровня. Дорога — кратчайшая с наименьшим числом поворотов:
+    её повороты и длина должны попасть в диапазоны уровня."""
+    rows: int
+    cols: int
+    blocks: int               # сколько препятствий
+    turns: Tuple[int, int]    # повороты, от и до (вход от человека и выход к дому тоже считаются)
+    length: Tuple[int, int]   # клеток дороги, от и до
+
+
+# Поле и препятствия растут медленно, а на каждом поле дорога становится сложнее:
+# больше поворотов и длиннее. Диапазоны подобраны замером: каждая комбинация встречается
+# не реже чем на ~2% случайных полей, генератор находит её за доли секунды.
 PATH_LEVELS = {
-    1: (4, 4, 0.20, 2),
-    2: (4, 4, 0.25, 2),
-    3: (5, 5, 0.25, 3),
-    4: (5, 5, 0.30, 3),
-    5: (6, 6, 0.30, 4),
-    6: (6, 6, 0.33, 4),
-    7: (7, 7, 0.33, 5),
+    1: PathLevel(4, 4, 3, (0, 1), (2, 3)),
+    2: PathLevel(4, 4, 3, (1, 1), (3, 4)),
+    3: PathLevel(4, 4, 4, (2, 2), (3, 5)),
+    4: PathLevel(5, 5, 5, (1, 1), (3, 5)),
+    5: PathLevel(5, 5, 5, (2, 2), (4, 6)),
+    6: PathLevel(5, 5, 6, (3, 3), (4, 7)),
+    7: PathLevel(6, 6, 8, (1, 2), (4, 6)),
+    8: PathLevel(6, 6, 8, (2, 3), (5, 7)),
+    9: PathLevel(6, 6, 10, (3, 3), (5, 8)),
+    10: PathLevel(6, 6, 10, (4, 4), (6, 9)),
+    11: PathLevel(7, 7, 12, (2, 2), (5, 8)),
+    12: PathLevel(7, 7, 13, (3, 3), (6, 9)),
+    13: PathLevel(7, 7, 14, (4, 4), (7, 10)),
+    14: PathLevel(7, 7, 15, (5, 5), (8, 12)),
 }
-LATE_DENSITY_MAX = 0.40
+LATE_STEPS = 4            # дальше: блоки по 4 уровня, в блоке поле на ряд больше
+LATE_DENSITY = 0.31       # доля препятствий на поздних уровнях
 
 Cell = Tuple[int, int]
+DIRECTIONS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
 
-def path_params(level: int) -> Tuple[int, int, float, int]:
+def path_params(level: int) -> PathLevel:
     if level in PATH_LEVELS:
         return PATH_LEVELS[level]
-    extra = level - max(PATH_LEVELS)
-    rows = min(FIELD_COLS + (extra + 1) // 2, FIELD_ROWS_LIMIT)
-    return rows, FIELD_COLS, min(0.33 + 0.01 * extra, LATE_DENSITY_MAX), min(5 + extra // 2, 9)
+    extra = max(0, level - max(PATH_LEVELS) - 1)
+    block, step = divmod(extra, LATE_STEPS)
+    last_block = FIELD_ROWS_LIMIT - FIELD_COLS - 1
+    if block > last_block:
+        # поле больше не растёт — остаётся самая сложная дорога самого большого поля
+        block, step = last_block, LATE_STEPS - 1
+    rows = FIELD_COLS + 1 + block
+    turns = 2 + step
+    shortest = turns + 3 + block // 2
+    return PathLevel(rows, FIELD_COLS, round(rows * FIELD_COLS * LATE_DENSITY), (turns, turns),
+                     (shortest, shortest + (4 if turns >= 5 else 3)))
+
+
+def band_miss(value: int, band: Tuple[int, int]) -> int:
+    """На сколько value выходит за диапазон band (0 — внутри)."""
+    return max(band[0] - value, value - band[1], 0)
 
 
 def distance(a: Cell, b: Cell) -> int:
@@ -59,29 +95,34 @@ class PathRound:
     icons: Tuple[str, str] = (PEOPLE[0], HOUSES[0])
     road: List[Cell] = field(default_factory=list)       # клетки дороги в порядке нажатий
     marked: Set[Cell] = field(default_factory=set)       # нажатые человек и дом: вслепую — как дорога
-    solution: List[Cell] = field(default_factory=list)   # одна из кратчайших дорог (для разбора)
+    solution: List[Cell] = field(default_factory=list)   # самая простая из кратчайших дорог (для разбора)
+    _turns: Optional[int] = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         if not self.solution:
-            self.solution = self.shortest_route() or []
+            self.solution = self.simplest_route() or []
 
     @classmethod
     def generate(cls, level: int, rng: random.Random) -> "PathRound":
-        rows, cols, density, min_len = path_params(level)
+        spec = path_params(level)
+        rows, cols = spec.rows, spec.cols
         cells = [(r, c) for r in range(rows) for c in range(cols)]
         icons = (rng.choice(PEOPLE), rng.choice(HOUSES))
-        best = None
+        best, best_miss = None, None
         for _ in range(GENERATE_TRIES):
             a, b = rng.sample(cells, 2)
             if distance(a, b) < MIN_ENDS_DISTANCE:
                 continue
             others = [x for x in cells if x not in (a, b)]
-            blocks = set(rng.sample(others, max(1, round(len(cells) * density))))
+            blocks = set(rng.sample(others, min(spec.blocks, len(others) - 1)))
             rnd = cls(rows, cols, (a, b), blocks, icons)
-            if rnd.solution and len(rnd.solution) >= min_len:
+            if not rnd.solution:
+                continue
+            miss = band_miss(rnd.turns, spec.turns) + band_miss(rnd.shortest, spec.length)
+            if miss == 0:
                 return rnd
-            if rnd.solution and (best is None or len(rnd.solution) > len(best.solution)):
-                best = rnd
+            if best_miss is None or miss < best_miss:
+                best, best_miss = rnd, miss
         if best is not None:
             return best
         # почти невероятно: поле без препятствий, кроме одного в углу подальше от концов
@@ -124,6 +165,69 @@ class PathRound:
     def shortest_route(self) -> Optional[List[Cell]]:
         a, b = self.ends
         return self.route(self.neighbors(a), set(self.neighbors(b)))
+
+    def _distances(self, start: Cell) -> Dict[Cell, int]:
+        """Шаги от start по свободным клеткам; концы достижимы, но сквозь них не пройти."""
+        dist = {start: 0}
+        queue = deque([start])
+        while queue:
+            cell = queue.popleft()
+            for x in self.neighbors(cell):
+                if x not in dist and (self.free(x) or x in self.ends):
+                    dist[x] = dist[cell] + 1
+                    if x not in self.ends:
+                        queue.append(x)
+        return dist
+
+    def simplest_route(self) -> Optional[List[Cell]]:
+        """Кратчайшая дорога с наименьшим числом поворотов (её и проще всего запомнить).
+        Клетки — по порядку от человека к дому, без самих концов."""
+        a, b = self.ends
+        from_a, from_b = self._distances(a), self._distances(b)
+        if b not in from_a:
+            return None
+        total = from_a[b]
+
+        def on_route(cell: Cell, step: int) -> bool:
+            return from_a.get(cell) == step and from_b.get(cell) == total - step
+
+        # лучшее число поворотов до (клетка, направление входа) и откуда пришли
+        best: Dict[Tuple[Cell, int], Tuple[int, Optional[Tuple[Cell, int]]]] = {}
+        layer: List[Tuple[Cell, int]] = []
+        for d, (dr, dc) in enumerate(DIRECTIONS):
+            x = (a[0] + dr, a[1] + dc)
+            if x != b and on_route(x, 1):
+                best[(x, d)] = (0, None)
+                layer.append((x, d))
+        for step in range(1, total):
+            following = []
+            for state in layer:
+                (r, c), d = state
+                turns = best[state][0]
+                for nd, (dr, dc) in enumerate(DIRECTIONS):
+                    x = (r + dr, c + dc)
+                    if not on_route(x, step + 1):
+                        continue
+                    value = turns + (nd != d)
+                    if (x, nd) not in best:
+                        following.append((x, nd))
+                    if (x, nd) not in best or value < best[(x, nd)][0]:
+                        best[(x, nd)] = (value, state)
+            layer = following
+        end = min((s for s in best if s[0] == b), key=lambda s: best[s][0])
+        self._turns = best[end][0]
+        out, state = [], best[end][1]
+        while state is not None:
+            out.append(state[0])
+            state = best[state][1]
+        return out[::-1]
+
+    @property
+    def turns(self) -> int:
+        """Повороты самой простой кратчайшей дороги."""
+        if self._turns is None:
+            self.simplest_route()
+        return self._turns or 0
 
     @property
     def shortest(self) -> int:

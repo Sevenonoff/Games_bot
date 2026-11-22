@@ -90,7 +90,7 @@ async def test_idle_lowers_start_level(world):
     await chat.send("dbg:level:memo:10")
     await chat.send("dbg:idle:memo:3")
     await chat.click("Играть")
-    assert chat.session.progress.level == 7
+    assert chat.session.progress.level == 9    # новый день — на 1 ниже, сколько бы дней ни прошло
 
 
 async def test_short_round_only_for_admin(world):

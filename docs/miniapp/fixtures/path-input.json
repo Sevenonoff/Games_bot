@@ -67,11 +67,11 @@
     "data": "b:a1b2c3"
    },
    {
-    "text": "⠀",
+    "text": "●",
     "data": "t:a1b2c3:1:0"
    },
    {
-    "text": "●",
+    "text": "⠀",
     "data": "t:a1b2c3:1:1"
    },
    {
@@ -253,10 +253,10 @@
     ],
     [
      {
-      "k": "empty"
+      "k": "step"
      },
      {
-      "k": "step"
+      "k": "empty"
      },
      {
       "k": "empty"

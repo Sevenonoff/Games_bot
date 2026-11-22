@@ -3,15 +3,17 @@
 3 выигрыша подряд — уровень +1 (мемо: одно поле в лимит ходов), 2 ошибки — уровень -1.
 Новая партия начинается с уровня, на котором закончилась прошлая
 (last_success_level: последний выигрыш или заработанный/потерянный уровень);
-после перерыва больше 2 суток — на 3 уровня проще.
+первая партия игры в новый день (по Москве) — на 1 уровень проще, как бы долго ни длился
+перерыв; партии подряд в тот же день — без штрафа.
 """
 from dataclasses import dataclass
 from typing import Optional
 
+from . import days
+
 WINS_TO_LEVEL_UP = 3
 FAILS_TO_LEVEL_DOWN = 2
-IDLE_SECONDS = 2 * 24 * 3600
-IDLE_LEVEL_PENALTY = 3
+NEW_DAY_LEVEL_PENALTY = 1
 MIN_LEVEL = 1
 
 
@@ -28,8 +30,8 @@ class Progress:
 def start_partia(p: Progress, now: float) -> int:
     """Выставить уровень начала партии. Возвращает этот уровень."""
     level = max(MIN_LEVEL, p.last_success_level)
-    if p.last_played_at is not None and now - p.last_played_at > IDLE_SECONDS:
-        level = max(MIN_LEVEL, level - IDLE_LEVEL_PENALTY)
+    if p.last_played_at is not None and days.day_key(p.last_played_at) != days.day_key(now):
+        level = max(MIN_LEVEL, level - NEW_DAY_LEVEL_PENALTY)
         p.last_success_level = level
     if level != p.level:
         p.level = level
