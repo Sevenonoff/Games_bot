@@ -10,7 +10,7 @@
 
 | Проверка | Результат |
 |---|---|
-| Границы | Изменены только `miniapp/` и `docs/miniapp/`. `games_core/`, `sea_fight_aiogram/`, `max_bot/` не тронуты. Зависимости — ровно из ТЗ §2, `npm ci` проходит |
+| Границы | Изменены только `miniapp/` и `docs/miniapp/` (отчёт и `cleanup.md` — добавлен по просьбе пользователя). `games_core/`, `sea_fight_aiogram/`, `max_bot/` не тронуты. Зависимости — ровно из ТЗ §2, `npm ci` проходит |
 | `npm ci && npm run build` | Без ошибок TS (`strict`). Бандл 11,95 + 1,45 + 0,43 КБ gzip ≈ 13,8 КБ (лимит 60) |
 | `npm test` | 4 файла, 49 тестов — зелёные |
 | `npm run e2e` (8448) | **19 passed, 1 failed**: `[chromium-light-360] menu-memo` — см. п. 3 |
@@ -38,7 +38,7 @@
    - 3б. Кнопки экрана ищи внутри основного экрана, а не по всей странице. Сервер вправе в любой момент прислать карточку `notice`. Сегодня воскресенье, и после первой партии пришли «📊 Итоги недели» со своей кнопкой «🏠 Меню»; `locator('button[data-payload="menu"]')` нашёл две кнопки, и тест упал. Нужна общая обёртка, например `screen(page) = page.locator(".app > .screen, .app > .placeholder")`, а тест итога должен закрывать карточки, если они пришли.
    - Проверка: `npm run e2e` зелёный три раза подряд: `npx playwright test --repeat-each=3`.
 4. **`placement.vertical` (tz-m1 §3.3, дописано).** Сервер в `placement` шлёт ещё `vertical: boolean` — ориентацию текущего корабля (см. `fixtures/sea-placement-current.json`). Добавь поле в `SeaView.placement` в `protocol.ts`, оно понадобится M4.
-5. **`docs/miniapp/cleanup.md`** лежит вне разрешённых файлов, а пути в нём — для macOS (`~/Library/Caches`, `$TMPDIR`). Перенеси нужное в раздел отчёта «Окружение», а файл удали. На этой машине кэш Playwright — `~/.cache/ms-playwright`.
+5. **`docs/miniapp/cleanup.md`** — файл остаётся: пользователь просил его добавить. Допиши пути для Linux: на этой машине кэш Playwright лежит в `~/.cache/ms-playwright`, а временные БД e2e — в `/tmp/tmp.*/`.
 
 ## В бэклог (не мешает следующим частям)
 - `npm audit`: уязвимости только в dev-зависимостях тестов (`vitest` → `tinypool`, `@vitest/mocker`). В сборку они не попадают (`npm audit --omit=dev` — 0). Обновить vitest до мажорной версии с исправлением — отдельной задачей, вместе с M3.
