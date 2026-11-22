@@ -104,13 +104,14 @@
  "blink": {"board": "own" | "enemy", "cells": [[2, 3], [2, 4]], "frame": "hit" | "sunk"} | null,
  "result": {"won": true, "reason": "sunk" | "timeouts" | "surrender", "score": 90,
             "rating": 1016, "delta": 16, "journey": ["👣 +1 шаг · …"]} | null,
- "placement": {"sizes": [3, 2, 2, 1, 1, 1], "fixed": [[[0, 0], [0, 1], [0, 2]]], "current": [[4, 3], [4, 4]],
+ "placement": {"sizes": [3, 2, 2, 1, 1, 1], "fixed": [[[0, 0], [0, 1], [0, 2]]], "current": [[4, 3], [4, 4]], "vertical": false,
                "forbidden": [[1, 0], …], "left": 154} | null,
  "actions": {"fire": "mpf:ABC234:{r}:{c}", "surrender": "mpg:ABC234",
              "place": "mpp:ABC234:{r}:{c}:{o}", "fix": "mpk:ABC234", "reset": "mpz:ABC234", "ready": "mpy:ABC234"}}
 ```
 - `enemy.cells[*].k == "ship"` бывает только после итога: непотопленные корабли соперника открываются.
 - `blink` — кадр мигания потопленного корабля (сервер шлёт 6 кадров по 0,4 с).
+- `placement.vertical` — ориентация текущего корабля (`current`): `true` — вертикально.
 - Перетаскивание на клиенте (M4) переводится в `place` (центр и ориентация `{o}` = `h` | `v`, см. §2.2а) и `fix`. Ошибка расстановки приходит `note`.
 - Экран приглашения (`status: "waiting"`) несёт `invite: {"link": "…", "code": "ABC234"}`, а `actions.cancel_invite` — его отмену.
 
