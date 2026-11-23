@@ -16,7 +16,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,
-  workers: 4,
+  // Потоков — по умолчанию Playwright (половина ядер): на машине 89.125.106.7 (2 ядра, 2 ГБ)
+  // четыре Chromium разом съедают память и тесты виснут (приёмка M2-2). Больше — E2E_WORKERS=4.
+  workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : undefined,
   retries: 0,
   reporter: [["list"]],
   outputDir: "./test-results",
