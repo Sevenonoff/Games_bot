@@ -2,8 +2,11 @@ import { defineConfig } from "@playwright/test";
 
 // `npm run e2e` сначала собирает приложение (dist/), затем поднимает dev-сервер M1
 // на свежей временной БД — папку dist/assets сервер подхватывает при запуске.
-// У каждой пары «тест + проект» свой dev_user (fake-telegram.ts), админы для dbg-теста —
-// DEV_ADMINS="1 2 3 4", по одному на проект: параллельные окна не мешают друг другу.
+// У каждой пары «тест + проект» свой dev_user (fake-telegram.ts): параллельные окна не мешают
+// друг другу. Диапазоны id (DEV_ADMINS — у кого есть /dbg):
+//   каркас M2 — игроки 101–134, админы 1–4;
+//   игры M3   — игроки 200–299, админы 300–399;
+//   бой M4    — игроки 400–499, админы 500–599.
 // Порт 8448 по ТЗ; если он занят (например, форвардом на другую машину) — E2E_PORT=… npm run e2e.
 // На машине разработки Chromium берёт системные библиотеки из LD_LIBRARY_PATH
 // окружения запуска (на Linux: LD_LIBRARY_PATH=$HOME/.local/lib/playwright-deps npm run e2e).
@@ -27,7 +30,7 @@ export default defineConfig({
   },
   projects: PROJECTS.map((p) => ({ name: p.name, use: { viewport: p.viewport } })),
   webServer: {
-    command: `bash -c 'DEV_ADMINS="1 2 3 4" DEV_DB="$(mktemp -d)/miniapp-e2e.db" DEV_PORT=${port} ./dev-server.sh'`,
+    command: `bash -c 'DEV_ADMINS="1-4 300-399 500-599" DEV_DB="$(mktemp -d)/miniapp-e2e.db" DEV_PORT=${port} ./dev-server.sh'`,
     url: `http://127.0.0.1:${port}/app/`,
     reuseExistingServer: false,
     timeout: 60_000,

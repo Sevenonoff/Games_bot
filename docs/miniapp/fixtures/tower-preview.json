@@ -1,0 +1,287 @@
+{
+ "text": "<b>🚗 Поездка на числах</b> · уровень 1\nРаунд 1 из 6\nОчки: <b>0</b> · серия ×1\n🏁➖➖➖➖➖➖➖➖➖➖🚗\n🚗 Проехали: <b>0 км</b>\n\n👀 Запоминайте!",
+ "rows": [
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "🟨",
+    "data": "t:a1b2c3:0:0"
+   },
+   {
+    "text": "🟨",
+    "data": "t:a1b2c3:0:1"
+   },
+   {
+    "text": "🟨",
+    "data": "t:a1b2c3:0:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "3",
+    "data": "t:a1b2c3:1:0"
+   },
+   {
+    "text": "🟨",
+    "data": "t:a1b2c3:1:1"
+   },
+   {
+    "text": "🟨",
+    "data": "t:a1b2c3:1:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "🟨",
+    "data": "t:a1b2c3:2:0"
+   },
+   {
+    "text": "2",
+    "data": "t:a1b2c3:2:1"
+   },
+   {
+    "text": "1",
+    "data": "t:a1b2c3:2:2"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   },
+   {
+    "text": "⬛",
+    "data": "b:a1b2c3"
+   }
+  ],
+  [
+   {
+    "text": "🏁 Закончить",
+    "data": "q:a1b2c3"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "tower",
+  "title": "🚗 Поездка на числах",
+  "level": 1,
+  "score": 0,
+  "combo": "×1",
+  "actions": {
+   "tap": "t:a1b2c3:{r}:{c}",
+   "quit": "q:a1b2c3",
+   "skip": "t:a1b2c3:0:0"
+  },
+  "phase": "preview",
+  "countdown": 1,
+  "hint": "👀 Запоминайте!",
+  "grid": {
+   "rows": 3,
+   "cols": 3,
+   "cells": [
+    [
+     {
+      "k": "inactive"
+     },
+     {
+      "k": "inactive"
+     },
+     {
+      "k": "inactive"
+     }
+    ],
+    [
+     {
+      "k": "number",
+      "v": "3"
+     },
+     {
+      "k": "inactive"
+     },
+     {
+      "k": "inactive"
+     }
+    ],
+    [
+     {
+      "k": "inactive"
+     },
+     {
+      "k": "number",
+      "v": "2"
+     },
+     {
+      "k": "number",
+      "v": "1"
+     }
+    ]
+   ]
+  },
+  "rounds": {
+   "current": 1,
+   "total": 6
+  },
+  "extra": {
+   "road": 0.0,
+   "km": 0
+  }
+ }
+}

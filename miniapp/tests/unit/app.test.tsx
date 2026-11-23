@@ -77,6 +77,8 @@ function fakeTelegram() {
       notificationOccurred: (type) => { haptics.push(`notify:${type}`); },
       impactOccurred: (style) => { haptics.push(`impact:${style}`); },
     },
+    showConfirm: (_message, callback) => { callback?.(true); },
+    openTelegramLink: () => {},
   };
   return { tg, calls, haptics, backHandlers };
 }

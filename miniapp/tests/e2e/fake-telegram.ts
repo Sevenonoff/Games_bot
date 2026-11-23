@@ -59,10 +59,13 @@ type TgCalls = {
   backHide: number;
   selection: number;
   haptics: string[];
+  confirms: string[];
+  links: string[];
 };
 
 function injectTelegram(arg: { theme: Record<string, string> }): void {
-  const calls: TgCalls = { ready: 0, expand: 0, backShow: 0, backHide: 0, selection: 0, haptics: [] };
+  const calls: TgCalls = { ready: 0, expand: 0, backShow: 0, backHide: 0, selection: 0, haptics: [],
+                          confirms: [], links: [] };
   const backHandlers: Array<() => void> = [];
   window.Telegram = {
     WebApp: {
@@ -86,6 +89,12 @@ function injectTelegram(arg: { theme: Record<string, string> }): void {
         notificationOccurred: (type: string) => { calls.haptics.push(`notify:${type}`); },
         impactOccurred: (style: string) => { calls.haptics.push(`impact:${style}`); },
       },
+      // диалог подтверждения: в тестах всегда «ОК», текст запоминается
+      showConfirm: (message: string, callback?: (ok: boolean) => void) => {
+        calls.confirms.push(message);
+        callback?.(true);
+      },
+      openTelegramLink: (url: string) => { calls.links.push(url); },
     },
   };
   window.__tg = { calls, backHandlers };
@@ -111,9 +120,10 @@ export async function openApp(page: Page, user: number, name: string, theme: The
 }
 
 /** Основной экран (не карточки notice): кнопки ищем внутри него — сервер вправе
- *  прислать карточку в любой момент, и её кнопки не должны путаться с экраном. */
+ *  прислать карточку в любой момент, и её кнопки не должны путаться с экраном.
+ *  Корень экрана игры (M3/M4) — элемент с классом game прямо в .app. */
 export function mainScreen(page: Page): Locator {
-  return page.locator(".app > .screen, .app > .placeholder");
+  return page.locator(".app > .screen, .app > .placeholder, .app > .game");
 }
 
 /** Закрыть карточки-уведомления, если сервер их прислал (итоги недели и т.п.). */
@@ -122,6 +132,33 @@ export async function dismissNotices(page: Page): Promise<void> {
   for (let i = 0; i < 10 && (await close.count()) > 0; i++) {
     await close.first().click();
   }
+}
+
+/** Нажатие от имени игрока вторым соединением, мимо экрана: например, отладочная команда
+ *  админа `dbg:level:matrix:40` (id из DEV_ADMINS). Ждёт ответ сервера на это нажатие.
+ *  Экран в окне приложения при этом не меняется — следующее нажатие в окне берёт новое состояние.
+ *  Вызывать до начала партии: hello второго соединения открывает меню, а уход в меню закрывает партию уровня. */
+export async function serverPress(page: Page, user: number, payload: string): Promise<void> {
+  await page.evaluate(({ id, data }) => new Promise<void>((resolve, reject) => {
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+    let pressed = false;
+    const fail = setTimeout(() => reject(new Error(`нет ответа на ${data} за 5 с`)), 5000);
+    ws.onopen = () => ws.send(JSON.stringify({ type: "hello", dev_user: { id, name: "Тест" }, client: "e2e" }));
+    ws.onmessage = (ev: MessageEvent) => {
+      const msg = JSON.parse(String(ev.data)) as { type: string; seq?: number | null };
+      if (msg.type === "error") reject(new Error(`ошибка сервера на ${data}`));
+      if (msg.type !== "screen") return;
+      if (!pressed) {                       // первый кадр — меню после hello
+        pressed = true;
+        ws.send(JSON.stringify({ type: "press", payload: data, seq: 1 }));
+      } else if (msg.seq === 1) {
+        clearTimeout(fail);
+        ws.close();
+        resolve();
+      }
+    };
+    ws.onerror = () => reject(new Error("ws error"));
+  }), { id: user, data: payload });
 }
 
 /** Верный ход игрока по подсказке dev-сервера (tz-m1 §2.6). */

@@ -14,6 +14,7 @@ from games_core import seafight_mp as mp
 from games_core import seafight_solo as sea
 from games_core.sessions import SEA_SYMBOLS
 from sea_fight_aiogram.webapp import WebApp
+from tests.scenario import do_mp_place
 from tests.harness import World, mp_game, mp_targets, wait_ai, wait_preview, wrong_moves
 
 FIXTURES = Path(__file__).resolve().parent.parent / "docs" / "miniapp" / "fixtures"
@@ -75,9 +76,12 @@ async def collect() -> dict:
         await chat.tap(*wrong_moves(chat.session)[0])
         keep("matrix-review")
 
-        # поездка на числах: ввод и разбор
+        # поездка на числах: отсчёт, показ, ввод и разбор
         await chat.send()
         await chat.click("Поездка")
+        keep("tower-countdown")
+        await world.time.advance(2.05)
+        keep("tower-preview")
         await wait_preview(world, chat)
         await chat.play_right()
         keep("tower-input")
@@ -87,6 +91,7 @@ async def collect() -> dict:
         # проложи дорогу: показ, ввод вслепую, итог, разбор
         await chat.send()
         await chat.click("Проложи дорогу")
+        keep("path-countdown")
         await world.time.advance(2.05)
         keep("path-preview")
         await wait_preview(world, chat)
@@ -133,6 +138,16 @@ async def collect() -> dict:
         for label in ("Морской бой", "Играть с другом", "1 мин", "Полный", "Автоматическая"):
             await chat.click(label)
         keep("sea-invite")
+
+        # бой с другом, ручная расстановка: я готов, соперник ещё расставляет
+        await chat.click("Отменить")
+        for label in ("Играть с другом", "1 мин", "Малый", "Ручная"):
+            await chat.click(label)
+        friend = world.chat(2, "Друг")
+        await friend.start(f"mp_{mp_game(chat).code}")
+        await do_mp_place(world, chat)
+        await chat.click("Готов")
+        keep("sea-waiting-ready")
     finally:
         await world.close()
     return out
@@ -164,9 +179,11 @@ def test_fixture_states_cover_every_phase():
     views = [json.loads(p.read_text(encoding="utf-8"))["view"] for p in FIXTURES.glob("*.json")]
     phases = {(v["kind"], v.get("phase") or v.get("status")) for v in views if v}
     for kind in ("matrix", "path"):
-        for phase in ("countdown" if kind == "matrix" else "preview", "input", "done", "review"):
+        for phase in ("countdown", "preview", "input", "done", "review"):
             assert (kind, phase) in phases, (kind, phase)
-    assert {("sea", s) for s in ("placing", "active", "finished", "waiting")} <= phases
+    for phase in ("countdown", "preview", "input", "review"):
+        assert ("tower", phase) in phases, ("tower", phase)
+    assert {("sea", s) for s in ("placing", "waiting_ready", "active", "finished", "waiting")} <= phases
     assert any(v and v["kind"] == "sea" and v["blink"] for v in views)
     assert any(v and v["kind"] == "sea" and v["thinking"] for v in views)
     assert re.search(SID, (FIXTURES / "memo-play.json").read_text(encoding="utf-8"))

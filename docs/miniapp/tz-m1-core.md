@@ -41,8 +41,8 @@
 
 ### 2.7. Образцы `docs/miniapp/fixtures/`
 Тест `tests/test_miniapp_fixtures.py` проводит партии на виртуальном времени и сохраняет кадр `screen` (с `view`) для каждого состояния из §3:
-- игры: `memo-play`, `memo-mismatch`, `memo-done`, `matrix-countdown`, `matrix-preview`, `matrix-input`, `matrix-done`, `matrix-review`, `tower-input`, `tower-review`, `path-preview`, `path-input`, `path-done`, `path-review`;
-- морской бой: `sea-placement`, `sea-placement-current`, `sea-my-turn`, `sea-ai-thinking`, `sea-their-shot`, `sea-blink`, `sea-result`, `sea-invite`;
+- игры: `memo-play`, `memo-mismatch`, `memo-done`, `matrix-countdown`, `matrix-preview`, `matrix-input`, `matrix-done`, `matrix-review`, `tower-countdown`, `tower-preview`, `tower-input`, `tower-review`, `path-countdown`, `path-preview`, `path-input`, `path-done`, `path-review`;
+- морской бой: `sea-placement`, `sea-placement-current`, `sea-waiting-ready`, `sea-my-turn`, `sea-ai-thinking`, `sea-their-shot`, `sea-blink`, `sea-result`, `sea-invite`;
 - экраны без `view`: `menu`, `sea-menu`, `ai-level`, `result-memo`.
 
 Обычный прогон сверяет образцы с кодом. Если схема поменялась, образцы обновляются тем же коммитом: `UPDATE_FIXTURES=1 .venv/bin/python -m pytest tests/test_miniapp_fixtures.py`. Номер партии в образцах заменён на `a1b2c3`, картинки — на `/img/example.jpg`.

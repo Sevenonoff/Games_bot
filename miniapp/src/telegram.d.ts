@@ -33,6 +33,10 @@ export interface TelegramWebApp {
   onEvent(event: "themeChanged", listener: () => void): void;
   HapticFeedback: TgHapticFeedback;
   BackButton: TgBackButton;
+  /** Системный диалог «ОК / Отмена» (M4: подтверждение сдачи). */
+  showConfirm(message: string, callback?: (ok: boolean) => void): void;
+  /** Открыть ссылку t.me внутри Telegram (M4: «Отправить другу»). */
+  openTelegramLink(url: string): void;
 }
 
 declare global {

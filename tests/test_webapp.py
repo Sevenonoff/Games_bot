@@ -274,3 +274,9 @@ async def test_dbg_notify_comes_as_notice_cards(env):
     await web.press("dbg:notify")
     await web.wait(lambda: len(web.notices) >= 2, "карточки")
     assert all(n["rows"] for n in web.notices)
+
+
+def test_dev_admins_accept_ranges():
+    from sea_fight_aiogram.webapp_dev import parse_ids
+    assert parse_ids("1") == [1]
+    assert parse_ids("1, 2 300-302") == [1, 2, 300, 301, 302]

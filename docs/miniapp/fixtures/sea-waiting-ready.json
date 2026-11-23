@@ -1,0 +1,432 @@
+{
+ "text": "✅ Корабли расставлены! Ждём противника…",
+ "rows": [
+  [
+   {
+    "text": "🏳 Сдаться",
+    "data": "mpg:4UT7Y4"
+   }
+  ],
+  [
+   {
+    "text": "🏠 Меню",
+    "data": "menu"
+   }
+  ]
+ ],
+ "image": null,
+ "view": {
+  "kind": "sea",
+  "code": "4UT7Y4",
+  "set": "reduced",
+  "status": "waiting_ready",
+  "title": "⚔️ С другом (малый)",
+  "score": 0,
+  "opponent": {
+   "name": "Друг",
+   "ai": false
+  },
+  "turn": null,
+  "thinking": false,
+  "timer": null,
+  "timeouts": {
+   "me": 0,
+   "them": 0,
+   "max": 3
+  },
+  "last": [],
+  "own": {
+   "rows": 8,
+   "cols": 7,
+   "cells": [
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "ship"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ]
+   ]
+  },
+  "enemy": {
+   "rows": 8,
+   "cols": 7,
+   "cells": [
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ],
+    [
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     },
+     {
+      "k": "sea"
+     }
+    ]
+   ]
+  },
+  "blink": null,
+  "result": null,
+  "placement": null,
+  "invite": null,
+  "actions": {
+   "fire": "mpf:4UT7Y4:{r}:{c}",
+   "surrender": "mpg:4UT7Y4",
+   "place": "mpp:4UT7Y4:{r}:{c}:{o}",
+   "fix": "mpk:4UT7Y4",
+   "reset": "mpz:4UT7Y4",
+   "ready": "mpy:4UT7Y4",
+   "cancel_invite": "mpx:4UT7Y4"
+  }
+ }
+}

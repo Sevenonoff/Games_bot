@@ -150,7 +150,7 @@ export function App(props: AppProps): VNode {
         ? null
         : screen.view === null
           ? <GenericScreen screen={screen} press={press} />
-          : renderGame(screen, press, ui.note.value)}
+          : renderGame(screen, press, ui.note.value, tg)}
       {ui.note.value !== null && (
         <div class="toast" role="status">{ui.note.value}</div>
       )}
@@ -165,13 +165,11 @@ export function App(props: AppProps): VNode {
   );
 }
 
-function renderGame(screen: Screen, press: (payload: string) => void, note: string | null): VNode {
+function renderGame(screen: Screen, press: (payload: string) => void, note: string | null,
+                    tg: TelegramWebApp | null): VNode {
   const view = screen.view!;
-  const Game = games[view.kind];
-  if (Game !== undefined) {
-    return <Game view={view} screen={screen} press={press} note={note} />;
-  }
-  return <Placeholder view={view} screen={screen} press={press} note={note} />;
+  const Game = games[view.kind] ?? Placeholder;
+  return <Game view={view} screen={screen} press={press} note={note} tg={tg} />;
 }
 
 /** Карточка-уведомление (bottom sheet): текст, картинка и кнопки — тем же универсальным
