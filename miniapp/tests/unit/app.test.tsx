@@ -152,10 +152,15 @@ describe("App и соединение", () => {
     const { container } = makeApp();
     const sock = FakeSocket.created[0]!;
     void open(sock);
+    // sea рисует M4 — единственный вид без компонента после M3
     const view: View = {
-      kind: "memo", title: "🃏 Мемо", level: 1, score: 0, combo: "×1", actions: {},
-      done: false, pairs: { found: 0, total: 3 }, moves: { made: 0, limit: 6 },
-      grid: { rows: 1, cols: 1, cells: [[{ k: "back" }]] },
+      kind: "sea", title: "⚔️ Морской бой", score: 0, actions: {},
+      code: "ABC234", opponent: { name: "🤖", ai: true }, set: "reduced",
+      status: "placing", turn: null, thinking: false, timer: null,
+      timeouts: { me: 0, them: 0, max: 3 }, last: [],
+      own: { rows: 1, cols: 1, cells: [[{ k: "sea" }]] },
+      enemy: { rows: 1, cols: 1, cells: [[{ k: "sea" }]] },
+      blink: null, result: null, placement: null, invite: null,
     };
     void message(sock, { type: "screen", seq: null, note: null, screen: screen({ view }) });
     expect(container.querySelector(".soon")?.textContent).toContain("скоро");

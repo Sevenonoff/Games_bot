@@ -1,0 +1,80 @@
+/* Поездка на числах (tz-m3 §4): дорога с машинкой и клетки-числа. */
+
+/* дорога над полем: финиш слева, машинка едет справа налево (переезд 400 мс) */
+.road {
+  position: relative;
+  flex: 0 0 auto;
+  height: 30px;
+  margin: 4px 16px 0;
+  border-radius: 999px;
+  background: var(--secondary-bg);
+}
+
+.road-finish {
+  position: absolute;
+  left: 6px;
+  bottom: 2px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.road-car {
+  position: absolute;
+  bottom: 2px;
+  font-size: 20px;
+  line-height: 1;
+  transition: right 0.4s ease;
+}
+
+.road-km {
+  flex: 0 0 auto;
+  margin: 2px 16px 0;
+  color: var(--hint);
+  font-size: 13px;
+  text-align: right;
+}
+
+/* клетки: числа крупно в долях клетки */
+.game-tower .gcell.tw {
+  font-weight: 600;
+}
+
+/* жёлтая неактивная (правило пользователя: всегда жёлтые) */
+.game-tower .k-inactive {
+  background: #f2c14e;
+}
+
+/* белая с рубашкой */
+.game-tower .k-hidden {
+  background: var(--secondary-bg);
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, var(--text) 8%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 8%, transparent) 75%),
+    linear-gradient(45deg, color-mix(in srgb, var(--text) 8%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 8%, transparent) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+}
+
+/* белая с числом */
+.game-tower .k-number {
+  background: var(--secondary-bg);
+  color: var(--text);
+}
+
+/* красная: ошибка, в углу правильное число */
+.game-tower .k-wrong {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.game-tower .wrong-num {
+  position: absolute;
+  right: 8%;
+  bottom: 4%;
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .road-car {
+    transition: none;
+  }
+}

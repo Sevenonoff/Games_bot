@@ -3,6 +3,10 @@
 import type { ComponentType } from "preact";
 import type { Screen, View } from "../protocol";
 import type { TelegramWebApp } from "../telegram";
+import { Memo } from "./memo/Memo";
+import { Matrix } from "./matrix/Matrix";
+import { Tower } from "./tower/Tower";
+import { Path } from "./path/Path";
 
 export type GameProps<V> = {
   view: V;
@@ -12,4 +16,9 @@ export type GameProps<V> = {
   tg: TelegramWebApp | null;   // SDK Telegram (вибрация, диалоги); null — страница открыта не в Telegram
 };
 
-export const games: Partial<Record<View["kind"], ComponentType<GameProps<any>>>> = {};
+export const games: Partial<Record<View["kind"], ComponentType<GameProps<any>>>> = {
+  memo: Memo,
+  matrix: Matrix,
+  tower: Tower,
+  path: Path,
+};
