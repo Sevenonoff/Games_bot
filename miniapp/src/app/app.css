@@ -235,11 +235,16 @@ body {
 /* --- toast --- */
 
 .toast {
+  /* left+right+auto-поля вместо left: 50% — иначе ширина ужимается до половины экрана
+     и короткая фраза переносится на две строки */
   position: fixed;
-  left: 50%;
+  left: 16px;
+  right: 16px;
   bottom: calc(24px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  max-width: 86vw;
+  width: fit-content;
+  max-width: calc(100vw - 32px);
+  margin: 0 auto;
+  box-sizing: border-box;
   padding: 10px 16px;
   background: var(--text);
   color: var(--bg);
@@ -248,13 +253,28 @@ body {
   text-align: center;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   z-index: 30;
+  pointer-events: none;   /* только сообщение: нажатия проходят к экрану под ним */
   animation: toast-in 0.2s ease-out;
+}
+
+/* экран игры: сверху поверх шапки, чтобы не закрывать подсказку и «Закончить» */
+.toast.toast-top {
+  top: calc(8px + env(safe-area-inset-top));
+  bottom: auto;
+  animation-name: toast-in-top;
 }
 
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 8px);
+    transform: translateY(8px);
+  }
+}
+
+@keyframes toast-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 }
 

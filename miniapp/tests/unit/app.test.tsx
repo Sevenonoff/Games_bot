@@ -170,6 +170,20 @@ describe("App и соединение", () => {
     void message(sock, { type: "screen", seq: 2, note: "Не ваш ход!", screen: null });
     expect(container.querySelector(".text")?.textContent).toContain("Рекорды");
     expect(container.querySelector(".toast")?.textContent).toBe("Не ваш ход!");
+    expect(container.querySelector(".toast")?.classList).not.toContain("toast-top");
+  });
+
+  it("на экране игры (есть view) toast сверху — не закрывает подсказку и «Закончить»", () => {
+    const { container } = makeApp();
+    const sock = FakeSocket.created[0]!;
+    void open(sock);
+    const view: View = {
+      kind: "memo", title: "🃏 Мемо", level: 1, score: 0, combo: "×1", actions: { tap: "t:x:{r}:{c}", skip: "t:x:0:0", quit: "q:x" },
+      done: false, pairs: { found: 0, total: 1 }, moves: { made: 0, limit: 2 },
+      grid: { rows: 1, cols: 2, cells: [[{ k: "back" }, { k: "back" }]] },
+    };
+    void message(sock, { type: "screen", seq: 1, note: "✅ Пара!", screen: screen({ view }) });
+    expect(container.querySelector(".toast")?.classList).toContain("toast-top");
   });
 });
 

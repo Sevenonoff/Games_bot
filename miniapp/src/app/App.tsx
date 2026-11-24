@@ -152,7 +152,10 @@ export function App(props: AppProps): VNode {
           ? <GenericScreen screen={screen} press={press} />
           : renderGame(screen, press, ui.note.value, tg)}
       {ui.note.value !== null && (
-        <div class="toast" role="status">{ui.note.value}</div>
+        // на экране игры toast сверху, поверх шапки: внизу у игр подсказка и «Закончить»
+        <div class={screen !== null && screen.view !== null ? "toast toast-top" : "toast"} role="status">
+          {ui.note.value}
+        </div>
       )}
       {notices.length > 0 && (
         <NoticeSheet
