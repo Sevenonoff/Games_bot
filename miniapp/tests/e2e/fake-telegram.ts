@@ -169,8 +169,11 @@ export async function hint(user: number): Promise<string | null> {
   return data.payload;
 }
 
-/** Скриншот шага в tests/e2e/__screenshots__/ (Playwright сам создаст папку; в git не кладутся). */
+/** Скриншот шага в tests/e2e/__screenshots__/ (Playwright сам создаст папку; в git не кладутся).
+ *  Имя: <проект>-<spec-файл>-<шаг>.png — одинаковые шаги разных игр («01-review») не затирают
+ *  друг друга. При повторах (--repeat-each) снимок последнего повтора перезаписывает прежние. */
 export async function shot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
   const dir = new URL("./__screenshots__/", import.meta.url).pathname;
-  await page.screenshot({ path: `${dir}${testInfo.project.name}-${name}.png` });
+  const spec = (testInfo.file.split(/[\\/]/).pop() ?? "").replace(/\.spec\.ts$/, "");
+  await page.screenshot({ path: `${dir}${testInfo.project.name}-${spec}-${name}.png` });
 }
