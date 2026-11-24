@@ -199,8 +199,9 @@ exports[`Дорога: образцы всех фаз > фикстура path-co
       </button>
       <svg
         class="path-lines"
-        preserveAspectRatio="none"
-        viewBox="0 0 4 4"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
       />
       <div
         class="countdown-overlay"
@@ -443,22 +444,37 @@ exports[`Дорога: образцы всех фаз > фикстура path-do
       </button>
       <svg
         class="path-lines"
-        preserveAspectRatio="none"
-        viewBox="0 0 4 4"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
       >
         <line
           class="ln-step"
-          x1="0.5"
-          x2="0.5"
-          y1="1.5"
-          y2="2.5"
+          x1="15"
+          x2="15"
+          y1="15"
+          y2="49"
         />
         <line
           class="ln-step"
-          x1="0.5"
-          x2="1.5"
-          y1="2.5"
-          y2="2.5"
+          x1="15"
+          x2="15"
+          y1="49"
+          y2="83"
+        />
+        <line
+          class="ln-step"
+          x1="15"
+          x2="49"
+          y1="83"
+          y2="83"
+        />
+        <line
+          class="ln-step"
+          x1="49"
+          x2="83"
+          y1="83"
+          y2="83"
         />
       </svg>
     </div>
@@ -679,8 +695,9 @@ exports[`Дорога: образцы всех фаз > фикстура path-in
       </button>
       <svg
         class="path-lines"
-        preserveAspectRatio="none"
-        viewBox="0 0 4 4"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
       />
     </div>
   </div>
@@ -910,8 +927,9 @@ exports[`Дорога: образцы всех фаз > фикстура path-pr
       </button>
       <svg
         class="path-lines"
-        preserveAspectRatio="none"
-        viewBox="0 0 4 4"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
       />
     </div>
   </div>
@@ -1139,22 +1157,23 @@ exports[`Дорога: образцы всех фаз > фикстура path-re
       </button>
       <svg
         class="path-lines"
-        preserveAspectRatio="none"
-        viewBox="0 0 4 4"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
       >
         <line
           class="ln-answer"
-          x1="0.5"
-          x2="1.5"
-          y1="2.5"
-          y2="2.5"
+          x1="15"
+          x2="49"
+          y1="83"
+          y2="83"
         />
         <line
           class="ln-answer"
-          x1="1.5"
-          x2="2.5"
-          y1="2.5"
-          y2="2.5"
+          x1="49"
+          x2="83"
+          y1="83"
+          y2="83"
         />
       </svg>
     </div>

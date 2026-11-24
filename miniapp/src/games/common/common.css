@@ -56,10 +56,12 @@
   overflow-y: auto;
   display: flex;
   justify-content: center;
+  align-items: center;   /* маленькое поле — по центру зоны по вертикали */
   padding: 4px 8px;
 }
 
 .field {
+  align-self: center;    /* сетка не тянется по высоте зоны: SVG линий совпадает с клетками */
   display: grid;
   gap: 4px;
   align-content: start;
@@ -118,7 +120,14 @@
   padding: 6px 12px;
   color: var(--hint);
   font-size: 14px;
+  line-height: 1.45;
   text-align: center;
+  /* высота на 3 строки: размер клетки не зависит от длины подсказки (приёмка M3-1 п. 3) */
+  min-height: 75px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .game .quit {

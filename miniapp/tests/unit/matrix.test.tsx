@@ -67,12 +67,23 @@ describe("Матрица: нажатия и таймер", () => {
     expect(p.press).toHaveBeenCalledWith("t:a1b2c3:0:0");
   });
 
-  it("полоска таймера: ширина из кадра, число секунд в шапке", () => {
+  it("полоска таймера: старт из кадра, CSS-переход в 0 за left секунд", () => {
     const { container } = render(<Matrix {...props("input")} />);
     expect(container.querySelector(".gh-right")!.textContent).toContain("60");
     const fill = container.querySelector<HTMLElement>(".timerbar-fill")!;
-    expect(fill.style.width).toBe("100%");
+    expect(fill.style.transition).toContain("60s linear");   // уйдёт в 0 за 60 с
     expect(container.querySelector(".timerbar")!.classList).not.toContain("low");
+  });
+
+  it("overtime: полоска пустая без перехода, красная", () => {
+    const frame = JSON.parse(JSON.stringify(FIXTURES.input)) as Screen;
+    const overtime = frame.view as MatrixView;
+    overtime.timer = { left: 0, total: 60, overtime: true };
+    const { container } = render(<Matrix {...props("input", { view: overtime })} />);
+    const fill = container.querySelector<HTMLElement>(".timerbar-fill")!;
+    expect(fill.style.width).toBe("0%");
+    expect(fill.style.transition).toBe("none");
+    expect(container.querySelector(".timerbar")!.classList).toContain("low");
   });
 
   it("«Закончить» шлёт quit", () => {

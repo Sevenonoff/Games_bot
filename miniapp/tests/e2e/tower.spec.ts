@@ -1,14 +1,14 @@
 // Поездка на числах, e2e (tz-m3 §7.3): партия с дорогой и км, ошибка, поле 14×7 (уровень 80).
 import { expect, test } from "@playwright/test";
+import { adminId, playerId } from "./m3-ids";
 import {
-  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf, userId,
+  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf,
 } from "./fake-telegram";
 
 const RESULT = "Партия окончена";
-/** Честный клик по клетке с данным data-payload (tz-m3 §1.2): после перестроения грида
- *  физическая мышь CDP может попасть в соседнюю клетку — жмём сам узел. */
+/** Клик по клетке с данным data-payload внутри основного экрана (tz-m3 §1.2). */
 async function clickCell(page: import("@playwright/test").Page, payload: string): Promise<void> {
-  await page.locator(`button[data-payload="${payload}"]`).first().evaluate((el: HTMLElement) => el.click());
+  await mainScreen(page).locator(`button[data-payload="${payload}"]`).first().click();
 }
 
 
@@ -32,7 +32,7 @@ async function otherHidden(page: import("@playwright/test").Page, notPayload: st
 
 test("полная партия: раунды, дорога, км, итог", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
-  const user = userId(221 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(4, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   const screenEl = await startTower(page, user, "Анна", testInfo.project.name);
 
   await expect(page.locator(".game-tower")).toBeVisible({ timeout: 8000 });
@@ -71,7 +71,7 @@ test("полная партия: раунды, дорога, км, итог", as
 
 test("ошибка — правильное число в углу, разбор", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
-  const user = userId(222 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(5, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   const screenEl = await startTower(page, user, "Борис", testInfo.project.name);
   await expect(page.locator('.game-tower[data-phase="input"]')).toBeVisible({ timeout: 8000 });
 
@@ -93,7 +93,7 @@ test("ошибка — правильное число в углу, разбор
 });
 
 test("поле максимального уровня (80) влезает без прокрутки", async ({ page }, testInfo) => {
-  const admin = 320 + projectIndex(testInfo.project.name) + testInfo.repeatEachIndex * 25;
+  const admin = adminId(3, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, admin, "Админ", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await serverPress(page, admin, "dbg:level:tower:80");

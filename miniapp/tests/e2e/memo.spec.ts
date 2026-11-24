@@ -1,17 +1,17 @@
 // Мемо, e2e (tz-m3 §7.3): полная партия по подсказке, несовпавшая пара, поле 14×7
 // максимального уровня, 10 партий подряд без роста DOM. id: игроки 201–204, админ 300+.
 import { expect, test } from "@playwright/test";
+import { adminId, playerId } from "./m3-ids";
 import {
-  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf, userId,
+  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf,
 } from "./fake-telegram";
 
 const RESULT = "Партия окончена";
 
 
-/** Честный клик по клетке с данным data-payload (tz-m3 §1.2): после перестроения грида
- *  физическая мышь CDP может попасть в соседнюю клетку — жмём сам узел. */
+/** Клик по клетке с данным data-payload внутри основного экрана (tz-m3 §1.2). */
 async function clickCell(page: import("@playwright/test").Page, payload: string): Promise<void> {
-  await page.locator(`button[data-payload="${payload}"]`).first().evaluate((el: HTMLElement) => el.click());
+  await mainScreen(page).locator(`button[data-payload="${payload}"]`).first().click();
 }
 
 async function startMemo(page: import("@playwright/test").Page, user: number, name: string, theme: string) {
@@ -24,7 +24,7 @@ async function startMemo(page: import("@playwright/test").Page, user: number, na
 
 test("полная партия от меню до итога", async ({ page }, testInfo) => {
   test.setTimeout(90_000);
-  const user = userId(201 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(0, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   const screenEl = await startMemo(page, user, "Анна", testInfo.project.name);
   await expect(page.locator('.game-memo[data-phase="play"]')).toBeVisible();
   await shot(page, testInfo, "01-play");
@@ -52,7 +52,7 @@ test("полная партия от меню до итога", async ({ page },
 
 test("несовпавшая пара закрывается кадром сервера", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
-  const user = userId(202 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(1, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   const screenEl = await startMemo(page, user, "Борис", testInfo.project.name);
 
   const first = await hint(user);
@@ -79,7 +79,7 @@ test("несовпавшая пара закрывается кадром сер
 });
 
 test("поле максимального уровня 14×7 влезает без прокрутки", async ({ page }, testInfo) => {
-  const admin = 305 + projectIndex(testInfo.project.name) + testInfo.repeatEachIndex * 25;
+  const admin = adminId(0, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, admin, "Админ", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await expect(screenEl.locator(".tile").first()).toBeVisible();
@@ -100,7 +100,7 @@ test("поле максимального уровня 14×7 влезает бе
 
 test("10 партий подряд не растят DOM", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
-  const user = userId(203 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(2, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   const screenEl = await startMemo(page, user, "Вера", testInfo.project.name);
   await expect(page.locator(".game-memo .gcell").first()).toBeVisible();
   const first = await page.evaluate(() => document.querySelectorAll("*").length);

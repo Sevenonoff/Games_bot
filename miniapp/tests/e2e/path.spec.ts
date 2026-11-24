@@ -1,17 +1,43 @@
 // Проложи дорогу, e2e (tz-m3 §7.3): показ/ввод/разбор, скрытие препятствий на вводе,
 // линия дороги, ошибка, поле 14×7.
 import { expect, test } from "@playwright/test";
+import { adminId, playerId } from "./m3-ids";
 import {
-  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf, userId,
+  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf,
 } from "./fake-telegram";
 
 const RESULT = "Партия окончена";
-/** Честный клик по клетке с данным data-payload (tz-m3 §1.2): после перестроения грида
- *  физическая мышь CDP может попасть в соседнюю клетку — жмём сам узел. */
+/** Клик по клетке с данным data-payload внутри основного экрана (tz-m3 §1.2). */
 async function clickCell(page: import("@playwright/test").Page, payload: string): Promise<void> {
-  await page.locator(`button[data-payload="${payload}"]`).first().evaluate((el: HTMLElement) => el.click());
+  await mainScreen(page).locator(`button[data-payload="${payload}"]`).first().click();
 }
 
+/** Концы каждой линии дороги лежат внутри клеток поля (SVG-геометрия совпадает с сеткой). */
+async function linesInsideCells(page: import("@playwright/test").Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const svg = document.querySelector<SVGSVGElement>(".game-path .path-lines");
+    if (svg === null) return false;
+    const box = svg.getBoundingClientRect();
+    const [, , vw, vh] = (svg.getAttribute("viewBox") ?? "0 0 0 0").split(" ").map(Number);
+    const cells = [...document.querySelectorAll<HTMLElement>(".game-path .gcell")]
+      .map((c) => c.getBoundingClientRect());
+    const lines = [...svg.querySelectorAll("line")];
+    if (lines.length === 0) return false;
+    const sx = box.width / vw;
+    const sy = box.height / vh;
+    const inside = (px: number, py: number) => {
+      const x = box.left + px * sx;
+      const y = box.top + py * sy;
+      return cells.some((r) =>
+        x >= r.left + 2 && x <= r.right - 2 && y >= r.top + 2 && y <= r.bottom - 2);
+    };
+    return lines.every((line) => {
+      const x1 = Number(line.getAttribute("x1")), y1 = Number(line.getAttribute("y1"));
+      const x2 = Number(line.getAttribute("x2")), y2 = Number(line.getAttribute("y2"));
+      return inside(x1, y1) && inside(x2, y2);
+    });
+  });
+}
 
 async function startPath(page: import("@playwright/test").Page, user: number, name: string, projectName: string) {
   await openApp(page, user, name, themeOf(projectName));
@@ -23,7 +49,7 @@ async function startPath(page: import("@playwright/test").Page, user: number, na
 
 test("полная партия: показ, ввод по линии, дорога готова, итог", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
-  const user = userId(231 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(6, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   const screenEl = await startPath(page, user, "Анна", testInfo.project.name);
 
   await expect(page.locator('.game-path[data-phase="preview"]')).toBeVisible({ timeout: 8000 });
@@ -41,6 +67,8 @@ test("полная партия: показ, ввод по линии, доро�
     if (await page.getByText(RESULT).isVisible({ timeout: 50 }).catch(() => false)) break;
     if (!doneShot && await page.locator('.game-path[data-phase="done"]').isVisible({ timeout: 50 }).catch(() => false)) {
       await expect(screenEl.locator(".ln-step").first()).toBeAttached();   // у SVG-line пустой bbox — видимостью не проверить
+      // линия дороги идёт по клеткам: концы каждого отрезка внутри клеток поля (приёмка M3-1 п. 1)
+      expect(await linesInsideCells(page)).toBe(true);
       await shot(page, testInfo, "04-done");
       doneShot = true;
     }
@@ -67,7 +95,7 @@ test("ошибка — разбор с кратчайшей дорогой пу�
   test.setTimeout(90_000);
   // уровень 5+: у кратчайшей дороги несколько промежуточных клеток — пунктир точно есть
   // (на 1-м уровне решение может быть из одних концов — линий не рисуется)
-  const admin = 335 + projectIndex(testInfo.project.name) + testInfo.repeatEachIndex * 25;
+  const admin = adminId(4, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, admin, "Борис", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await expect(screenEl.locator(".tile").first()).toBeVisible();
@@ -111,7 +139,7 @@ test("ошибка — разбор с кратчайшей дорогой пу�
 });
 
 test("поле максимального уровня 14×7 влезает без прокрутки", async ({ page }, testInfo) => {
-  const admin = 340 + projectIndex(testInfo.project.name) + testInfo.repeatEachIndex * 25;
+  const admin = adminId(5, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, admin, "Админ", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await serverPress(page, admin, "dbg:level:path:40");
@@ -127,4 +155,26 @@ test("поле максимального уровня 14×7 влезает бе
   expect(metrics.cell).toBeGreaterThanOrEqual(30);
   expect(metrics.cells).toBe(14 * 7);
   await shot(page, testInfo, "01-big-field");
+});
+
+test("размер клетки не меняется между фазами (подсказка фиксированной высоты)", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  // уровень 20: подсказка показа — 1 строка, подсказка ввода — 3 (изменила бы высоту зоны)
+  const admin = adminId(6, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
+  await openApp(page, admin, "Дима", themeOf(testInfo.project.name));
+  const screenEl = mainScreen(page);
+  await serverPress(page, admin, "dbg:level:path:20");
+  await screenEl.locator('.tile[data-payload="new:path"]').click();
+  await expect(page.locator('.game-path[data-phase="preview"]')).toBeVisible({ timeout: 8000 });
+
+  const widthAt = () => page.evaluate(
+    () => document.querySelector<HTMLElement>(".game-path .gcell")?.getBoundingClientRect().width ?? 0);
+  const previewWidth = await widthAt();
+  await shot(page, testInfo, "01-preview-45px");
+
+  await expect(page.locator('.game-path[data-phase="input"]')).toBeVisible({ timeout: 8000 });
+  const inputWidth = await widthAt();
+  await shot(page, testInfo, "02-input-45px");
+
+  expect(inputWidth).toBeCloseTo(previewWidth, 0);   // поле не прыгает между фазами
 });

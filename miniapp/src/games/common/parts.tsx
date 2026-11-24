@@ -110,12 +110,14 @@ export function QuitButton(props: { screen: Screen; quit: string; press: (payloa
 }
 
 /** Вибрация сверх каркаса (tz-m3 §1.4): success при переходе кадра в done, error при новой
- *  wrong-клетке, когда note пуст (с note каркас уже провибрировал сам). */
+ *  wrong-клетке, когда note пуст (с note каркас уже провибрировал сам). Начало — первый
+ *  кадр: открыв приложение посреди review/done, не вибрируем задним числом. */
 export function useFrameVibration(tg: TelegramWebApp | null, done: boolean, wrongCount: number, note: string | null): void {
-  const prev = useRef({ done: false, wrong: 0 });
+  const prev = useRef<{ done: boolean; wrong: number } | null>(null);
   useEffect(() => {
     const before = prev.current;
     prev.current = { done, wrong: wrongCount };
+    if (before === null) return;                       // первый кадр — только запомнить
     if (done && !before.done) tg?.HapticFeedback.notificationOccurred("success");
     else if (wrongCount > before.wrong && note === null) tg?.HapticFeedback.notificationOccurred("error");
   }, [tg, done, wrongCount, note]);

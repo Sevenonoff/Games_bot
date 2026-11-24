@@ -1,15 +1,15 @@
 // Матрица памяти, e2e (tz-m3 §7.3): фазы партии, ошибка с разбором, поле 14×7.
 // Партия матрицы идёт по часу (60 с) — для полной партии админу укорачиваем её /dbg round 5.
 import { expect, test } from "@playwright/test";
+import { adminId, playerId } from "./m3-ids";
 import {
-  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf, userId,
+  dismissNotices, hint, mainScreen, openApp, projectIndex, serverPress, shot, themeOf,
 } from "./fake-telegram";
 
 const RESULT = "Партия окончена";
-/** Честный клик по клетке с данным data-payload (tz-m3 §1.2): после перестроения грида
- *  физическая мышь CDP может попасть в соседнюю клетку — жмём сам узел. */
+/** Клик по клетке с данным data-payload внутри основного экрана (tz-m3 §1.2). */
 async function clickCell(page: import("@playwright/test").Page, payload: string): Promise<void> {
-  await page.locator(`button[data-payload="${payload}"]`).first().evaluate((el: HTMLElement) => el.click());
+  await mainScreen(page).locator(`button[data-payload="${payload}"]`).first().click();
 }
 
 
@@ -21,7 +21,7 @@ async function currentPhase(page: import("@playwright/test").Page): Promise<stri
 
 test("полная партия по фазам до итога", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
-  const admin = 300 + projectIndex(testInfo.project.name) + testInfo.repeatEachIndex * 25;   // повторы расходятся по id
+  const admin = adminId(1, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, admin, "Админ", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await serverPress(page, admin, "dbg:round:15");            // партия матрицы — 15 секунд
@@ -47,8 +47,14 @@ test("полная партия по фазам до итога", async ({ page 
     if (phase === "input") {
       // время партии вышло: в overtime раунд не кончается сам — «Заканчиваем» как в боте
       if (await screenEl.locator(".gh-right", { hasText: "Время вышло" }).isVisible({ timeout: 50 }).catch(() => false)) {
-        const quit = await screenEl.locator('button[data-payload^="q:"]').first().getAttribute("data-payload");
-        if (quit !== null) await clickCell(page, quit);
+        // force + повторы: кадры пересоздают кнопку, Playwright не дождётся её «стабильности»
+        const quit = screenEl.locator('button[data-payload^="q:"]').first();
+        for (let k = 0; k < 5; k++) {
+          try {
+            await quit.click({ force: true, timeout: 2000 });
+            break;
+          } catch { /* кнопка пересоздана следующим кадром — пробуем снова */ }
+        }
         break;
       }
       const payload = await hint(admin);
@@ -61,9 +67,15 @@ test("полная партия по фазам до итога", async ({ page 
     await page.waitForTimeout(200);
   }
   // партия в overtime сама не кончается — закрываем, как игрок кнопкой «Закончить»
+  // force + повторы: кадры пересоздают кнопку, Playwright не дождётся её «стабильности»
   if (await page.locator(".game-matrix").isVisible({ timeout: 100 }).catch(() => false)) {
-    const quit = await screenEl.locator('button[data-payload^="q:"]').first().getAttribute("data-payload");
-    if (quit !== null) await clickCell(page, quit);
+    const quit = screenEl.locator('button[data-payload^="q:"]').first();
+    for (let k = 0; k < 5; k++) {
+      try {
+        await quit.click({ force: true, timeout: 2000 });
+        break;
+      } catch { /* кнопка пересоздана следующим кадром — пробуем снова */ }
+    }
   }
   // итог после конца партии может задержаться на запись результатов — ждём подольше
   await expect(page.getByText(RESULT)).toBeVisible({ timeout: 60_000 });
@@ -86,7 +98,7 @@ async function otherCellPayload(
 
 test("ошибка в раунде — разбор с wrong и возврат", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
-  const user = userId(211 + testInfo.repeatEachIndex * 25, testInfo.project.name);
+  const user = playerId(3, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, user, "Борис", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await screenEl.locator('.tile[data-payload="new:matrix"]').click();
@@ -114,7 +126,7 @@ test("ошибка в раунде — разбор с wrong и возврат",
 });
 
 test("поле максимального уровня 14×7 влезает без прокрутки", async ({ page }, testInfo) => {
-  const admin = 310 + projectIndex(testInfo.project.name) + testInfo.repeatEachIndex * 25;
+  const admin = adminId(2, projectIndex(testInfo.project.name), testInfo.repeatEachIndex);
   await openApp(page, admin, "Админ", themeOf(testInfo.project.name));
   const screenEl = mainScreen(page);
   await serverPress(page, admin, "dbg:level:matrix:40");

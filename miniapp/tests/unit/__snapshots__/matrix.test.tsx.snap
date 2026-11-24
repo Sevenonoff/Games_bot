@@ -51,7 +51,7 @@ exports[`Матрица: образцы всех фаз > фикстура matri
   >
     <div
       class="timerbar-fill"
-      style="width: 100%;"
+      style="transition: width 60s linear; width: 0%;"
     />
   </div>
   <div
@@ -183,7 +183,7 @@ exports[`Матрица: образцы всех фаз > фикстура matri
   >
     <div
       class="timerbar-fill"
-      style="width: 100%;"
+      style="transition: width 60s linear; width: 0%;"
     />
   </div>
   <div
@@ -306,7 +306,7 @@ exports[`Матрица: образцы всех фаз > фикстура matri
   >
     <div
       class="timerbar-fill"
-      style="width: 100%;"
+      style="transition: width 60s linear; width: 0%;"
     />
   </div>
   <div
@@ -429,7 +429,7 @@ exports[`Матрица: образцы всех фаз > фикстура matri
   >
     <div
       class="timerbar-fill"
-      style="width: 100%;"
+      style="transition: width 60s linear; width: 0%;"
     />
   </div>
   <div
@@ -552,7 +552,7 @@ exports[`Матрица: образцы всех фаз > фикстура matri
   >
     <div
       class="timerbar-fill"
-      style="width: 100%;"
+      style="transition: width 60s linear; width: 0%;"
     />
   </div>
   <div
