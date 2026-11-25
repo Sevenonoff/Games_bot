@@ -15,11 +15,10 @@ test("меню → Мемо → ход → Закончить → итог → �
   await expect(screenEl.locator(".image-menu img")).toBeVisible();
   await shot(page, testInfo, "01-menu");
 
-  // партия мемо: пока без компонента игры — заглушка с универсальным рендером
+  // партия мемо: экран игры M3 (карты-кнопки с data-payload из шаблона tap)
   // (составной селектор: цепочный .locator ищет потомков, а data-payload — на самой плитке)
   await screenEl.locator('.tile[data-payload="new:memo"]').click();
-  await expect(screenEl.locator(".cell").first()).toBeVisible();
-  await expect(screenEl.locator(".soon")).toBeVisible();
+  await expect(page.locator('.game-memo[data-phase="play"]')).toBeVisible();
   await shot(page, testInfo, "02-memo-board");
 
   // ход по подсказке сервера: кнопка с таким data-payload

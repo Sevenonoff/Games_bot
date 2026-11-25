@@ -1,0 +1,631 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Матрица: образцы всех фаз > фикстура matrix-countdown рендерится > matrix-countdown: DOM 1`] = `
+<div
+  class="game game-matrix"
+  data-phase="countdown"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🟦 Матрица памяти
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          ⏱ 60 с
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        0
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="timerbar"
+    role="timer"
+  >
+    <div
+      class="timerbar-fill"
+      style="transition: width 60s linear; width: 0%;"
+    />
+  </div>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:2"
+        type="button"
+      />
+      <div
+        class="countdown-overlay"
+        style="font-size: 42px;"
+      >
+        3
+      </div>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    ⏳ Приготовьтесь… 
+    <b>
+      3
+    </b>
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Матрица: образцы всех фаз > фикстура matrix-done рендерится > matrix-done: DOM 1`] = `
+<div
+  class="game game-matrix"
+  data-phase="done"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🟦 Матрица памяти
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          ⏱ 60 с
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        45
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="timerbar"
+    role="timer"
+  >
+    <div
+      class="timerbar-fill"
+      style="transition: width 60s linear; width: 0%;"
+    />
+  </div>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    ✅ Раунд пройден! Нажмите любую клетку, чтобы продолжить
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Матрица: образцы всех фаз > фикстура matrix-input рендерится > matrix-input: DOM 1`] = `
+<div
+  class="game game-matrix"
+  data-phase="input"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🟦 Матрица памяти
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          ⏱ 60 с
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        10
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="timerbar"
+    role="timer"
+  >
+    <div
+      class="timerbar-fill"
+      style="transition: width 60s linear; width: 0%;"
+    />
+  </div>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:2"
+        type="button"
+      />
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    👆 Нажмите клетки, которые были синими
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Матрица: образцы всех фаз > фикстура matrix-preview рендерится > matrix-preview: DOM 1`] = `
+<div
+  class="game game-matrix"
+  data-phase="preview"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🟦 Матрица памяти
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          ⏱ 60 с
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        0
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="timerbar"
+    role="timer"
+  >
+    <div
+      class="timerbar-fill"
+      style="transition: width 60s linear; width: 0%;"
+    />
+  </div>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-shown"
+        data-payload="t:a1b2c3:2:1"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:2:2"
+        type="button"
+      />
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    👀 Запоминайте!
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Матрица: образцы всех фаз > фикстура matrix-review рендерится > matrix-review: DOM 1`] = `
+<div
+  class="game game-matrix"
+  data-phase="review"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🟦 Матрица памяти
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          ⏱ 60 с
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        45
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="timerbar"
+    role="timer"
+  >
+    <div
+      class="timerbar-fill"
+      style="transition: width 60s linear; width: 0%;"
+    />
+  </div>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell mx k-wrong"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 15px;"
+        >
+          ❌
+        </span>
+      </button>
+      <button
+        class="gcell mx k-answer"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-answer"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-hidden"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+      <button
+        class="gcell mx k-answer"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      />
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    ❌ Ошибка. 🟦 — вы нашли, 🟩 — правильный ответ
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;

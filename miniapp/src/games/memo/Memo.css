@@ -1,0 +1,83 @@
+/* Мемо (tz-m3 §2): рубашка — единый узор на --secondary-bg; открытая — флип по Y
+   за 200 мс; найденная бледнеет до 50% и чуть уменьшается; собранное поле прыгает. */
+
+/* клетка-карта — контейнер размера: эмодзи задаётся в долях клетки (60cqw) */
+.game-memo .gcell.card {
+  background: none;
+  perspective: 300px;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease;
+  border-radius: 8px;
+}
+
+/* открытая и найденная — лицом вперёд */
+.card.k-face .card-inner,
+.card.k-matched .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-side {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* рубашка: узор в сетку на --secondary-bg */
+.card-back {
+  background: var(--secondary-bg);
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, var(--text) 8%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 8%, transparent) 75%),
+    linear-gradient(45deg, color-mix(in srgb, var(--text) 8%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 8%, transparent) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+}
+
+.card-front {
+  transform: rotateY(180deg);
+  background: var(--bg);
+  box-shadow: inset 0 0 0 2px var(--secondary-bg);
+}
+
+/* найденная: бледнеет и чуть уменьшается */
+.card.k-matched {
+  opacity: 0.5;
+}
+
+.card.k-matched .card-inner {
+  transform: rotateY(180deg) scale(0.92);
+}
+
+/* собранное поле: все карты коротко подпрыгивают */
+.game-memo[data-phase="done"] .card {
+  animation: card-jump 0.4s ease;
+}
+
+@keyframes card-jump {
+  30% {
+    transform: translateY(-12%);
+  }
+  60% {
+    transform: translateY(4%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-inner {
+    transition: none;
+  }
+
+  .game-memo[data-phase="done"] .card {
+    animation: none;
+  }
+}

@@ -1,0 +1,51 @@
+/* Проложи дорогу (tz-m3 §5): линия дороги игрока сплошная, кратчайшая — жёлтый пунктир. */
+
+.game-path .gcell.pt {
+  line-height: 1;
+}
+
+.game-path .k-empty {
+  background: var(--secondary-bg);
+}
+
+/* дорога игрока */
+.game-path .k-step {
+  background: var(--button);
+  color: var(--button-text);
+}
+
+/* препятствие */
+.game-path .k-block {
+  background: var(--secondary-bg);
+}
+
+/* кратчайшая дорога на разборе */
+.game-path .k-answer {
+  background: #e9c46a;
+}
+
+.game-path .k-wrong {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+/* линии поверх поля: SVG размером ровно с сетку (px из компонента) */
+.path-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.ln-step {
+  stroke: var(--button);
+  stroke-width: 0.16;
+  stroke-linecap: round;
+}
+
+.ln-answer {
+  stroke: #e9c46a;
+  stroke-width: 0.14;
+  stroke-linecap: round;
+  stroke-dasharray: 0.24 0.18;
+}

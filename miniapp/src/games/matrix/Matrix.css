@@ -1,0 +1,49 @@
+/* Матрица памяти (tz-m3 §3). */
+
+.game-matrix .gcell.mx {
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+
+/* скрытая клетка — та же рубашка, что у карт мемо */
+.game-matrix .k-hidden {
+  background: var(--secondary-bg);
+  background-image:
+    linear-gradient(45deg, color-mix(in srgb, var(--text) 8%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 8%, transparent) 75%),
+    linear-gradient(45deg, color-mix(in srgb, var(--text) 8%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--text) 8%, transparent) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+}
+
+/* синяя: показ в preview и найденная в input */
+.game-matrix .k-shown {
+  background: var(--button);
+}
+
+/* зелёная: правильный ответ на разборе */
+.game-matrix .k-answer {
+  background: #43a047;
+}
+
+/* красная с ❌: ошибка */
+.game-matrix .k-wrong {
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 60%;
+}
+
+/* раунд пройден: все синие, лёгкая пульсация */
+.game-matrix[data-phase="done"] .k-shown {
+  animation: mx-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mx-pulse {
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-matrix[data-phase="done"] .k-shown {
+    animation: none;
+  }
+}

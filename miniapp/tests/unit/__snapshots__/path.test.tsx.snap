@@ -1,0 +1,1194 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Дорога: образцы всех фаз > фикстура path-countdown рендерится > path-countdown: DOM 1`] = `
+<div
+  class="game game-path"
+  data-phase="countdown"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🏡 Проложи дорогу
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span>
+          Раунд 
+          1
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        0
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(4, 30px);"
+    >
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <svg
+        class="path-lines"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
+      />
+      <div
+        class="countdown-overlay"
+        style="font-size: 42px;"
+      >
+        3
+      </div>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    ⏳ Приготовьтесь… 
+    <b>
+      3
+    </b>
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Дорога: образцы всех фаз > фикстура path-done рендерится > path-done: DOM 1`] = `
+<div
+  class="game game-path"
+  data-phase="done"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🏡 Проложи дорогу
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span>
+          Раунд 
+          1
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        60
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(4, 30px);"
+    >
+      <button
+        class="gcell pt k-person"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          🏃
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-step"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ●
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-step"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ●
+        </span>
+      </button>
+      <button
+        class="gcell pt k-step"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ●
+        </span>
+      </button>
+      <button
+        class="gcell pt k-house"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          🏡
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <svg
+        class="path-lines"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
+      >
+        <line
+          class="ln-step"
+          x1="15"
+          x2="15"
+          y1="15"
+          y2="49"
+        />
+        <line
+          class="ln-step"
+          x1="15"
+          x2="15"
+          y1="49"
+          y2="83"
+        />
+        <line
+          class="ln-step"
+          x1="15"
+          x2="49"
+          y1="83"
+          y2="83"
+        />
+        <line
+          class="ln-step"
+          x1="49"
+          x2="83"
+          y1="83"
+          y2="83"
+        />
+      </svg>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    ✅ Дорога готова! Нажмите любую клетку, чтобы продолжить
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Дорога: образцы всех фаз > фикстура path-input рендерится > path-input: DOM 1`] = `
+<div
+  class="game game-path"
+  data-phase="input"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🏡 Проложи дорогу
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span>
+          Раунд 
+          1
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        10
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(4, 30px);"
+    >
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-step"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ●
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <svg
+        class="path-lines"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
+      />
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    👆 Поле скрыто — проложите дорогу от 🏃 к 🏡 по соседним клеткам, обходя ⛔.
+    <br />
+    Клетки можно ставить в любом порядке.
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Дорога: образцы всех фаз > фикстура path-preview рендерится > path-preview: DOM 1`] = `
+<div
+  class="game game-path"
+  data-phase="preview"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🏡 Проложи дорогу
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span>
+          Раунд 
+          1
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        0
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(4, 30px);"
+    >
+      <button
+        class="gcell pt k-person"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          🏃
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:1:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-house"
+        data-payload="t:a1b2c3:2:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          🏡
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:2:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:1"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:3:2"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:3:3"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <svg
+        class="path-lines"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
+      />
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    👀 Запоминайте!
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Дорога: образцы всех фаз > фикстура path-review рендерится > path-review: DOM 1`] = `
+<div
+  class="game game-path"
+  data-phase="review"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🏡 Проложи дорогу
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span>
+          Раунд 
+          2
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Очки 
+        60
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(4, 30px);"
+    >
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-wrong"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 14px;"
+        >
+          ❌
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-answer"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-answer"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-answer"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-house"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          🏠
+        </span>
+      </button>
+      <button
+        class="gcell pt k-person"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          🕺
+        </span>
+      </button>
+      <button
+        class="gcell pt k-empty"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        />
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <button
+        class="gcell pt k-block"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          style="font-size: 17px;"
+        >
+          ⛔
+        </span>
+      </button>
+      <svg
+        class="path-lines"
+        height="132"
+        viewBox="0 0 132 132"
+        width="132"
+      >
+        <line
+          class="ln-answer"
+          x1="15"
+          x2="49"
+          y1="83"
+          y2="83"
+        />
+        <line
+          class="ln-answer"
+          x1="49"
+          x2="83"
+          y1="83"
+          y2="83"
+        />
+      </svg>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    ❌ Препятствие! ● — ваша дорога, 🟡 — кратчайшая
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;

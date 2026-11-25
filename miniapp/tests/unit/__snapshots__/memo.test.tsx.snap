@@ -1,0 +1,589 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Мемо: образцы > фикстура memo-done рендерится и снимок осмысленный > memo-done: DOM 1`] = `
+<div
+  class="game game-memo"
+  data-phase="done"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🃏 Мемо
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          Ходы 
+          4
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Пары 
+        3
+        /
+        3
+      </span>
+      <span
+        class="chip"
+      >
+        Очки 
+        30
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell card k-matched"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🌴
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-matched"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🐞
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-matched"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🌷
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-matched"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🐞
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-matched"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🌴
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-matched"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🌷
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    🎉 Поле собрано! Нажмите любую клетку, чтобы увидеть результат
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Мемо: образцы > фикстура memo-done рендерится и снимок осмысленный > memo-done: data-phase 1`] = `"done"`;
+
+exports[`Мемо: образцы > фикстура memo-mismatch рендерится и снимок осмысленный > memo-mismatch: DOM 1`] = `
+<div
+  class="game game-memo"
+  data-phase="play"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🃏 Мемо
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          Ходы 
+          1
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Пары 
+        0
+        /
+        3
+      </span>
+      <span
+        class="chip"
+      >
+        Очки 
+        0
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell card k-face"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🌴
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-face"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🐞
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    Откройте две карты. Совпали — пара ваша.
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Мемо: образцы > фикстура memo-mismatch рендерится и снимок осмысленный > memo-mismatch: data-phase 1`] = `"play"`;
+
+exports[`Мемо: образцы > фикстура memo-play рендерится и снимок осмысленный > memo-play: DOM 1`] = `
+<div
+  class="game game-memo"
+  data-phase="play"
+>
+  <header
+    class="game-header"
+  >
+    <div
+      class="gh-top"
+    >
+      <span
+        class="gh-title"
+      >
+        🃏 Мемо
+         · ур. 
+        1
+      </span>
+      <span
+        class="gh-right"
+      >
+        <span
+          class=""
+        >
+          Ходы 
+          0
+           из 
+          6
+        </span>
+      </span>
+    </div>
+    <div
+      class="gh-stats"
+    >
+      <span
+        class="chip"
+      >
+        Пары 
+        0
+        /
+        3
+      </span>
+      <span
+        class="chip"
+      >
+        Очки 
+        0
+      </span>
+      <span
+        class="chip"
+      >
+        Серия 
+        ×1
+      </span>
+    </div>
+  </header>
+  <div
+    class="field-scroll"
+  >
+    <div
+      class="field"
+      style="grid-template-columns: repeat(3, 30px);"
+    >
+      <button
+        class="gcell card k-face"
+        data-payload="t:a1b2c3:0:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            🌴
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:0:1"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:0:2"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:1:0"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:1:1"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+      <button
+        class="gcell card k-back"
+        data-payload="t:a1b2c3:1:2"
+        type="button"
+      >
+        <span
+          class="card-inner"
+        >
+          <span
+            class="card-side card-front"
+            style="font-size: 18px;"
+          >
+            
+          </span>
+          <span
+            class="card-side card-back"
+          />
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="game-hint"
+  >
+    Откройте две карты. Совпали — пара ваша.
+  </div>
+  <button
+    class="btn quit"
+    data-payload="q:a1b2c3"
+    type="button"
+  >
+    🏁 Закончить
+  </button>
+</div>
+`;
+
+exports[`Мемо: образцы > фикстура memo-play рендерится и снимок осмысленный > memo-play: data-phase 1`] = `"play"`;
