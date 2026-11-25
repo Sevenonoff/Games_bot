@@ -200,6 +200,7 @@ exports[`Дорога: образцы всех фаз > фикстура path-co
       <svg
         class="path-lines"
         height="132"
+        style="--ln-step: 4.8px; --ln-answer: 4.2px; --ln-dash: 7.2px 5.4px;"
         viewBox="0 0 132 132"
         width="132"
       />
@@ -445,6 +446,7 @@ exports[`Дорога: образцы всех фаз > фикстура path-do
       <svg
         class="path-lines"
         height="132"
+        style="--ln-step: 4.8px; --ln-answer: 4.2px; --ln-dash: 7.2px 5.4px;"
         viewBox="0 0 132 132"
         width="132"
       >
@@ -696,6 +698,7 @@ exports[`Дорога: образцы всех фаз > фикстура path-in
       <svg
         class="path-lines"
         height="132"
+        style="--ln-step: 4.8px; --ln-answer: 4.2px; --ln-dash: 7.2px 5.4px;"
         viewBox="0 0 132 132"
         width="132"
       />
@@ -928,6 +931,7 @@ exports[`Дорога: образцы всех фаз > фикстура path-pr
       <svg
         class="path-lines"
         height="132"
+        style="--ln-step: 4.8px; --ln-answer: 4.2px; --ln-dash: 7.2px 5.4px;"
         viewBox="0 0 132 132"
         width="132"
       />
@@ -1158,6 +1162,7 @@ exports[`Дорога: образцы всех фаз > фикстура path-re
       <svg
         class="path-lines"
         height="132"
+        style="--ln-step: 4.8px; --ln-answer: 4.2px; --ln-dash: 7.2px 5.4px;"
         viewBox="0 0 132 132"
         width="132"
       >

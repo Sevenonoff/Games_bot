@@ -102,10 +102,18 @@ test("поле максимального уровня (80) влезает бе�
 
   const metrics = await page.evaluate(() => ({
     hscroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    // верхний ряд достижим: при прокрутке в начало он не уходит под край зоны
+    topCut: (() => {
+      const zone = document.querySelector<HTMLElement>(".game .field-scroll")!;
+      zone.scrollTop = 0;
+      const cell = document.querySelector<HTMLElement>(".game .gcell")!;
+      return zone.getBoundingClientRect().top - cell.getBoundingClientRect().top;
+    })(),
     cell: document.querySelector<HTMLElement>(".game-tower .gcell")?.getBoundingClientRect().width ?? 0,
     cells: document.querySelectorAll(".game-tower .gcell").length,
   }));
   expect(metrics.hscroll).toBe(false);
+  expect(metrics.topCut).toBeLessThanOrEqual(0);
   expect(metrics.cell).toBeGreaterThanOrEqual(30);
   expect(metrics.cells).toBe(14 * 7);
   await shot(page, testInfo, "01-big-field");

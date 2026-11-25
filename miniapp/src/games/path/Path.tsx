@@ -84,7 +84,12 @@ export function Path(props: GameProps<PathView>): VNode {
             // размер — ровно с сеткой в px: растягивание родителем и viewBox без gap
             // рисовали линии мимо клеток (приёмка M3-1)
             <svg key="lines" class="path-lines" width={width} height={height}
-                 viewBox={`0 0 ${width} ${height}`}>
+                 viewBox={`0 0 ${width} ${height}`}
+                 style={{
+                   "--ln-step": `${Math.max(3, cellPx * 0.16).toFixed(1)}px`,
+                   "--ln-answer": `${Math.max(3, cellPx * 0.14).toFixed(1)}px`,
+                   "--ln-dash": `${(cellPx * 0.24).toFixed(1)}px ${(cellPx * 0.18).toFixed(1)}px`,
+                 }}>
               {answerMask && segments(answerMask, cellPx).map((s, i) => (
                 <line key={`a${i}`} class="ln-answer" x1={s[0]} y1={s[1]} x2={s[2]} y2={s[3]} />
               ))}

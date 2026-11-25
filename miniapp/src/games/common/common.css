@@ -56,12 +56,14 @@
   overflow-y: auto;
   display: flex;
   justify-content: center;
-  align-items: center;   /* маленькое поле — по центру зоны по вертикали */
   padding: 4px 8px;
 }
 
 .field {
-  align-self: center;    /* сетка не тянется по высоте зоны: SVG линий совпадает с клетками */
+  /* маленькое поле — по центру зоны по вертикали; сетка не тянется по высоте зоны
+     (SVG линий совпадает с клетками). Автополя, а не align-items: center: у поля выше
+     зоны они обнуляются, и верхний ряд остаётся достижим прокруткой */
+  margin-block: auto;
   display: grid;
   gap: 4px;
   align-content: start;

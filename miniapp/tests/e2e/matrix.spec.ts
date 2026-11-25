@@ -29,6 +29,7 @@ test("полная партия по фазам до итога", async ({ page 
 
   await expect(page.locator(".game-matrix")).toBeVisible({ timeout: 8000 });
   // фазы короткие: снимаем каждую по факту появления, без жёсткого порядка ожиданий
+  let quitClicked = false;
   const taken = new Set<string>();
   const shootPhase = async (phase: string, name: string) => {
     if (taken.has(phase)) return;
@@ -47,14 +48,8 @@ test("полная партия по фазам до итога", async ({ page 
     if (phase === "input") {
       // время партии вышло: в overtime раунд не кончается сам — «Заканчиваем» как в боте
       if (await screenEl.locator(".gh-right", { hasText: "Время вышло" }).isVisible({ timeout: 50 }).catch(() => false)) {
-        // force + повторы: кадры пересоздают кнопку, Playwright не дождётся её «стабильности»
-        const quit = screenEl.locator('button[data-payload^="q:"]').first();
-        for (let k = 0; k < 5; k++) {
-          try {
-            await quit.click({ force: true, timeout: 2000 });
-            break;
-          } catch { /* кнопка пересоздана следующим кадром — пробуем снова */ }
-        }
+        await screenEl.locator('button[data-payload^="q:"]').first().click();
+        quitClicked = true;
         break;
       }
       const payload = await hint(admin);
@@ -67,15 +62,10 @@ test("полная партия по фазам до итога", async ({ page 
     await page.waitForTimeout(200);
   }
   // партия в overtime сама не кончается — закрываем, как игрок кнопкой «Закончить»
-  // force + повторы: кадры пересоздают кнопку, Playwright не дождётся её «стабильности»
-  if (await page.locator(".game-matrix").isVisible({ timeout: 100 }).catch(() => false)) {
-    const quit = screenEl.locator('button[data-payload^="q:"]').first();
-    for (let k = 0; k < 5; k++) {
-      try {
-        await quit.click({ force: true, timeout: 2000 });
-        break;
-      } catch { /* кнопка пересоздана следующим кадром — пробуем снова */ }
-    }
+  // «Закончить» — ровно один раз: если цикл уже нажал, экран сейчас сменится итогом
+  // (второе нажатие ловило бы исчезающую кнопку)
+  if (!quitClicked && await page.locator(".game-matrix").isVisible({ timeout: 100 }).catch(() => false)) {
+    await screenEl.locator('button[data-payload^="q:"]').first().click();
   }
   // итог после конца партии может задержаться на запись результатов — ждём подольше
   await expect(page.getByText(RESULT)).toBeVisible({ timeout: 60_000 });
@@ -135,10 +125,18 @@ test("поле максимального уровня 14×7 влезает бе
 
   const metrics = await page.evaluate(() => ({
     hscroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    // верхний ряд достижим: при прокрутке в начало он не уходит под край зоны
+    topCut: (() => {
+      const zone = document.querySelector<HTMLElement>(".game .field-scroll")!;
+      zone.scrollTop = 0;
+      const cell = document.querySelector<HTMLElement>(".game .gcell")!;
+      return zone.getBoundingClientRect().top - cell.getBoundingClientRect().top;
+    })(),
     cell: document.querySelector<HTMLElement>(".game-matrix .gcell")?.getBoundingClientRect().width ?? 0,
     cells: document.querySelectorAll(".game-matrix .gcell").length,
   }));
   expect(metrics.hscroll).toBe(false);
+  expect(metrics.topCut).toBeLessThanOrEqual(0);
   expect(metrics.cell).toBeGreaterThanOrEqual(30);
   expect(metrics.cells).toBe(14 * 7);
   await shot(page, testInfo, "01-big-field");

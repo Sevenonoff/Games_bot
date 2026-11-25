@@ -4,6 +4,13 @@
   line-height: 1;
 }
 
+/* кружки дороги и эмодзи — поверх линии (z-index 2 над SVG с z-index 1; у клетки своего
+   контекста наложения нет, поэтому фон клетки остаётся под линией) */
+.game-path .gcell.pt > span {
+  position: relative;
+  z-index: 2;
+}
+
 .game-path .k-empty {
   background: var(--secondary-bg);
 }
@@ -32,20 +39,22 @@
 /* линии поверх поля: SVG размером ровно с сетку (px из компонента) */
 .path-lines {
   position: absolute;
+  z-index: 1;
   top: 0;
   left: 0;
   pointer-events: none;
 }
 
+/* толщина и штрих — в px от размера клетки: переменные ставит компонент на <svg> */
 .ln-step {
   stroke: var(--button);
-  stroke-width: 0.16;
+  stroke-width: var(--ln-step);
   stroke-linecap: round;
 }
 
 .ln-answer {
   stroke: #e9c46a;
-  stroke-width: 0.14;
+  stroke-width: var(--ln-answer);
   stroke-linecap: round;
-  stroke-dasharray: 0.24 0.18;
+  stroke-dasharray: var(--ln-dash);
 }

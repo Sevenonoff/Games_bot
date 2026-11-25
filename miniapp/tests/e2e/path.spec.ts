@@ -67,6 +67,10 @@ test("полная партия: показ, ввод по линии, доро�
     if (await page.getByText(RESULT).isVisible({ timeout: 50 }).catch(() => false)) break;
     if (!doneShot && await page.locator('.game-path[data-phase="done"]').isVisible({ timeout: 50 }).catch(() => false)) {
       await expect(screenEl.locator(".ln-step").first()).toBeAttached();   // у SVG-line пустой bbox — видимостью не проверить
+      // линия видна: толщина в px экрана, а не в единицах клетки (приёмка M3-2)
+      const strokePx = await screenEl.locator(".ln-step").first()
+        .evaluate((el) => parseFloat(getComputedStyle(el).strokeWidth));
+      expect(strokePx).toBeGreaterThanOrEqual(3);
       // линия дороги идёт по клеткам: концы каждого отрезка внутри клеток поля (приёмка M3-1 п. 1)
       expect(await linesInsideCells(page)).toBe(true);
       await shot(page, testInfo, "04-done");
@@ -148,10 +152,18 @@ test("поле максимального уровня 14×7 влезает бе
 
   const metrics = await page.evaluate(() => ({
     hscroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    // верхний ряд достижим: при прокрутке в начало он не уходит под край зоны
+    topCut: (() => {
+      const zone = document.querySelector<HTMLElement>(".game .field-scroll")!;
+      zone.scrollTop = 0;
+      const cell = document.querySelector<HTMLElement>(".game .gcell")!;
+      return zone.getBoundingClientRect().top - cell.getBoundingClientRect().top;
+    })(),
     cell: document.querySelector<HTMLElement>(".game-path .gcell")?.getBoundingClientRect().width ?? 0,
     cells: document.querySelectorAll(".game-path .gcell").length,
   }));
   expect(metrics.hscroll).toBe(false);
+  expect(metrics.topCut).toBeLessThanOrEqual(0);
   expect(metrics.cell).toBeGreaterThanOrEqual(30);
   expect(metrics.cells).toBe(14 * 7);
   await shot(page, testInfo, "01-big-field");
