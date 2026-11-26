@@ -1,0 +1,4679 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`образцы всех состояний > фикстура aiThinking рендерится > aiThinking: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="active"
+  data-turn="them"
+>
+  <div
+    class="battle-top"
+  >
+    <span
+      class="status-line"
+    >
+      <span
+        aria-hidden="true"
+        class="ring ring-low"
+      >
+        <svg
+          height="36"
+          viewBox="0 0 36 36"
+          width="36"
+        >
+          <circle
+            class="ring-bg"
+            cx="18"
+            cy="18"
+            r="15"
+          />
+          <circle
+            class="ring-fg"
+            cx="18"
+            cy="18"
+            r="15"
+            stroke-dasharray="94.24777960769379"
+            style="transition: none; stroke-dashoffset: 94.24777960769379;"
+          />
+        </svg>
+        <span
+          class="ring-mark"
+        >
+          ⏱
+        </span>
+      </span>
+      Компьютер думает…
+    </span>
+    <div
+      class="last-line"
+    >
+      Вы
+      : 
+      💠
+    </div>
+  </div>
+  <div
+    class="battle"
+  >
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Поле соперника
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 30px);"
+      >
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+      </div>
+    </div>
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Ваши корабли
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 24px);"
+      >
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpg:BU54HC"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура blink рендерится > blink: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="active"
+  data-turn="me"
+>
+  <div
+    class="battle-top"
+  >
+    <span
+      class="status-line"
+    >
+      <span
+        aria-hidden="true"
+        class="ring"
+      >
+        <svg
+          height="36"
+          viewBox="0 0 36 36"
+          width="36"
+        >
+          <circle
+            class="ring-bg"
+            cx="18"
+            cy="18"
+            r="15"
+          />
+          <circle
+            class="ring-fg"
+            cx="18"
+            cy="18"
+            r="15"
+            stroke-dasharray="94.24777960769379"
+            style="transition: stroke-dashoffset 30s linear; stroke-dashoffset: 94.24777960769379;"
+          />
+        </svg>
+        <span
+          class="ring-mark"
+        >
+          ⏱
+        </span>
+      </span>
+      Ваш ход
+    </span>
+    <div
+      class="last-line"
+    >
+      Вы
+      : 
+      💠
+    </div>
+    <div
+      class="last-line"
+    >
+      Соперник
+      : 
+      💠
+    </div>
+  </div>
+  <div
+    class="battle"
+  >
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Поле соперника
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 30px);"
+      >
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea blink-hit"
+          data-payload="mpf:BU54HC:2:6"
+          type="button"
+        >
+          💥
+        </button>
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:6"
+          type="button"
+        />
+      </div>
+    </div>
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Ваши корабли
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 24px);"
+      >
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpg:BU54HC"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура invite рендерится > invite: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="waiting"
+  data-turn=""
+>
+  <div
+    class="invite"
+  >
+    <div
+      class="invite-title"
+    >
+      Приглашение в бой
+    </div>
+    <div
+      class="invite-code"
+    >
+      MTXFYJ
+    </div>
+    <button
+      class="btn"
+      type="button"
+    >
+      Отправить другу
+    </button>
+    <button
+      class="btn"
+      type="button"
+    >
+      Скопировать код
+    </button>
+    <div
+      class="invite-copied"
+    >
+      
+    </div>
+    <button
+      class="btn quit"
+      data-payload="mpx:MTXFYJ"
+      type="button"
+    >
+      ❌ Отменить приглашение
+    </button>
+    <button
+      class="btn quit"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура myTurn рендерится > myTurn: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="active"
+  data-turn="me"
+>
+  <div
+    class="battle-top"
+  >
+    <span
+      class="status-line"
+    >
+      <span
+        aria-hidden="true"
+        class="ring"
+      >
+        <svg
+          height="36"
+          viewBox="0 0 36 36"
+          width="36"
+        >
+          <circle
+            class="ring-bg"
+            cx="18"
+            cy="18"
+            r="15"
+          />
+          <circle
+            class="ring-fg"
+            cx="18"
+            cy="18"
+            r="15"
+            stroke-dasharray="94.24777960769379"
+            style="transition: stroke-dashoffset 30s linear; stroke-dashoffset: 94.24777960769379;"
+          />
+        </svg>
+        <span
+          class="ring-mark"
+        >
+          ⏱
+        </span>
+      </span>
+      Ваш ход
+    </span>
+  </div>
+  <div
+    class="battle"
+  >
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Поле соперника
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 30px);"
+      >
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:6"
+          type="button"
+        />
+      </div>
+    </div>
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Ваши корабли
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 24px);"
+      >
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpg:BU54HC"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура placement рендерится > placement: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="placing"
+  data-turn=""
+>
+  <div
+    class="placing-top"
+  >
+    <span>
+      Расстановка: 
+      180
+       с
+    </span>
+    <button
+      class="btn rotate"
+      type="button"
+    >
+      Повернуть
+    </button>
+  </div>
+  <div
+    class="placing-board"
+    style="grid-template-columns: repeat(7, 30px);"
+  >
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+  </div>
+  <div
+    class="dock"
+  >
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+        <i />
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+      </span>
+    </button>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpz:6JZGCJ"
+      type="button"
+    >
+      🔄 Сначала
+    </button>
+    <button
+      class="btn"
+      data-payload="mpg:6JZGCJ"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура placementCurrent рендерится > placementCurrent: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="placing"
+  data-turn=""
+>
+  <div
+    class="placing-top"
+  >
+    <span>
+      Расстановка: 
+      180
+       с
+    </span>
+    <button
+      class="btn rotate"
+      type="button"
+    >
+      Повернуть
+    </button>
+  </div>
+  <div
+    class="placing-board"
+    style="grid-template-columns: repeat(7, 30px);"
+  >
+    <button
+      class="scell k-sea current"
+      type="button"
+    >
+      
+    </button>
+    <button
+      class="scell k-sea current"
+      type="button"
+    >
+      
+    </button>
+    <button
+      class="scell k-sea current"
+      type="button"
+    >
+      
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+  </div>
+  <div
+    class="dock"
+  >
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+        <i />
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+      </span>
+    </button>
+    <button
+      class="dock-ship"
+      type="button"
+    >
+      <span
+        class="dock-hull"
+      >
+        <i />
+      </span>
+    </button>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpz:6JZGCJ"
+      type="button"
+    >
+      🔄 Сначала
+    </button>
+    <button
+      class="btn"
+      data-payload="mpg:6JZGCJ"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура result рендерится > result: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="finished"
+  data-turn=""
+>
+  <div
+    class="battle-top"
+  >
+    <span
+      class="status-line"
+    >
+      
+    </span>
+    <div
+      class="last-line"
+    >
+      Соперник
+      : 
+      💥
+    </div>
+    <div
+      class="last-line"
+    >
+      Вы
+      : 
+      💢
+    </div>
+  </div>
+  <div
+    class="battle"
+  >
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Поле соперника
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 30px);"
+      >
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+      </div>
+    </div>
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Ваши корабли
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 24px);"
+      >
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-hit"
+          disabled=""
+          type="button"
+        >
+          💥
+        </button>
+        <button
+          class="scell k-hit"
+          disabled=""
+          type="button"
+        >
+          💥
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sunk"
+          disabled=""
+          type="button"
+        >
+          💢
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="result-card"
+  >
+    <div
+      class="result-title win"
+    >
+      🏆 Победа!
+    </div>
+    <div
+      class="result-reason"
+    >
+      Все корабли соперника потоплены
+    </div>
+    <div
+      class="result-score"
+    >
+      Очки: 
+      160
+    </div>
+    <div
+      class="result-journey"
+    >
+      🎯 Тренировка дня пройдена! +1 шаг
+    </div>
+    <div
+      class="result-journey"
+    >
+      👣 Шаги на сегодня набраны — путь продолжится завтра
+    </div>
+    <div
+      class="result-journey"
+    >
+      🏅 Новый значок: 
+      <b>
+        🌈 Разносторонний
+      </b>
+    </div>
+    <div
+      class="result-journey"
+    >
+      🏅 Новый значок: 
+      <b>
+        🎯 Тренировка дня
+      </b>
+    </div>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn primary"
+      data-payload="ai"
+      type="button"
+    >
+      🤖 Новая партия с компьютером
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура theirShot рендерится > theirShot: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="active"
+  data-turn="me"
+>
+  <div
+    class="battle-top"
+  >
+    <span
+      class="status-line"
+    >
+      <span
+        aria-hidden="true"
+        class="ring"
+      >
+        <svg
+          height="36"
+          viewBox="0 0 36 36"
+          width="36"
+        >
+          <circle
+            class="ring-bg"
+            cx="18"
+            cy="18"
+            r="15"
+          />
+          <circle
+            class="ring-fg"
+            cx="18"
+            cy="18"
+            r="15"
+            stroke-dasharray="94.24777960769379"
+            style="transition: stroke-dashoffset 30s linear; stroke-dashoffset: 94.24777960769379;"
+          />
+        </svg>
+        <span
+          class="ring-mark"
+        >
+          ⏱
+        </span>
+      </span>
+      Ваш ход
+    </span>
+    <div
+      class="last-line"
+    >
+      Вы
+      : 
+      💠
+    </div>
+    <div
+      class="last-line"
+    >
+      Соперник
+      : 
+      💠
+    </div>
+  </div>
+  <div
+    class="battle"
+  >
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Поле соперника
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 30px);"
+      >
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:0:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:1:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:2:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:3:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:4:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:5:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:6:6"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:0"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:1"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:2"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:3"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:4"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:5"
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          data-payload="mpf:BU54HC:7:6"
+          type="button"
+        />
+      </div>
+    </div>
+    <div
+      class="sboard-wrap"
+    >
+      <div
+        class="sboard-label"
+      >
+        Ваши корабли
+      </div>
+      <div
+        class="sboard"
+        style="grid-template-columns: repeat(7, 24px);"
+      >
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-miss"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-miss"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-sea"
+          disabled=""
+          type="button"
+        />
+        <button
+          class="scell k-ship"
+          disabled=""
+          type="button"
+        >
+          <span
+            class="mark-ship"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpg:BU54HC"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;
+
+exports[`образцы всех состояний > фикстура waitingReady рендерится > waitingReady: DOM 1`] = `
+<div
+  class="game game-sea"
+  data-status="waiting_ready"
+  data-turn=""
+>
+  <div
+    class="placing-top"
+  >
+    <span>
+      Ждём соперника…
+    </span>
+  </div>
+  <div
+    class="placing-board"
+    style="grid-template-columns: repeat(7, 30px);"
+  >
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-ship"
+      type="button"
+    >
+      <span
+        class="mark-ship"
+      />
+    </button>
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+    <button
+      class="scell k-sea"
+      type="button"
+    />
+  </div>
+  <div
+    class="sea-actions"
+  >
+    <button
+      class="btn"
+      data-payload="mpg:4UT7Y4"
+      type="button"
+    >
+      🏳 Сдаться
+    </button>
+    <button
+      class="btn"
+      data-payload="menu"
+      type="button"
+    >
+      🏠 Меню
+    </button>
+  </div>
+</div>
+`;

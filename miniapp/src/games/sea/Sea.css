@@ -1,0 +1,354 @@
+/* Морской бой (tz-m4). Цвета — переменные темы каркаса из app.css. */
+
+.game-sea {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* --- поля боя --- */
+
+.battle {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 8px;
+  overflow-y: auto;
+}
+
+.battle.side-by-side {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sboard-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.battle:not(.side-by-side) .sboard-wrap:first-child {
+  flex: 0 0 auto;
+}
+
+.sboard-label {
+  color: var(--hint);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.sboard {
+  display: grid;
+  gap: 3px;
+  width: max-content;
+}
+
+.scell {
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  font-size: inherit;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.k-sea {
+  background: var(--secondary-bg);
+}
+
+/* вода на поле соперника в свой ход — нажимаемая */
+button.scell[data-payload] {
+  background: color-mix(in srgb, var(--button) 22%, var(--bg));
+  cursor: pointer;
+}
+
+button.scell[data-payload]:active {
+  opacity: 0.7;
+}
+
+.k-ship {
+  background: color-mix(in srgb, var(--text) 26%, var(--secondary-bg));
+}
+
+.mark-ship {
+  width: 60%;
+  height: 60%;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text) 45%, var(--secondary-bg));
+}
+
+.k-hit {
+  background: color-mix(in srgb, var(--danger) 25%, var(--bg));
+}
+
+.k-sunk {
+  background: #7f1d1d;
+  color: #ffffff;
+}
+
+.mark-miss {
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: var(--hint);
+}
+
+/* мигание потопленного корабля: кадры hit ↔ sunk шлёт сервер (tz-m4 §3) */
+.blink-hit {
+  background: color-mix(in srgb, var(--danger) 25%, var(--bg));
+}
+
+.blink-sunk {
+  background: #7f1d1d;
+  color: #ffffff;
+}
+
+/* --- верх боя: статус, таймер-кольцо, пропуски, последние ходы --- */
+
+.battle-top {
+  flex: 0 0 auto;
+  padding: 6px 12px 0;
+  font-size: 14px;
+}
+
+.status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.timeouts {
+  display: block;
+  color: var(--hint);
+  font-size: 12px;
+}
+
+.last-line {
+  color: var(--hint);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* кольцо таймера вокруг индикатора */
+.ring {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+}
+
+.ring svg {
+  transform: rotate(-90deg);
+}
+
+.ring-bg {
+  fill: none;
+  stroke: var(--secondary-bg);
+  stroke-width: 3;
+}
+
+.ring-fg {
+  fill: none;
+  stroke: var(--button);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.ring-low .ring-fg {
+  stroke: var(--danger);
+}
+
+.ring-mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+/* --- расстановка --- */
+
+.placing-top {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 0;
+  color: var(--hint);
+  font-size: 14px;
+}
+
+.placing-board {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 3px;
+  margin: 8px auto 0;
+  width: max-content;
+  position: relative;
+}
+
+.dock {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+}
+
+.dock-ship {
+  padding: 8px;
+  border: none;
+  border-radius: 10px;
+  background: var(--secondary-bg);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dock-ship:active {
+  cursor: grabbing;
+}
+
+/* возврат корабля в док: сервер отклонил место или корабль бросили мимо поля */
+.dock-ship.returning {
+  animation: dock-return 450ms ease-out;
+}
+
+@keyframes dock-return {
+  0% { transform: translateY(-48px) scale(1.1); opacity: 0.4; }
+  60% { transform: translateY(6px); opacity: 1; }
+  100% { transform: none; }
+}
+
+.dock-hull {
+  display: flex;
+  gap: 2px;
+}
+
+.dock-hull i {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 45%, var(--secondary-bg));
+}
+
+.dock-empty {
+  color: var(--hint);
+  font-size: 13px;
+}
+
+/* тень корабля под пальцем: зелёная — место похоже на свободное, красная — нет */
+.shadow-ok {
+  background: color-mix(in srgb, #43a047 45%, var(--bg));
+}
+
+.shadow-bad {
+  background: color-mix(in srgb, var(--danger) 55%, var(--bg));
+}
+
+/* поставленный, но не зафиксированный корабль */
+.current {
+  background: color-mix(in srgb, var(--button) 45%, var(--bg));
+}
+
+/* --- приглашение --- */
+
+.invite {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 16px;
+}
+
+.invite-title {
+  color: var(--hint);
+  font-size: 14px;
+}
+
+.invite-code {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-align: center;
+  padding: 12px;
+  background: var(--secondary-bg);
+  border-radius: 12px;
+}
+
+.invite-copied {
+  min-height: 18px;
+  color: var(--hint);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* --- итог: карточка поверх полей --- */
+
+.result-card {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  width: min(88vw, 340px);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.result-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.result-title.win {
+  color: #43a047;
+}
+
+.result-title.lose {
+  color: var(--danger);
+}
+
+.result-reason,
+.result-score,
+.result-rating {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.result-journey {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--hint);
+}
+
+/* --- кнопки действий внизу --- */
+
+.sea-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px calc(10px + env(safe-area-inset-bottom));
+}
+
+.sea-actions .btn {
+  flex: 1 1 auto;
+  min-height: 44px;
+}
