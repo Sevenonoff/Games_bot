@@ -1,0 +1,5 @@
+This is a profile picture (avatar) for a cozy brain-training games chat bot for kids and families: memory games, number games, sea battle, and a long map journey with collectable coins. The reference image shows the main character, a cute chibi red fox traveler with a tiny backpack; draw exactly this fox character in exactly this art style: stylized hand-painted mobile game art, soft painterly shading, warm sunny light from the top left, fresh saturated colors.
+
+Avatar rules: square 1:1 picture that will be cropped to a circle, so everything important is centered and fits well inside the inner circle, nothing important near the corners. One big bold clear shape that reads instantly even at a tiny size of 48 pixels: big head, big friendly eyes, strong silhouette, high contrast against the background, not too many small details. No text, no letters, no numbers, no logo, no frame, no border, no watermark.
+
+Concept: the fox from the waist up, happily juggling three game objects above its head in an arc: a game card with a star, a tiny toy sailing ship, and a shiny gold coin with a star. Background: a simple fresh mint-green gradient.
