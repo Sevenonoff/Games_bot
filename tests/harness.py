@@ -8,6 +8,7 @@ Chat — переписка одного игрока: send() — текстов
 right_move() подсказывает верный ход, чтобы сценарии доходили до побед и новых уровней.
 """
 import asyncio
+import dataclasses
 import heapq
 import itertools
 import json
@@ -15,6 +16,7 @@ import random
 import re
 from typing import Dict, List, Optional, Tuple
 
+from games_core import boats
 from games_core import debug
 from games_core import friends
 from games_core import motivation
@@ -102,16 +104,45 @@ class Messenger:
 
 
 class Chat:
+    """Переписка игрока с ботом в чате, а после open_app() — окно Mini App: там один экран на
+    соединение, и любой ответ «правит» его (как webapp.respond)."""
+
     def __init__(self, mgr: Manager, messenger: Messenger, player: Player):
         self.mgr = mgr
         self.messenger = messenger
         self.player = player
-        self.ref: Optional[str] = None     # последнее сообщение бота в чате
+        self.web = False                   # окно Mini App, а не чат
+        self.ref: Optional[str] = None     # последнее сообщение бота в чате (в Mini App — экран окна)
         self.note: Optional[str] = None    # всплывающее уведомление последнего нажатия
         self.seen_sent = 0                 # сколько сообщений от бота (World.send) уже проверено
 
+    async def open_app(self) -> Screen:
+        """Открыть Mini App (новое окно и соединение): hello без ссылки — меню или идущая партия."""
+        self.web = True
+        self.player = dataclasses.replace(self.player, web=True)
+        self.ref = None
+        return await self.send(self.mgr.hello_payload(self.player))
+
+    async def _web(self, payload: str) -> Screen:
+        async def respond(reply):
+            self.note = reply.note
+            if reply.screen is None:
+                return None
+            if self.ref is None:
+                self.ref = self.messenger.new_message(reply.screen)
+            else:
+                self.messenger.edit(self.ref, reply.screen)
+            return self.ref
+
+        self.note = None
+        await self.mgr.handle(self.player, payload, respond)
+        return self.screen
+
     async def send(self, payload: str = "menu") -> Screen:
         """Текстовое сообщение боту: экран приходит новым сообщением."""
+        if self.web:
+            return await self._web(payload)
+
         async def respond(reply):
             if reply.screen is None:
                 return None
@@ -125,6 +156,8 @@ class Chat:
     async def press(self, payload: str) -> Screen:
         """Нажатие кнопки последнего сообщения: ответ правит его же."""
         assert self.ref is not None, "сначала send()"
+        if self.web:
+            return await self._web(payload)
 
         async def respond(reply):
             self.note = reply.note
@@ -343,8 +376,8 @@ class World:
         self.inbox.setdefault(chat_id, []).append(screen)
         self.sent_at.append((chat_id, self.time.now, screen))
         chat = self.chats.get(chat_id)
-        if chat is not None:
-            chat.ref = ref
+        if chat is not None and not chat.web:
+            chat.ref = ref          # в Mini App это карточка поверх экрана, экран окна не меняется
         return ref
 
     async def restart(self) -> None:
@@ -406,6 +439,34 @@ async def win_round(world: "World", chat: Chat) -> Optional[str]:
     return chat.note
 
 
+async def boats_wait_play(world: "World", chat: Chat) -> "boats.BoatsSession":
+    """«Кораблики»: дождаться конца отсчёта (кадра play)."""
+    s = live(chat)
+    assert isinstance(s, boats.BoatsSession), "сейчас не идёт партия «Корабликов»"
+    for _ in range(100):
+        if s.phase != boats.COUNTDOWN:
+            return s
+        await world.time.advance(0.1)
+    raise AssertionError("отсчёт «Корабликов» не кончился")
+
+
+async def play_boats(world: "World", chat: Chat, toggles=None, until_end: bool = True) -> None:
+    """Сыграть партию «Корабликов» по журналу [(t, r, c)] (по умолчанию — план идеального игрока):
+    каждое нажатие — в свой момент игры, со своим временем, как шлёт клиент; затем дождаться итога."""
+    s = await boats_wait_play(world, chat)
+    plan = boats.perfect_toggles(s.field, s.boats, game_ms=s.game_ms) if toggles is None else toggles
+    if plan[:len(s.toggles)] == s.toggles:
+        plan = plan[len(s.toggles):]        # начало плана уже сыграно (окно открыли заново)
+    for t_ms, r, c in plan:
+        due = s.play_started_at + t_ms / 1000
+        if due > world.time.now:
+            await world.time.advance(due - world.time.now)
+        await chat.press(f"t:{s.sid}:{r}:{c}:{t_ms}")
+    if until_end:
+        end = s.play_started_at + (s.game_ms + boats.END_GRACE_MS) / 1000
+        await world.time.advance(max(0.0, end - world.time.now) + 0.01)
+
+
 # --- инварианты: что должно быть верно на любом экране ---
 
 MP_CODE = f"[{mp.CODE_ALPHABET}]{{{mp.CODE_LEN}}}"
@@ -415,7 +476,7 @@ KNOWN_PAYLOAD = re.compile(
     rf"|fr(:\d+)?|fri|frs:\d+|frj:{FRIEND_CODE}|set(:fn|:wk|:rm(:(off|\d+))?)?"
     r"|mpn:\d+(:(full|reduced)(:(auto|manual))?)?|ai|ain:(normal|advanced)(:\d+(:(full|reduced)(:(auto|manual))?)?)?"
     rf"|mpj:{MP_CODE}|mp[xkzyg]:{MP_CODE}|mp[fp]:{MP_CODE}:\d+:\d+(:[hv])?"
-    rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})"
+    rf"|rec:({'|'.join(RECORD_GAMES)})|new:({'|'.join(GAMES)})|new:boats(:\d+)?|bl:\d+"
     r"|q:[0-9a-f]{6}|b:[0-9a-f]{6}|t:[0-9a-f]{6}:\d+:\d+)$")
 
 
@@ -449,10 +510,13 @@ def check_screen(chat) -> None:
         assert sids == {s.sid}, f"на экране кнопки чужой партии: {sids} != {s.sid}"
         assert s.progress.level >= 1
         assert screen.rows == s.screen().rows, "сообщение отстало от состояния партии"
-        check_field(screen)
+        if isinstance(s, boats.BoatsSession):
+            assert chat.web, "«Кораблики» — только в Mini App"
+        else:
+            check_field(screen)
 
 
-VIEW_ACTION = re.compile(r"^(t|q|mp[fgkpxyz]):[0-9a-zA-Z]+(:(\d+|\{r\}|\{c\}|\{o\}))*$")
+VIEW_ACTION = re.compile(r"^(t|q|mp[fgkpxyz]):[0-9a-zA-Z]+(:(\d+|\{r\}|\{c\}|\{o\}|\{t\}))*$")
 
 
 def check_view(screen: Screen) -> None:
@@ -462,13 +526,38 @@ def check_view(screen: Screen) -> None:
     if v is None:
         return
     json.dumps(v)
-    assert v["kind"] in ("memo", "matrix", "tower", "path", "sea"), v["kind"]
+    assert v["kind"] in ("memo", "matrix", "tower", "path", "sea", "boats"), v["kind"]
     for name, action in v["actions"].items():
         assert VIEW_ACTION.match(action), f"действие {name}: {action!r}"
+    if v["kind"] == "boats":
+        check_boats_view(v)
+        return
     for key in ("grid", "own", "enemy"):
         grid = v.get(key)
         if grid:
             assert len(grid["cells"]) == grid["rows"] and all(len(row) == grid["cols"] for row in grid["cells"]), key
+
+
+def check_boats_view(v: dict) -> None:
+    """«Кораблики»: клетки в границах поля и не повторяются, у развилки 2 выхода и положение — индекс в них,
+    цвета причалов и корабликов — из палитры view, журнал не убывает."""
+    rows, cols = v["grid"]["rows"], v["grid"]["cols"]
+    cells = {(x["r"], x["c"]): x for x in v["cells"]}
+    assert len(cells) == len(v["cells"]), "клетка поля повторяется"
+    assert all(0 <= r < rows and 0 <= c < cols for r, c in cells)
+    kinds = [x["k"] for x in v["cells"]]
+    assert kinds.count("bay") == 1 and kinds.count("switch") == kinds.count("pier") - 1
+    ids = {c["id"] for c in v["colors"]}
+    for x in v["cells"]:
+        if x["k"] == "switch":
+            assert len(x["out"]) == 2 and x["state"] in (0, 1) and x["init"] in (0, 1)
+        if x["k"] == "pier":
+            assert x["color"] in ids
+    assert all(b["color"] in ids for b in v["boats"])
+    times = [t for t, _, _ in v["toggles"]]
+    assert times == sorted(times) and all(cells[(r, c)]["k"] == "switch" for _, r, c in v["toggles"])
+    assert v["tally"]["correct"] <= v["tally"]["arrived"]
+    assert v["phase"] in (boats.COUNTDOWN, boats.PLAY, boats.OVER)
 
 
 def check_field(screen: Screen) -> None:

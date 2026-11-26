@@ -4,7 +4,7 @@
 своя БД. Для разработки фронтенда и e2e-тестов (docs/miniapp/tz-m1-core.md §2.6):
     miniapp/dev-server.sh            # http://127.0.0.1:8448/app/, ws://127.0.0.1:8448/ws
 Переменные: DEV_PORT (8448), DEV_DB (miniapp/dev.db), DEV_ADMINS (id с /dbg: «1», «1 2», «1-4 300-399»),
-MINIAPP_STATIC.
+MINIAPP_STATIC, BOATS_GAME_MS (длина партии «Корабликов» для e2e, например 20000).
 """
 import asyncio
 import logging
@@ -47,6 +47,7 @@ async def main() -> None:
     db.parent.mkdir(parents=True, exist_ok=True)
     static = Path(os.getenv("MINIAPP_STATIC", str(HERE.parent / "miniapp" / "dist")))
     admins = parse_ids(os.getenv("DEV_ADMINS", "1"))
+    boats_ms = int(os.getenv("BOATS_GAME_MS") or 0) or None
 
     app = webapp.WebApp(bot_token="", make_player=make_player, static_dir=static, dev=True)
 
@@ -55,7 +56,8 @@ async def main() -> None:
 
     storage = Storage(str(db))
     manager = Manager(storage, PLATFORM, app.push, send=send, debug_users=admins, live_ref=webapp.is_ref,
-                      start_link=lambda param: f"https://t.me/dev_bot?start={param}")
+                      start_link=lambda param: f"https://t.me/dev_bot?start={param}",
+                      **({"boats_game_ms": boats_ms} if boats_ms else {}))
     app.manager = manager
     manager.restore()
     manager.start_background()

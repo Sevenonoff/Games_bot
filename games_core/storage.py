@@ -106,6 +106,16 @@ CREATE TABLE IF NOT EXISTS ai_results (
     updated_at  REAL NOT NULL,
     PRIMARY KEY (platform, user_id, level, ship_set)
 );
+CREATE TABLE IF NOT EXISTS boats_results (
+    score_id    INTEGER PRIMARY KEY,    -- scores.id этой партии (там же очки и уровень партии)
+    platform    TEXT NOT NULL,
+    user_id     INTEGER NOT NULL,
+    level       INTEGER NOT NULL,       -- уровень партии
+    correct     INTEGER NOT NULL,       -- верных прибытий
+    arrived     INTEGER NOT NULL,       -- всего прибытий
+    opened      INTEGER NOT NULL        -- самый высокий открытый уровень после партии
+);
+CREATE INDEX IF NOT EXISTS boats_results_user ON boats_results (platform, user_id, level);
 """
 
 SETTING_FIELDS = ("friend_notify", "reminder_hour", "friend_notified_day", "reminded_day",
@@ -195,10 +205,53 @@ class Storage:
                 )
         return is_record
 
-    def partias(self, platform: str, user_id: int) -> List[Partia]:
-        """История партий игрока по времени — из неё считаются путь и серия."""
+    def save_boats(self, platform: str, user_id: int, p: Progress, score: int, level: int,
+                   correct: int, arrived: int, now: float) -> bool:
+        """«Кораблики»: прогресс (p.level — самый высокий открытый уровень), партия в scores с уровнем
+        партии и её «верно из прибывших» в boats_results. True — новый личный рекорд."""
+        is_record = score > p.best_score
+        if is_record:
+            p.best_score = score
+        p.last_played_at = now
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO progress (platform, user_id, game, level, win_streak, fail_count,
+                                         last_success_level, last_played_at, best_score)
+                   VALUES (?, ?, 'boats', ?, 0, 0, ?, ?, ?)
+                   ON CONFLICT (platform, user_id, game) DO UPDATE SET
+                       level = excluded.level, last_success_level = excluded.last_success_level,
+                       last_played_at = excluded.last_played_at, best_score = excluded.best_score""",
+                (platform, user_id, p.level, p.level, now, p.best_score))
+            cur = self.conn.execute(
+                "INSERT INTO scores (platform, user_id, game, score, level, played_at) VALUES (?, ?, 'boats', ?, ?, ?)",
+                (platform, user_id, score, level, now))
+            self.conn.execute(
+                "INSERT INTO boats_results (score_id, platform, user_id, level, correct, arrived, opened)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (cur.lastrowid, platform, user_id, level, correct, arrived, p.level))
+        return is_record
+
+    def boats_best(self, platform: str, user_id: int) -> Dict[int, Tuple[int, int]]:
+        """Лучшая партия «Корабликов» на каждом уровне: {уровень: (верно, прибыло)} —
+        больше верных, при равенстве — выше точность."""
         rows = self.conn.execute(
-            "SELECT game, level, played_at FROM scores WHERE platform = ? AND user_id = ? ORDER BY played_at, id",
+            "SELECT level, correct, arrived FROM boats_results WHERE platform = ? AND user_id = ?",
+            (platform, user_id)).fetchall()
+        best: Dict[int, Tuple[int, int]] = {}
+        for r in rows:
+            cur = best.get(r["level"])
+            key = (r["correct"], r["correct"] / r["arrived"] if r["arrived"] else 0.0)
+            if cur is None or key > (cur[0], cur[0] / cur[1] if cur[1] else 0.0):
+                best[r["level"]] = (r["correct"], r["arrived"])
+        return best
+
+    def partias(self, platform: str, user_id: int) -> List[Partia]:
+        """История партий игрока по времени — из неё считаются путь и серия.
+        У «Корабликов» уровень в истории — самый высокий открытый после партии (по нему путь и значки)."""
+        rows = self.conn.execute(
+            """SELECT s.game, COALESCE(b.opened, s.level) AS level, s.played_at FROM scores s
+               LEFT JOIN boats_results b ON b.score_id = s.id
+               WHERE s.platform = ? AND s.user_id = ? ORDER BY s.played_at, s.id""",
             (platform, user_id)).fetchall()
         return [Partia(r["game"], r["level"], r["played_at"]) for r in rows]
 
@@ -213,7 +266,7 @@ class Storage:
     def reset_user(self, platform: str, user_id: int) -> None:
         """Стереть уровни и результаты игрока (для отладки)."""
         with self.conn:
-            for table in ("progress", "scores", "ratings", "hero_purchases", "ai_results"):
+            for table in ("progress", "scores", "ratings", "hero_purchases", "ai_results", "boats_results"):
                 self.conn.execute(f"DELETE FROM {table} WHERE platform = ? AND user_id = ?",
                                   (platform, user_id))
 

@@ -47,6 +47,7 @@ class Player:
     user_id: int
     name: str
     chat_id: Optional[int] = None
+    web: bool = False          # игрок в Mini App (место показа ("web", conn_id)), а не в чате
 
 
 class Session:
@@ -61,7 +62,7 @@ class Session:
         self.rng = rng
         self.clock = clock
         self.progress: Progress = storage.load_progress(player.platform, player.user_id, self.game)
-        self.level = start_partia(self.progress, clock())
+        self.level = self._start_level()
         self.score = 0
         self.combo = 0
         self.over = False                 # партия закончилась сама
@@ -76,6 +77,10 @@ class Session:
 
     # --- общее ---
 
+    def _start_level(self) -> int:
+        """Уровень партии: по общему движку уровней, со штрафом за новый день."""
+        return start_partia(self.progress, self.clock())
+
     def tap(self, r: int, c: int) -> Optional[str]:
         raise NotImplementedError
 
@@ -84,6 +89,10 @@ class Session:
 
     def quit(self) -> Screen:
         return self.finish()
+
+    def abandon(self) -> None:
+        """Игрок ушёл с партии на другой экран: партия заканчивается как есть."""
+        self.finish()
 
     def in_done(self) -> bool:
         """Итог: поле собрано и видно целиком, пока Manager не перейдёт дальше (или игрок не нажмёт)."""
@@ -135,7 +144,7 @@ class Session:
         p = self.player
         self.storage.upsert_user(p.platform, p.user_id, p.name, p.chat_id, now)
         before = motivation.journey(self.storage, p.platform, p.user_id) if score is not None else None
-        is_record = self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
+        is_record = self._store(score, now)
         if before is not None:
             after = motivation.journey(self.storage, p.platform, p.user_id)
             self.motivation_events = motivation.diff(before, after, self.game)
@@ -144,6 +153,11 @@ class Session:
         if score is not None and self.on_saved is not None:
             self.on_saved()
         return is_record
+
+    def _store(self, score: Optional[int], now: float) -> bool:
+        """Записать прогресс и результат; True — новый рекорд."""
+        p = self.player
+        return self.storage.save_result(p.platform, p.user_id, self.game, self.progress, score, now)
 
     def _result_screen(self, lines: List[str], is_record: Optional[bool]) -> Screen:
         text = [t("result_title", title=TITLES[self.game])] + lines

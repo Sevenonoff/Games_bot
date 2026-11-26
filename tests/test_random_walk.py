@@ -10,7 +10,7 @@ from collections import Counter, deque
 
 import pytest
 
-from games_core import days, seafight_mp as mp
+from games_core import boats, days, seafight_mp as mp
 from games_core.sessions import GAMES
 from games_core.ui import data
 from games_core.texts import t
@@ -34,6 +34,10 @@ def ai_games(world, uid: int) -> int:
 async def step(rng, world, chats, log, skill) -> None:
     chat = rng.choice(chats)
     roll = rng.random()
+    if chat.web and chat.ref is None:
+        log.append(f"{chat.player.user_id} открывает приложение")
+        await chat.open_app()
+        return
     if roll < 0.05 or chat.ref is None:
         payload = "dbg" if chat.player.user_id == ADMIN and rng.random() < 0.5 else "menu"
         log.append(f"{chat.player.user_id} пишет {payload!r}")
@@ -64,6 +68,18 @@ async def step(rng, world, chats, log, skill) -> None:
     s = live(chat)
     if s is not None and s.msg_ref != chat.ref:
         s = None       # партия в сообщении повыше, а жмём по последнему (там — бой с другом)
+    if isinstance(s, boats.BoatsSession) and s.phase == boats.PLAY and rng.random() < 0.8:
+        # «Кораблики»: переключить развилку со временем клиента — точным, чуть сбитым или сильно сбитым
+        r, c = rng.choice(s.field.switches + s.field.piers[:1])
+        t_ms = s.elapsed_ms() + rng.choice([0, 0, -200, 700, -4000, 9000])
+        log.append(f"{chat.player.user_id} переключает развилку {(r, c)} в {t_ms} мс")
+        await chat.press(f"t:{s.sid}:{r}:{c}:{t_ms}")
+        assert chat.note is None
+        return
+    if chat.web and roll > 0.97:
+        log.append(f"{chat.player.user_id} переоткрывает приложение")
+        await chat.open_app()
+        return
     cell = right_move(s)
     if s is not None and s.sid not in skill:
         skill[s.sid] = rng.choice([0.2, 0.6, 0.97])    # партии бывают и удачные, и не очень
@@ -150,7 +166,8 @@ def check_mp(world, mp_moves, rating_reset: bool) -> None:
 async def test_random_walk(seed, platform):
     rng = random.Random(seed)
     world = World(seed=seed, debug_users={ADMIN}, platform=platform)
-    chats = [world.chat(ADMIN, "Админ"), world.chat(2, "Игрок")]
+    chats = [world.chat(ADMIN, "Админ"), world.chat(2, "Игрок"), world.chat(3, "Окно")]
+    chats[2].web = True     # игрок в Mini App: откроет приложение первым шагом
     log = deque(maxlen=25)
     finished_games, max_level, skill = set(), 1, {}
     ai_finished = 0
@@ -180,10 +197,11 @@ async def test_random_walk(seed, platform):
                 if s is not None and c.session is not s:
                     assert s.finished, "прерванная партия не закрыта"
                 done = s is not None and s.finished
-                recorded = done
+                # «Кораблики», брошенные до конца времени, не записываются
+                recorded = done and not (isinstance(s, boats.BoatsSession) and s.result is None)
                 assert user_scores(world, uid) - scores - ai_delta == int(recorded), \
                     f"игрок {uid}: результат {'не ' if recorded else ''}записан ({s and s.game})"
-                if done:
+                if recorded:
                     finished_games.add(s.game)
                     max_level = max(max_level, s.progress.level)
                     if c.session is s:      # закончилась сама или кнопкой, а не прервана
@@ -195,6 +213,6 @@ async def test_random_walk(seed, platform):
     finally:
         await world.close()
     # обход не застрял в одном месте
-    assert finished_games == set(GAMES), finished_games
+    assert finished_games >= set(GAMES), finished_games
     assert max_level > 1
     assert ai_finished > 0, "ни одного боя с компьютером не доиграно"

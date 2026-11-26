@@ -31,6 +31,7 @@ CATEGORIES = {
     "memo": "memory", "matrix": "memory",
     "tower": "numbers",
     "path": "space",
+    "boats": "multitask",
     "ai_full": "logic", "ai_reduced": "logic", "mp_full": "logic", "mp_reduced": "logic",
     "sea_full": "logic", "sea_reduced": "logic",     # «найди корабли»: только в истории партий
 }
@@ -39,8 +40,12 @@ CATEGORY_TITLES = {
     "numbers": "🔢 Числа",
     "space": "🧭 Пространство",
     "logic": "♟ Логика",
+    "multitask": "🔀 Многозадачность",
 }
-LEVEL_GAMES = ("memo", "matrix", "tower", "path")
+# категории, общие для чата и Mini App: по ним бонус «все категории за день» и подсказка «реже всего»;
+# «Многозадачность» есть только в Mini App — игроки чата не должны терять из-за неё награды
+CORE_CATEGORIES = ("memory", "numbers", "space", "logic")
+LEVEL_GAMES = ("memo", "matrix", "tower", "path", "boats")
 
 ZONES = ("🌿 Луг", "🌲 Лес", "🌉 Река", "⛰ Горы", "🏰 Замок",
          "🌊 Море", "🏜 Пустыня", "🏔 Ледник", "🌆 Город", "🚀 Космос")
@@ -182,7 +187,7 @@ def _add(j: Journey, p: Partia, epoch: float = 0.0) -> None:
     if category is not None and category not in j.day_categories:
         j.day_categories.add(category)
         earned += 1
-        if len(j.day_categories) == len(CATEGORY_TITLES):
+        if category in CORE_CATEGORIES and all(c in j.day_categories for c in CORE_CATEGORIES):
             j.all_categories_days += 1
     if p.level is not None:
         best = j.max_level.get(p.game, 1)
@@ -382,7 +387,7 @@ def weakest_category(p: Period) -> Optional[str]:
     """Категория, которую реже всего тренировали за период (подсказка в отчёте)."""
     if not p.partias:
         return None
-    key = min(CATEGORY_TITLES, key=lambda k: (p.by_category.get(k, 0), list(CATEGORY_TITLES).index(k)))
+    key = min(CORE_CATEGORIES, key=lambda k: (p.by_category.get(k, 0), CORE_CATEGORIES.index(k)))
     return CATEGORY_TITLES[key]
 
 

@@ -17,7 +17,7 @@ export interface Screen {
 
 // --- view игр (общая часть у всех kind) ---
 
-export type ViewKind = "memo" | "matrix" | "tower" | "path" | "sea";
+export type ViewKind = "memo" | "matrix" | "tower" | "path" | "sea" | "boats";
 
 /** Шаблоны payload'ов; клиент подставляет {r}, {c}, {o} и никогда не собирает payload сам. */
 export type Actions = Record<string, string>;
@@ -137,7 +137,36 @@ export interface SeaView {
   invite: { link: string; code: string } | null;   // status == "waiting"
 }
 
-export type View = MemoView | MatrixView | TowerView | PathView | SeaView;
+/** «⚓ Кораблики» (docs/boats/tz.md §6.2): поле, расписание и журнал; клиент двигает кораблики сам. */
+export type BoatsSide = "N" | "E" | "S" | "W";
+export type BoatsCell =
+  | { r: number; c: number; k: "bay"; out: [BoatsSide] }
+  | { r: number; c: number; k: "canal"; in: BoatsSide; out: [BoatsSide] }
+  | { r: number; c: number; k: "switch"; in: BoatsSide; out: [BoatsSide, BoatsSide];
+      state: 0 | 1;           // текущее положение (индекс в out) на момент кадра
+      init: 0 | 1 }           // начальное: от него judge.ts считает журнал
+  | { r: number; c: number; k: "pier"; in: BoatsSide; color: number };
+
+export interface BoatsView {
+  kind: "boats";
+  title: string;
+  level: number;
+  score: number;
+  combo: string;
+  phase: "countdown" | "play" | "over";
+  countdown_ms: number;       // сколько осталось до кадра play (0 вне отсчёта)
+  clock: { elapsed_ms: number; total_ms: number };
+  ms_per_cell: number;
+  grid: { rows: number; cols: number };
+  cells: BoatsCell[];         // только занятые клетки
+  colors: { id: number; name: string; sail: string; hull: string }[];
+  boats: { id: number; t: number; color: number }[];
+  toggles: [number, number, number][];   // [t, r, c], уже принятые сервером
+  tally: { correct: number; arrived: number };
+  actions: Actions;           // tap: "t:<sid>:{r}:{c}:{t}", quit: "q:<sid>"
+}
+
+export type View = MemoView | MatrixView | TowerView | PathView | SeaView | BoatsView;
 
 // --- сообщения ---
 

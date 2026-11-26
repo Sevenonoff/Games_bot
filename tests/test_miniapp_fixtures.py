@@ -15,7 +15,8 @@ from games_core import seafight_solo as sea
 from games_core.sessions import SEA_SYMBOLS
 from sea_fight_aiogram.webapp import WebApp
 from tests.scenario import do_mp_place
-from tests.harness import World, mp_game, mp_targets, wait_ai, wait_preview, wrong_moves
+from games_core import boats
+from tests.harness import World, live, mp_game, mp_targets, play_boats, wait_ai, wait_preview, wrong_moves
 
 FIXTURES = Path(__file__).resolve().parent.parent / "docs" / "miniapp" / "fixtures"
 SID = "a1b2c3"
@@ -148,6 +149,33 @@ async def collect() -> dict:
         await do_mp_place(world, chat)
         await chat.click("Готов")
         keep("sea-waiting-ready")
+
+        # «Кораблики» в Mini App: итог 1-го уровня, выбор уровня, отсчёт, игра, переподключение посреди партии
+        boater = world.chat(3, "Тестер")
+
+        def keep_app(name):
+            s = boater.session
+            out[name] = frame(app, boater.screen, s.sid if s else None)
+        await boater.open_app()
+        await boater.click("Кораблики")
+        await boater.click("▶ 1")
+        await play_boats(world, boater)
+        keep_app("result-boats")
+        p = world.storage.load_progress("tg", 3, "boats")
+        p.level = 12
+        world.storage.save_result("tg", 3, "boats", p, None, world.time.now)
+        await boater.click("Уровни")
+        keep_app("boats-levels")
+        await boater.click("▶ 12")
+        keep_app("boats-countdown")
+        await world.time.advance(boats.COUNTDOWN_MS / 1000)
+        keep_app("boats-play")
+        s = live(boater)
+        await play_boats(world, boater, [x for x in boats.perfect_toggles(s.field, s.boats) if x[0] <= 20_000],
+                         until_end=False)
+        await world.time.advance(s.play_started_at + 20.5 - world.time.now)
+        await boater.open_app()
+        keep_app("boats-reconnect")
     finally:
         await world.close()
     return out
@@ -186,4 +214,7 @@ def test_fixture_states_cover_every_phase():
     assert {("sea", s) for s in ("placing", "waiting_ready", "active", "finished", "waiting")} <= phases
     assert any(v and v["kind"] == "sea" and v["blink"] for v in views)
     assert any(v and v["kind"] == "sea" and v["thinking"] for v in views)
+    assert {("boats", p) for p in ("countdown", "play")} <= phases
+    reconnect = json.loads((FIXTURES / "boats-reconnect.json").read_text(encoding="utf-8"))["view"]
+    assert reconnect["toggles"] and reconnect["clock"]["elapsed_ms"] > 20_000
     assert re.search(SID, (FIXTURES / "memo-play.json").read_text(encoding="utf-8"))

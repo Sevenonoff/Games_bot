@@ -12,6 +12,7 @@
 «правит» его, как нажатие в чате правит своё сообщение. Без aiogram: тесты ядра гоняют его в .venv.
 """
 import asyncio
+import dataclasses
 import hashlib
 import json
 import logging
@@ -129,7 +130,9 @@ class WebApp:
             raise web.HTTPBadRequest()
         async with self.manager.locks[uid]:
             payload = debug.hint_payload(self.manager, uid)
-        return web.json_response({"payload": payload})
+            plan = debug.boats_plan(self.manager, uid)
+        # «Кораблики»: вместо одного хода — план идеального игрока [[t, r, c], …] по времени игры
+        return web.json_response({"payload": payload, "plan": plan})
 
     # --- экраны ---
 
@@ -197,7 +200,9 @@ class WebApp:
                         break
                     conn = self._open(ws, player)
                     start = data.get("start")
-                    await self._handle(conn, start_payload(start) if isinstance(start, str) else "menu", None)
+                    # без ссылки — меню, а посреди «Корабликов» — снова партия (она идёт и без окна)
+                    first = start_payload(start) if isinstance(start, str) else self.manager.hello_payload(conn.player)
+                    await self._handle(conn, first, None)
                 elif kind == "press":
                     payload, seq = data.get("payload"), data.get("seq")
                     if not isinstance(payload, str) or not payload or len(payload) > MAX_DATA_LEN \
@@ -213,7 +218,8 @@ class WebApp:
         return ws
 
     def _open(self, ws: web.WebSocketResponse, player: Player) -> Conn:
-        conn = Conn(next(self._ids), ws, player, self.clock())
+        # игрок в Mini App: в меню есть игры только для приложения («Кораблики»)
+        conn = Conn(next(self._ids), ws, dataclasses.replace(player, web=True), self.clock())
         self.conns[conn.id] = conn
         self.by_user.setdefault(player.user_id, set()).add(conn.id)
         logger.info("ws open conn=%s user=%s", conn.id, player.user_id)

@@ -15,12 +15,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from games_core import days, path
+from games_core import boats, days, path
 from games_core.ui import BLANK, Screen
 from games_core.manager import text_payload
 from games_core.sessions import PATH_EMPTY, TimedSession
 from games_core import seafight_mp as mp
-from tests.harness import (Chat, World, check_screen, live, mp_game, mp_right_move, wait_ai, mp_targets, path_detour,
+from tests.harness import (Chat, World, check_screen, live, mp_game, play_boats, mp_right_move, wait_ai, mp_targets, path_detour,
                            path_middle_first, right_move, settle, wait_preview, win_round, wrong_moves)
 
 SCENARIOS_DIR = Path(__file__).parent / "scenarios"
@@ -74,6 +74,10 @@ STEP_PATTERNS = [
     (r"доводим партию до последнего выстрела", "mp_endgame"),
     (r"расставляю корабли", "mp_place"),
     (r"перезапускаю бота", "restart"),
+    (r"(?:открываю|переоткрываю) приложение", "open_app"),
+    (r"веду кораблики без ошибок", "boats_perfect"),
+    (r"веду кораблики без ошибок до (\d+) ?с", "boats_perfect_until"),
+    (r"партий в истории:? (\d+)", "history"),
     (r"жму клетку (\d+)[ ,]+(\d+)", "tap"),
     (r"жму чёрную клетку", "tap_blank"),
     (r"жму клетку дороги ещё раз", "path_again"),
@@ -558,7 +562,31 @@ async def do_no_incoming(world: World, chat: Chat) -> None:
     assert not new, f"ждали тишину, а бот прислал: {[plain(s.text) for s in new]}"
 
 
+async def do_open_app(world: World, chat: Chat) -> None:
+    await chat.open_app()
+
+
+async def do_boats_perfect(world: World, chat: Chat) -> None:
+    await play_boats(world, chat)
+
+
+async def do_boats_perfect_until(world: World, chat: Chat, seconds: str) -> None:
+    """Вести кораблики без ошибок первые N секунд игры; партия идёт дальше."""
+    s = live(chat)
+    assert s is not None and s.game == "boats", "сейчас не идёт партия «Корабликов»"
+    plan = [x for x in boats.perfect_toggles(s.field, s.boats) if x[0] <= int(seconds) * 1000]
+    await play_boats(world, chat, plan, until_end=False)
+
+
+async def do_history(world: World, chat: Chat, count: str) -> None:
+    n = world.storage.conn.execute("SELECT COUNT(*) FROM scores WHERE user_id = ?",
+                                   (chat.player.user_id,)).fetchone()[0]
+    assert n == int(count), f"партий в истории: {n}, ждали {count}"
+
+
 ACTIONS: Dict[str, Callable] = {
+    "open_app": do_open_app, "boats_perfect": do_boats_perfect, "boats_perfect_until": do_boats_perfect_until,
+    "history": do_history,
     "send_code": do_send_code, "follow_invite": do_follow_invite, "mp_miss": do_mp_miss,
     "mp_hit": do_mp_hit, "mp_endgame": do_mp_endgame, "mp_place": do_mp_place, "restart": do_restart,
     "send": do_send, "click": do_click, "tap": do_tap, "tap_blank": do_tap_blank,
@@ -613,7 +641,7 @@ async def run(sc: Scenario, transcript: Optional[List[str]] = None, verbose: boo
             for c in chats.values():
                 if c.ref is not None:
                     check_screen(c)
-            if step.action in ("send", "click", "tap", "tap_blank", "right", "right_until", "wrong", "win_round", "play_partia",
+            if step.action in ("open_app", "boats_perfect", "boats_perfect_until", "send", "click", "tap", "tap_blank", "right", "right_until", "wrong", "win_round", "play_partia",
                                "wait", "send_code", "follow_invite", "mp_miss", "mp_hit", "mp_endgame", "mp_place",
                                "path_shortest", "path_detour", "path_middle", "path_again", "path_end", "path_block",
                                "clock", "incoming"):

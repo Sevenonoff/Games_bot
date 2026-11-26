@@ -16,7 +16,7 @@ import time
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, Iterable, Optional, Set
 
-from . import days, debug, friends, heroes, journey_art, locations, motivation, notify, progress
+from . import boats, days, debug, friends, heroes, journey_art, locations, motivation, notify, progress
 from . import seafight_mp as mp
 from .multiplayer import ACTIONS as MP_ACTIONS, Multiplayer, looks_like_code
 from .seafight_mp import game_type as mp_game_type
@@ -36,7 +36,7 @@ ROUND_SECONDS = 60
 IDLE_SECONDS = 30 * 60
 MP_BLINK_SECONDS = 0.4    # мигание потопленного корабля в бою с другом
 AI_THINK_SECONDS = 1.0    # пауза перед ходом компьютера
-RECORD_GAMES = ("memo", "matrix", "tower", "path", "ai_normal", "ai_advanced", "mp_full", "mp_reduced")
+RECORD_GAMES = ("memo", "matrix", "tower", "path", "boats", "ai_normal", "ai_advanced", "mp_full", "mp_reduced")
 RATING_GAMES = ("mp_full", "mp_reduced")   # бой с другом: таблица — рейтинг Elo, а не рекорды
 AI_GAMES = {"ai_normal": "normal", "ai_advanced": "advanced"}   # бой с компьютером: таблица побед
 
@@ -87,7 +87,8 @@ class Manager:
                  mp_blink_seconds: float = MP_BLINK_SECONDS,
                  ai_think_seconds: float = AI_THINK_SECONDS,
                  run_cpu: Optional[Callable[..., Awaitable[Any]]] = None,
-                 live_ref: Callable[[Any], bool] = lambda ref: False):
+                 live_ref: Callable[[Any], bool] = lambda ref: False,
+                 boats_game_ms: int = boats.GAME_MS):
         self.storage = storage
         self.platform = platform
         self.push = push
@@ -110,6 +111,7 @@ class Manager:
         self.review_seconds = review_seconds
         self.round_seconds = round_seconds
         self.debug_users = frozenset(debug_users)
+        self.boats_game_ms = boats_game_ms     # длина партии «Корабликов»: e2e укорачивают (BOATS_GAME_MS)
         self.round_overrides: Dict[int, int] = {}   # /dbg round: длина партии для одного игрока
         self.sessions: Dict[int, Session] = {}
         self.locks: Dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -148,13 +150,28 @@ class Manager:
         action = parts[0]
         uid = player.user_id
 
+        if action == "bres":
+            # Mini App переподключился посреди партии «Корабликов»: текущий кадр в новое окно
+            s = self.sessions.get(uid)
+            if isinstance(s, boats.BoatsSession) and len(parts) > 1 and s.sid == parts[1] and not s.finished:
+                return Reply(s.screen()), s
+            action, parts = "menu", ["menu"]
+
         if action in ("t", "q", "b"):
             s = self.sessions.get(uid)
             if s is None or len(parts) < 2 or s.sid != parts[1] or s.finished:
                 return Reply(note=t("note_stale")), None
             s.last_activity = self.clock()
             if action == "q":
-                return Reply(s.finish()), s
+                return Reply(s.quit()), s
+            if isinstance(s, boats.BoatsSession):
+                # переключение развилки: t:<sid>:<r>:<c>:<t_ms>; ответ без экрана — подтверждение
+                try:
+                    r, c = int(parts[2]), int(parts[3])
+                except (IndexError, ValueError):
+                    return Reply(), None
+                s.toggle(r, c, parts[4] if len(parts) > 4 else None)
+                return Reply(), None
             if s.in_done():
                 # итог раунда или собранного поля: любое нажатие — дальше
                 return Reply(s.skip_done()), s
@@ -194,6 +211,11 @@ class Manager:
             return Reply(progress.dispatch(self, player, parts)), None
         if action in heroes.ACTIONS:
             return heroes.dispatch(self, player, parts), None
+        if action == "new" and len(parts) > 1 and parts[1] == boats.GAME:
+            return self._boats_entry(player, parts[2] if len(parts) > 2 else None)
+        if action == "bl":
+            level = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 2
+            return Reply(note=boats.locked_note(max(2, level))), None
         if action == "dbg":
             if uid not in self.debug_users:
                 return Reply(Screen(t("dbg_off", user_id=uid), [[Button(t("btn_menu"), "menu")]])), None
@@ -209,6 +231,33 @@ class Manager:
                 return Reply(self.records_screen(player, game)), None
             return Reply(self.records_menu()), None
         return Reply(self.menu_screen(player)), None
+
+    def _boats_entry(self, player: Player, level_arg: Optional[str]):
+        """new:boats — выбор уровня, new:boats:<L> — партия на открытом уровне L (только в Mini App)."""
+        if not player.web:
+            return Reply(boats.only_in_app_screen()), None
+        opened = self.storage.load_progress(self.platform, player.user_id, boats.GAME).level
+        screen = boats.levels_screen(self.storage, self.platform, player.user_id)
+        if level_arg is None:
+            return Reply(screen), None
+        level = int(level_arg) if level_arg.isdigit() else 0
+        if level not in boats.LEVELS:
+            return Reply(screen), None
+        if level > opened:
+            return Reply(screen, boats.locked_note(level)), None
+        s = boats.BoatsSession(secrets.token_hex(3), player, self.storage, self.rng, self.clock,
+                               level=level, game_ms=self.boats_game_ms)
+        s.on_saved = lambda: self.partia_saved(s.player.user_id, s.motivation_events, s.journey_after)
+        self.sessions[player.user_id] = s
+        return Reply(s.screen()), s
+
+    def hello_payload(self, player: Player) -> str:
+        """Первое нажатие нового окна Mini App без ссылки: посреди «Корабликов» — вернуться в партию
+        (она идёт по таймеру и без окна), иначе меню."""
+        s = self.sessions.get(player.user_id)
+        if isinstance(s, boats.BoatsSession) and not s.finished:
+            return data("bres", s.sid)
+        return "menu"
 
     def start_session(self, player: Player, game: str) -> Session:
         self._abandon(player.user_id)
@@ -249,13 +298,15 @@ class Manager:
     def _abandon(self, uid: int) -> None:
         s = self.sessions.pop(uid, None)
         if s is not None and not s.finished:
-            s.finish()
+            s.abandon()
 
     def _drop_idle(self) -> None:
         now = self.clock()
         for uid, s in list(self.sessions.items()):
             # матрица, пока время не вышло, кончится сама; остальные партии убираем после простоя
             on_clock = isinstance(s, TimedSession) and s.clock_limited
+            if isinstance(s, boats.BoatsSession) and not s.finished and not s.time_is_up():
+                continue        # «Кораблики» кончатся сами по таймеру
             if s.finished:
                 del self.sessions[uid]
             elif now - s.last_activity > IDLE_SECONDS and not (on_clock and s.seconds_left() > 0):
@@ -266,6 +317,9 @@ class Manager:
     # --- таймеры ---
 
     def _schedule(self, uid: int, s: Session) -> None:
+        if isinstance(s, boats.BoatsSession) and s.timers_pending:
+            s.timers_pending = False
+            self._spawn(self._run_boats(uid, s))
         if isinstance(s, MemoSession) and s.close_pending:
             s.close_pending = False
             self._spawn(self._close_mismatch_later(uid, s, s.mismatch_id))
@@ -353,6 +407,22 @@ class Manager:
                 if self.clock() - s.rendered_at >= 1.0:
                     await self._push(s, s.screen())
 
+    async def _run_boats(self, uid: int, s: "boats.BoatsSession") -> None:
+        """«Кораблики»: отсчёт → игра (часы партии идут с этого кадра) → запоздавшие нажатия → итог."""
+        def alive() -> bool:
+            return self.sessions.get(uid) is s and not s.finished
+
+        await self.sleep(boats.COUNTDOWN_MS / 1000)
+        async with self.locks[uid]:
+            if not alive():
+                return
+            s.begin_play()
+            await self._push(s, s.screen())
+        await self.sleep((s.game_ms + boats.END_GRACE_MS) / 1000)
+        async with self.locks[uid]:
+            if alive():
+                await self._push(s, s.finish())
+
     async def _push(self, s: Session, screen: Screen) -> None:
         if s.msg_ref is None:
             return
@@ -418,6 +488,8 @@ class Manager:
             [Button(TITLES["matrix"], data("new", "matrix"))],
             [Button(TITLES["tower"], data("new", "tower"))],
             [Button(TITLES["path"], data("new", "path"))],
+            # «Кораблики» в реальном времени — только в Mini App
+            *([[Button(TITLES["boats"], data("new", "boats"))]] if player.web else []),
             [Button(t("btn_sea"), "sea")],
             [Button(t("btn_journey"), "jr"), Button(t("btn_progress"), "prog")],
             [Button(t("btn_records"), "rec")],

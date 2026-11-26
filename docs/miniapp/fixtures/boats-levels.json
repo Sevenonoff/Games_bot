@@ -1,0 +1,83 @@
+{
+ "text": "⚓ <b>Кораблики</b> — направляйте кораблики к причалам своего цвета. Выберите уровень:",
+ "rows": [
+  [
+   {
+    "text": "1 · ✔ 18/18",
+    "data": "new:boats:1"
+   },
+   {
+    "text": "2",
+    "data": "new:boats:2"
+   },
+   {
+    "text": "3",
+    "data": "new:boats:3"
+   }
+  ],
+  [
+   {
+    "text": "4",
+    "data": "new:boats:4"
+   },
+   {
+    "text": "5",
+    "data": "new:boats:5"
+   },
+   {
+    "text": "6",
+    "data": "new:boats:6"
+   }
+  ],
+  [
+   {
+    "text": "7",
+    "data": "new:boats:7"
+   },
+   {
+    "text": "8",
+    "data": "new:boats:8"
+   },
+   {
+    "text": "9",
+    "data": "new:boats:9"
+   }
+  ],
+  [
+   {
+    "text": "10",
+    "data": "new:boats:10"
+   },
+   {
+    "text": "11",
+    "data": "new:boats:11"
+   },
+   {
+    "text": "▶ 12",
+    "data": "new:boats:12"
+   }
+  ],
+  [
+   {
+    "text": "🔒 13",
+    "data": "bl:13"
+   },
+   {
+    "text": "🔒 14",
+    "data": "bl:14"
+   },
+   {
+    "text": "🔒 15",
+    "data": "bl:15"
+   }
+  ],
+  [
+   {
+    "text": "🏠 Меню",
+    "data": "menu"
+   }
+  ]
+ ],
+ "image": null,
+ "view": null
+}

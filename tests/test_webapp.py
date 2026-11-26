@@ -280,3 +280,31 @@ def test_dev_admins_accept_ranges():
     from sea_fight_aiogram.webapp_dev import parse_ids
     assert parse_ids("1") == [1]
     assert parse_ids("1, 2 300-302") == [1, 2, 300, 301, 302]
+
+
+async def test_boats_only_in_app_reconnect_and_plan(env):
+    """«Кораблики»: кнопка только в меню Mini App; нажатие — подтверждение без экрана; новое окно посреди
+    партии получает её кадр, а не меню; /dev/hint отдаёт план идеального игрока; итог приходит пушем."""
+    world, app, client, connect = env
+    web = await connect(dev_user={"id": 5, "name": "Dev"})
+    assert web.find("Кораблики") == "new:boats"
+    await web.press("new:boats")
+    await web.press(web.find("▶ 1"))
+    assert web.view["kind"] == "boats" and web.view["phase"] == "countdown"
+    await world.time.advance(3.0)
+    await web.wait(lambda: web.view["phase"] == "play", "кадр play")
+    plan = (await (await client.get("/dev/hint", params={"user": "5"})).json())["plan"]
+    assert plan and all(len(x) == 3 for x in plan)
+    t0, r, c = plan[0]
+    await world.time.advance(t0 / 1000)
+    frame = await web.press(web.action("tap", r=r, c=c, t=t0))
+    assert frame["screen"] is None and frame["note"] is None
+    await web.ws.close()
+    again = await connect(dev_user={"id": 5, "name": "Dev"})
+    assert again.view["kind"] == "boats" and again.view["toggles"] == [[t0, r, c]]
+    assert again.view["clock"]["elapsed_ms"] == t0
+    await world.time.advance(125)
+    await again.wait(lambda: again.view is None and "Партия окончена" in again.screen["text"], "итог партии")
+    assert world.scores_count() == 1
+    third = await connect(dev_user={"id": 5, "name": "Dev"})
+    assert "Выберите игру" in third.screen["text"]          # партия кончилась — снова меню

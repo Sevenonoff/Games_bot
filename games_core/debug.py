@@ -6,7 +6,7 @@
 """
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
-from . import days as calendar, motivation, notify, path
+from . import boats, days as calendar, motivation, notify, path
 from . import seafight_mp as mp
 from . import seafight_solo as sea
 from .progression import WINS_TO_LEVEL_UP
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .manager import Manager
 
 DAY = 24 * 3600
-LEVEL_GAMES = ("memo", "matrix", "tower", "path")
+LEVEL_GAMES = ("memo", "matrix", "tower", "path", "boats")   # «Кораблики»: уровень — самый высокий открытый
 SEA_SETS = ("full", "reduced")
 
 HELP = """/dbg level &lt;игра&gt; &lt;уровень&gt; [серия] — уровень и серия побед ({games})
@@ -81,7 +81,7 @@ def _play_screen(game: str, status: str) -> Screen:
 def set_level(mgr: "Manager", player: Player, args: List[str]) -> Result:
     game, level = _level_game(args[0]), int(args[1])
     streak = int(args[2]) if len(args) > 2 else 0
-    if level < 1 or not 0 <= streak < WINS_TO_LEVEL_UP:
+    if level < 1 or not 0 <= streak < WINS_TO_LEVEL_UP or (game == boats.GAME and level > boats.MAX_LEVEL):
         raise ValueError(args)
     p = mgr.storage.load_progress(mgr.platform, player.user_id, game)
     p.level = p.last_success_level = level
@@ -211,6 +211,14 @@ def hint_payload(mgr: "Manager", uid: int) -> Optional[str]:
         return data("t", s.sid, 0, 0)
     cell = right_cell(s)
     return data("t", s.sid, *cell) if cell else None
+
+
+def boats_plan(mgr: "Manager", uid: int) -> Optional[List[List[int]]]:
+    """«Кораблики»: план идеального игрока [[t, r, c], …] по времени игры — для e2e через /dev/hint."""
+    s = mgr.sessions.get(uid)
+    if not isinstance(s, boats.BoatsSession) or s.finished:
+        return None
+    return [list(x) for x in boats.perfect_toggles(s.field, s.boats, game_ms=s.game_ms)]
 
 
 COMMANDS: Dict[str, Callable[["Manager", Player, List[str]], Result]] = {
