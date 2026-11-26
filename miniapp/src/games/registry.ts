@@ -7,6 +7,7 @@ import { Memo } from "./memo/Memo";
 import { Matrix } from "./matrix/Matrix";
 import { Tower } from "./tower/Tower";
 import { Path } from "./path/Path";
+import { Sea } from "./sea/Sea";
 
 export type GameProps<V> = {
   view: V;
@@ -21,4 +22,5 @@ export const games: Partial<Record<View["kind"], ComponentType<GameProps<any>>>>
   matrix: Matrix,
   tower: Tower,
   path: Path,
+  sea: Sea,
 };
