@@ -90,6 +90,13 @@ describe("бой: выстрел и неактивные поля", () => {
 });
 
 describe("кнопки действий — из screen.rows", () => {
+  it("итог: только кнопки итога, без клеток старого поля (noop) и без второго «Меню»", () => {
+    const { container } = render(<Sea {...props("result")} />);
+    const texts = [...container.querySelectorAll(".sea-actions button")].map((b) => b.textContent);
+    expect(texts).toEqual(["🤖 Новая партия с компьютером", "🏠 Меню"]);
+    expect(container.querySelector('button[data-payload="noop"]')).toBeNull();
+  });
+
   it("в sea-placement нет «Готов», есть «Сначала» и «Сдаться»", () => {
     const p = props("placement");
     const { container } = render(<Sea {...p} />);
@@ -143,7 +150,7 @@ describe("расстановка перетаскиванием", () => {
   let restoreRect: (() => void) | null = null;
   afterEach(() => { restoreRect?.(); restoreRect = null; });
 
-  it("горизонтальный корабль 3: drop (0,2) → place с центром (0,3)", () => {
+  it("горизонтальный корабль 3: drop в клетку (0,2) → place с центром (0,2)", () => {
     mockGridRect();
     const p = props("placement");
     const { container } = render(<Sea {...p} />);
@@ -157,7 +164,7 @@ describe("расстановка перетаскиванием", () => {
     expect(p.press).toHaveBeenCalledWith("mpp:6JZGCJ:0:2:h");
   });
 
-  it("вертикальный корабль 4 после «Повернуть»: drop (5,3) → place v с центром (5,3)", () => {
+  it("вертикальный корабль 3 после «Повернуть»: drop (5,3) → place v с центром (5,3)", () => {
     mockGridRect();
     const p = props("placement");
     const { container } = render(<Sea {...p} />);
@@ -195,6 +202,59 @@ describe("расстановка перетаскиванием", () => {
     // сервер отклонил: current пуст, note с ошибкой → fix не шлётся
     await act(async () => { first.rerender(<Sea {...props("placement", { press: p.press, note: "Здесь корабль поставить нельзя" })} />); });
     expect(p.press).not.toHaveBeenCalledWith("mpk:6JZGCJ");
+    // корабль снова в доке (док не изменился) и возвращается с анимацией
+    expect(first.container.querySelectorAll(".dock-ship")).toHaveLength(6);
+    expect(first.container.querySelector(".dock-ship.returning .dock-hull")?.children).toHaveLength(3);
+  });
+
+  /** Вид расстановки с одним кораблём заданного размера в доке. */
+  function oneShip(size: number): GameProps<SeaView> {
+    const base = props("placement");
+    const view = { ...base.view, placement: { ...base.view.placement!, sizes: [size] } };
+    return { ...base, view, screen: { ...base.screen, view } };
+  }
+
+  // клетка 30 px, зазор 3: центр клетки (r, c) — (c·33 + 15, r·33 + 15)
+  const at = (r: number, c: number) => ({ clientX: c * 33 + 15, clientY: r * 33 + 15 });
+  const shadowKeys = (root: Element) => [...root.querySelectorAll(".placing-board .scell")]
+    .map((el, i) => (el.className.includes("shadow-ok") ? `${Math.floor(i / 7)}:${i % 7}` : null))
+    .filter((k): k is string => k !== null);
+
+  const CASES: Array<[number, boolean, string[]]> = [
+    [1, false, ["3:3"]],
+    [1, true, ["3:3"]],
+    [2, false, ["3:3", "3:4"]],                  // у чётных центр — левая из двух средних
+    [2, true, ["3:3", "4:3"]],                   // …и верхняя
+    [3, false, ["3:2", "3:3", "3:4"]],
+    [3, true, ["2:3", "3:3", "4:3"]],
+    [4, false, ["3:2", "3:3", "3:4", "3:5"]],
+    [4, true, ["2:3", "3:3", "4:3", "5:3"]],
+  ];
+  for (const [size, vertical, cells] of CASES) {
+    it(`корабль ${size} ${vertical ? "вертикально" : "горизонтально"}: тень по правилу ядра, place с центром (3,3)`, () => {
+      mockGridRect();
+      const p = oneShip(size);
+      const { container } = render(<Sea {...p} />);
+      if (vertical) fireEvent.click(container.querySelector<HTMLButtonElement>("button.rotate")!);
+      act(() => { fireEvent.pointerDown(container.querySelector<HTMLElement>(".dock-ship")!, at(3, 3)); });
+      act(() => { window.dispatchEvent(new MouseEvent("pointermove", at(3, 3))); });
+      expect(shadowKeys(container)).toEqual(cells);
+      // отпускание над полем всплывает до window: place уходит ровно один раз
+      const grid = container.querySelector<HTMLElement>(".placing-board")!;
+      act(() => { grid.dispatchEvent(new MouseEvent("pointerup", { ...at(3, 3), bubbles: true })); });
+      expect(p.press).toHaveBeenCalledTimes(1);
+      expect(p.press).toHaveBeenCalledWith(`mpp:6JZGCJ:3:3:${vertical ? "v" : "h"}`);
+    });
+  }
+
+  it("бросок мимо поля: place не уходит, корабль возвращается в док", () => {
+    mockGridRect();
+    const p = props("placement");
+    const { container } = render(<Sea {...p} />);
+    act(() => { fireEvent.pointerDown(container.querySelector<HTMLElement>(".dock-ship")!, at(0, 0)); });
+    act(() => { window.dispatchEvent(new MouseEvent("pointerup", { clientX: 150, clientY: 500 })); });
+    expect(p.press).not.toHaveBeenCalled();
+    expect(container.querySelector(".dock-ship.returning")).not.toBeNull();
   });
 });
 

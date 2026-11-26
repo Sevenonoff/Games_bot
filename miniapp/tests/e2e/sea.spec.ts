@@ -195,19 +195,19 @@ test("бой с другом: приглашение, вход по ссылке
   const page2 = await page.context().newPage();
   await openAppWithStart(page2, guest, "Гоша", theme, `mp_${code}`);
   await expect(page2.locator('.game-sea[data-status="active"][data-turn="them"]')).toBeVisible({ timeout: 20_000 });
-  await expect(hostScreen.locator('.game-sea[data-status="active"][data-turn="me"]')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.game-sea[data-status="active"][data-turn="me"]')).toBeVisible({ timeout: 20_000 });
   await shot(page, testInfo, "02-battle-host");
 
   // по выстрелу у каждого
   const hostPayload = await hint(host);
   expect(hostPayload).toMatch(/^mpf:/);
   await clickCell(page, hostPayload!);
-  await expect(hostScreen.locator('.game-sea[data-turn="them"]')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.game-sea[data-turn="them"]')).toBeVisible({ timeout: 15_000 });
   await shot(page2, testInfo, "03-battle-guest");
   const guestPayload = await hint(guest);
   if (guestPayload !== null) {
     await mainScreen(page2).locator(`button[data-payload="${guestPayload}"]`).first().click();
-    await expect(hostScreen.locator('.game-sea[data-turn="me"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.game-sea[data-turn="me"]')).toBeVisible({ timeout: 15_000 });
   }
 
   // сдача первого (showConfirm фейка отвечает «ОК») → у второго карточка победы

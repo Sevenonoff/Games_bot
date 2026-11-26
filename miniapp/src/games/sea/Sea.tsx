@@ -14,6 +14,9 @@ import "./Sea.css";
 const GAP = 3;             // зазор клеток сетки (Sea.css .scell gap)
 const CELL_MIN = 30;
 const OWN_SHARE = 0.6;     // своё поле — ≈60% ширины (tz-m4 §3)
+const PLACE_CELL_MAX = 56; // клетка расстановки на широком экране
+const PLACE_RESERVED = 250; // высота под верхней строкой, доком и кнопками расстановки
+const RETURN_MS = 450;     // анимация возврата корабля в док (Sea.css .returning)
 
 type Board = SeaView["own"];
 
@@ -29,6 +32,23 @@ function actionButton(rows: Button[][], payload: string): Button | undefined {
 /** Кнопки итога и прочие экранные (не из actions), в порядке экрана. */
 function rowButtons(rows: Button[][], skip: Set<string>): Button[] {
   return rows.flat().filter((b) => !skip.has(b.data));
+}
+
+/** Размер элемента через ResizeObserver; ref-колбэк, поэтому элемент, появившийся позже
+ *  (зона боя после расстановки), тоже измеряется. В jsdom размеры нулевые. */
+function useSize(): [(el: HTMLElement | null) => void, { w: number; h: number }] {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    if (el === null) return;
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    if (typeof ResizeObserver === "undefined") return;   // jsdom
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el]);
+  return [setEl, size];
 }
 
 /** Клетки поля боя. */
@@ -155,7 +175,22 @@ export function Sea(props: GameProps<SeaView>): VNode {
   const [drag, setDrag] = useState<{ size: number } | null>(null);
   const [pointerCell, setPointerCell] = useState<{ r: number; c: number } | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const [gridCell, setGridCell] = useState(CELL_MIN);
+  // корабль, вернувшийся в док (ошибка сервера или бросок мимо поля), — для анимации
+  const [returned, setReturned] = useState<number | null>(null);
+  const returnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bounceBack = (size: number) => {
+    setReturned(size);
+    if (returnTimer.current !== null) clearTimeout(returnTimer.current);
+    returnTimer.current = setTimeout(() => setReturned(null), RETURN_MS);
+  };
+  useEffect(() => () => { if (returnTimer.current !== null) clearTimeout(returnTimer.current); }, []);
+
+  // клетка расстановки: своё поле во всю ширину, но так, чтобы док и кнопки влезли по высоте
+  const [rootRef, rootSize] = useSize();
+  const gridCell = rootSize.w === 0 ? CELL_MIN : Math.max(24, Math.min(PLACE_CELL_MAX, Math.floor(Math.min(
+    (rootSize.w - 24 - GAP * (view.own.cols - 1)) / view.own.cols,
+    (rootSize.h - PLACE_RESERVED) / view.own.rows - GAP,
+  ))));
 
   // док: sizes минус длины уже зафиксированных кораблей, от большого к маленькому
   const dock = useMemo(() => {
@@ -169,7 +204,7 @@ export function Sea(props: GameProps<SeaView>): VNode {
   }, [view.placement]);
 
   // sent ожидаемого place: после кадра, где current — наш корабль и note без ошибки, шлём fix
-  const pendingPlace = useRef<{ cells: string } | null>(null);
+  const pendingPlace = useRef<{ cells: string; size: number } | null>(null);
   const currentKey = (view.placement?.current ?? []).map(([r, c]) => `${r}:${c}`).join(";") ?? "";
   useEffect(() => {
     if (pendingPlace.current === null) return;
@@ -179,6 +214,7 @@ export function Sea(props: GameProps<SeaView>): VNode {
       props.press(view.actions.fix);                 // поставлен — зафиксировать
     } else if (props.note !== null) {
       pendingPlace.current = null;                   // ошибка: сервер отклонил, корабль в доке
+      bounceBack(expected.size);
     }
   }, [currentKey, props.note]);                      // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -197,9 +233,12 @@ export function Sea(props: GameProps<SeaView>): VNode {
       : cellFromPoint(e.clientX - rect.left, e.clientY - rect.top, gridCell, GAP, view.own.rows, view.own.cols);
     setDrag(null);
     setPointerCell(null);
-    if (drop === null) return;                       // унесли обратно в док
+    if (drop === null) {                             // унесли обратно в док
+      bounceBack(drag.size);
+      return;
+    }
     const cells = shipCells(drop, drag.size, dragVertical);
-    pendingPlace.current = { cells: cells.map(cellKey).join(";") };
+    pendingPlace.current = { cells: cells.map(cellKey).join(";"), size: drag.size };
     props.press(placePayload(view.actions.place, drop, dragVertical));
   };
 
@@ -213,20 +252,10 @@ export function Sea(props: GameProps<SeaView>): VNode {
     };
   }, [drag, dragVertical, gridCell, view.placement]);
 
-  // --- размер клетки боя: из размеров зоны (ResizeObserver), поле соперника во всю ширину ---
-  const battleRef = useRef<HTMLDivElement | null>(null);
-  const [battleSize, setBattleSize] = useState({ w: 360, h: 420 });
+  // --- размер клетки боя: из размеров зоны, поле соперника во всю ширину ---
+  // зона появляется и после расстановки, поэтому — ref-колбэк, а не измерение один раз
+  const [battleRef, battleSize] = useSize();
   const sideBySide = battleSize.w > 700;
-  useEffect(() => {
-    const zone = battleRef.current;
-    if (zone === null) return;
-    const measure = () => setBattleSize({ w: zone.clientWidth, h: zone.clientHeight });
-    measure();
-    if (typeof ResizeObserver === "undefined") return;   // jsdom
-    const observer = new ResizeObserver(measure);
-    observer.observe(zone);
-    return () => observer.disconnect();
-  }, []);
   const enemyCell = Math.max(CELL_MIN, Math.floor(Math.min(
     (battleSize.w - 16 - GAP * 6) / 7,
     ((battleSize.h - 24) / (sideBySide ? 8 : 16)) - GAP,
@@ -303,7 +332,7 @@ export function Sea(props: GameProps<SeaView>): VNode {
   }
 
   return (
-    <div class="game game-sea" data-status={view.status} data-turn={view.turn ?? ""}>
+    <div class="game game-sea" data-status={view.status} data-turn={view.turn ?? ""} ref={rootRef}>
       {inBattle && (
         <div class="battle-top">
           <span class="status-line">
@@ -330,10 +359,10 @@ export function Sea(props: GameProps<SeaView>): VNode {
             </div>
           )}
           {view.status === "waiting_ready" && <div class="placing-top"><span>Ждём соперника…</span></div>}
+          {/* указатель слушаем только на window (см. useEffect выше): обработчик и здесь
+              отправлял бы place второй раз на то же отпускание */}
           <div class="placing-board" style={{ gridTemplateColumns: `repeat(${view.own.cols}, ${gridCell}px)` }}
-               ref={gridRef}
-               onPointerMove={(e) => onGridMove(e as unknown as PointerEvent)}
-               onPointerUp={(e) => onGridUp(e as unknown as PointerEvent)}>
+               ref={gridRef}>
             {view.own.cells.map((row, r) => row.map((c: SeaCell, col) => {
               const key = `${r}:${col}`;
               const isShadow = shadowSet.has(key);
@@ -354,8 +383,9 @@ export function Sea(props: GameProps<SeaView>): VNode {
           </div>
           {view.status === "placing" && (
             <div class="dock">
-              {dock.map((size) => (
-                <button key={size} type="button" class="dock-ship"
+              {dock.map((size, i) => (
+                <button key={`${size}-${i}`} type="button"
+                        class={"dock-ship" + (size === returned && dock.indexOf(size) === i ? " returning" : "")}
                         onPointerDown={() => startDrag(size)}>
                   <span class="dock-hull">{shipCellsFromStart({ r: 0, c: 0 }, size, false).map((_, i) => <i key={i} />)}</span>
                 </button>
@@ -415,7 +445,8 @@ export function Sea(props: GameProps<SeaView>): VNode {
           <button type="button" class="btn" data-payload={surrenderButton.data}
                   onClick={confirmSurrender}>{surrenderButton.text}</button>
         )}
-        {rowButtons(rows, new Set([quit, view.actions.reset, view.actions.ready, view.actions.cancel_invite]))
+        {/* noop — клетки старого поля из кнопок, menu рисуется ниже отдельно */}
+        {rowButtons(rows, new Set(["noop", "menu", quit, view.actions.reset, view.actions.ready, view.actions.cancel_invite]))
           .filter((b) => view.status === "finished")
           .map((b, i) => (
             <button key={i} type="button" class={"btn" + (i === 0 ? " primary" : "")} data-payload={b.data}
